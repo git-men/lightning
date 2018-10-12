@@ -4,6 +4,6 @@ from utils.routers import SimpleRouter
 from .views import CommonManageViewSet
 
 router = SimpleRouter(custom_base_name='common-manage')
-router.register('data', CommonManageViewSet)
+router.register('', CommonManageViewSet)
 
 urlpatterns = router.urls
