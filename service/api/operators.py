@@ -2,7 +2,7 @@ import operator
 from functools import reduce
 from django.db.models import Q
 
-
+# 运算符映射
 OPERATOR_MAP = {
     ">": "__gt",
     ">=": "__gte",
@@ -23,10 +23,10 @@ OPERATOR_MAP = {
 
 def build_filter_conditions(filters):
     """构造过滤器"""
-    if not filters:
-        return
 
     assert isinstance(filters, list), 'filters 应该是一个列表的数据结构'
+    if not filters:
+        return
 
     trans_cons = []
     for item in filters:

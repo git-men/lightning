@@ -6,10 +6,11 @@ from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
-from utils.api_response import success_response
 from utils import exceptions
+from utils.api_response import success_response
 
 from .operators import build_filter_conditions
+from .serializers import create_serializer_class
 
 
 # 常量声明
@@ -18,6 +19,8 @@ from .operators import build_filter_conditions
 FILTER_CONDITIONS = 'filters'
 # 客户端传入展示字段的关键字
 DISPLAY_FIELDS = 'display_fields'
+# 展开字段的传入
+EXPAND_FIELDS = 'expand_fields'
 
 
 class FormMixin(object):
@@ -40,6 +43,9 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     """通用的管理接口视图"""
 
     def perform_authentication(self, request):
+        """
+        截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
+        """
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
@@ -61,18 +67,20 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
             )
         return result
 
-    def get_queryset(self, display_fields=None):
-        """动态的计算结果集"""
+    def get_queryset(self, expand_fields=None):
+        """动态的计算结果集
 
-        queryset = self.model.objects.all()
-        return queryset
+        这里动态的解析字段，同时做好是否关联查询
+        """
+        if not expand_fields:
+            return self.model.objects.all()
+
+        field_list = [item.replace('.', '__') for item in expand_fields]
+        return self.model.objects.all().prefetch_related(*field_list)
 
     def get_serializer_class(self):
         """动态的获取序列化类"""
-        module_path = f'{self.app_label}.restful'
-        serializer_name = f'{self.model_slug}Serializer'
-        module = importlib.import_module(module_path)
-        return getattr(module, serializer_name)
+        return create_serializer_class(self.model)
 
     def _get_filter_queryset(self, queryset):
         """
@@ -101,7 +109,9 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
 
     @action(methods=['POST'], detail=False, url_path='list')
     def set(self, request, app, model, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+        expand_fields = request.data.get(EXPAND_FIELDS)
+
+        queryset = self.filter_queryset(self.get_queryset(expand_fields=expand_fields))
         if queryset.exists():
             queryset = self._get_filter_queryset(queryset)
 
