@@ -10,7 +10,7 @@ from utils import exceptions
 from utils.api_response import success_response
 
 from .operators import build_filter_conditions
-from .serializers import create_serializer_class
+from .serializers import create_serializer_class, multiple_create_serializer_class
 
 
 # 常量声明
@@ -65,22 +65,37 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
             raise exceptions.BusinessException(
                 error_code=exceptions.CANT_NOT_GET_MODEL
             )
+
+        self.get_expand_fields()
         return result
 
-    def get_queryset(self, expand_fields=None):
+    def get_expand_fields(self):
+        """获取扩展字段并作为属性值赋予"""
+        if self.action in ['list', 'retrieve']:
+            fields = self.request.query_params.get(EXPAND_FIELDS)
+            self.expand_fields = fields.split(',') if fields else None
+        else:
+            self.expand_fields = self.request.data.get(EXPAND_FIELDS)
+
+    def get_queryset(self):
         """动态的计算结果集
 
-        这里动态的解析字段，同时做好是否关联查询
+        这里做好是否关联查询
         """
+
+        expand_fields = self.expand_fields
         if not expand_fields:
             return self.model.objects.all()
 
         field_list = [item.replace('.', '__') for item in expand_fields]
         return self.model.objects.all().prefetch_related(*field_list)
+        # return self.model.objects.all().select_related(*field_list)
 
-    def get_serializer_class(self):
+    def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类"""
-        return create_serializer_class(self.model)
+        if not self.expand_fields:
+            return create_serializer_class(self.model)
+        return multiple_create_serializer_class(self.model, self.expand_fields)
 
     def _get_filter_queryset(self, queryset):
         """
@@ -111,7 +126,7 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     def set(self, request, app, model, **kwargs):
         expand_fields = request.data.get(EXPAND_FIELDS)
 
-        queryset = self.filter_queryset(self.get_queryset(expand_fields=expand_fields))
+        queryset = self.filter_queryset(self.get_queryset())
         if queryset.exists():
             queryset = self._get_filter_queryset(queryset)
 

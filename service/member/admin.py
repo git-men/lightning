@@ -4,7 +4,7 @@ from member.models import Author, Ship
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    list_display = ('username', 'name', 'gender', 'city', 'age')
+    list_display = ('id', 'username', 'name', 'gender', 'city', 'age')
 
 
 @admin.register(Ship)

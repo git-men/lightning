@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from api.serializers import BaseModelSerializerMixin
 from blog.models import Tag, Category, Article
+from member.restful.serializers import authorSerializer
 
 
 class tagSerializer(BaseModelSerializerMixin, serializers.ModelSerializer):
@@ -17,6 +18,8 @@ class categorySerializer(BaseModelSerializerMixin, serializers.ModelSerializer):
 
 
 class articleSerializer(BaseModelSerializerMixin, serializers.ModelSerializer, ):
+
+    author = authorSerializer()
 
     class Meta(BaseModelSerializerMixin.Meta):
         model = Article

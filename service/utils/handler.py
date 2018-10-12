@@ -25,5 +25,5 @@ def exception_handler(exc, context):
     if response:
         return response
 
-    return business_exception_handler(
-        BusinessException(error_data=str(exc)), context)
+    # return business_exception_handler(
+    #     BusinessException(error_data=str(exc)), context)

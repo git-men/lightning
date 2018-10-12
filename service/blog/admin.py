@@ -23,4 +23,4 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'is_public', 'author')
+    list_display = ('id', 'title', 'is_public', 'author')
