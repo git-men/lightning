@@ -155,3 +155,14 @@ STATIC_URL = '/static/'
 AUTH_USER_MODEL = 'member.Author'
 
 CORS_ALLOW_CREDENTIALS = True
+
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'utils.handler.exception_handler',
+    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'utils.authentication.CsrfExemptSessionAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+}
