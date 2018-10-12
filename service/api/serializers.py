@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import imaplib
 from rest_framework import serializers
 
@@ -76,10 +77,50 @@ def range_expand_fields(fields):
     return result
 
 
+def dg_attrs(index, model, field_dict, stop):
+    if index == 0:
+        model = model
+    else:
+        field_name = field_dict[index]['field_name']
+        field = model._meta.get_field(field_name)
+
+        field_dict[index]['field'] = field
+        field_dict[index]['model'] = field.related_model
+        field_dict[index]['many'] = field.many_to_many
+        model = field.related_model
+
+    index += 1
+    if index < stop:
+        dg_attrs(index, model, field_dict, stop)
+
+
 def create_nested_serializer_class(model, field_list):
-    field_dict = {index: item for index, item in enumerate(field_list)}
-    if len(field_list) == 1:
+    field_length = len(field_list)
+    if field_length == 1:
         return create_serializer_class(model)
+
+    field_dict = OrderedDict()
+    for index, item in enumerate(field_list):
+        field_dict[index] = {
+            'field_name': item,
+            'model': model,
+        }
+
+    dg_attrs(0, model, field_dict, field_length)
+
+    for key, value in reversed(field_dict.items()):
+        if key == (field_length - 1):
+            value['serializer'] = create_serializer_class(value['model'])
+        else:
+            prev_value = field_dict[key + 1]
+            many = True if prev_value['many'] else False
+            serializer_class = prev_value['serializer']
+
+            attrs = {
+                prev_value['field_name']: serializer_class(many=many)
+            }
+            value['serializer'] = create_serializer_class(value['model'], **attrs)
+    return field_dict[0]['serializer']
 
 
 def multiple_create_serializer_class(model, expand_fields):
