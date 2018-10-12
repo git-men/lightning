@@ -89,7 +89,6 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
 
         field_list = [item.replace('.', '__') for item in expand_fields]
         return self.model.objects.all().prefetch_related(*field_list)
-        # return self.model.objects.all().select_related(*field_list)
 
     def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类"""
@@ -124,14 +123,11 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
 
     @action(methods=['POST'], detail=False, url_path='list')
     def set(self, request, app, model, **kwargs):
-        expand_fields = request.data.get(EXPAND_FIELDS)
-
         queryset = self.filter_queryset(self.get_queryset())
         if queryset.exists():
             queryset = self._get_filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
-
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)

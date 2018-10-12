@@ -95,6 +95,7 @@ def dg_attrs(index, model, field_dict, stop):
 
 
 def create_nested_serializer_class(model, field_list):
+    """构建嵌套序列化类"""
     field_length = len(field_list)
     if field_length == 1:
         return create_serializer_class(model)
