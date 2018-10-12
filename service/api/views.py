@@ -1,4 +1,5 @@
 import importlib
+
 from django.apps import apps
 from django.conf import settings
 
@@ -7,6 +8,16 @@ from rest_framework.decorators import action
 
 from utils.api_response import success_response
 from utils import exceptions
+
+from .operators import build_filter_conditions
+
+
+# 常量声明
+
+# 客户端传入过滤条件的关键字
+FILTER_CONDITIONS = 'filters'
+# 客户端传入展示字段的关键字
+DISPLAY_FIELDS = 'display_fields'
 
 
 class FormMixin(object):
@@ -57,30 +68,45 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
         return queryset
 
     def get_serializer_class(self):
-        """获取序列化类
-
-        如果是 Django 模型，则需要找到匹配的序列化类
-        如果是字符模型，则返回 RecordSerializer
-        """
-
+        """动态的获取序列化类"""
         module_path = f'{self.app_label}.restful'
         serializer_name = f'{self.model_slug}Serializer'
         module = importlib.import_module(module_path)
         return getattr(module, serializer_name)
 
-    def list(self, request, **kwargs):
-        return success_response({'age': 23, 'name': 'kycool'})
+    def _get_filter_queryset(self, queryset):
+        """
+        此方法只用于 set 方法，用于检测客户端传入的过滤条件
+
+        客户端传入的过滤条件的数据结构如下：
+
+        [
+            {
+                field: xxxx,
+                operator: xxxx,
+                value: xxxx
+            }
+        ]
+        """
+        if not queryset:
+            return queryset
+
+        filter_conditions = self.request.data.get(FILTER_CONDITIONS)
+        if filter_conditions:
+            cons = build_filter_conditions(filter_conditions)
+            if cons:
+                return queryset.filter(cons)
+            return queryset
+        return queryset
 
     @action(methods=['POST'], detail=False, url_path='list')
     def set(self, request, app, model, **kwargs):
-
-        # serializer_class = self.get_serializer_class()
-        # queryset = self.get_queryset()
-        # serializer = serializer_class(queryset, many=True)
-        # return success_response(serializer.data)
-
         queryset = self.filter_queryset(self.get_queryset())
+        if queryset.exists():
+            queryset = self._get_filter_queryset(queryset)
+
         page = self.paginate_queryset(queryset)
+
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
