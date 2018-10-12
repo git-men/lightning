@@ -1,24 +1,22 @@
 from rest_framework import serializers
 
+from api.serializers import BaseModelSerializerMixin
 from blog.models import Tag, Category, Article
 
 
-class tagSerializer(serializers.ModelSerializer):
+class tagSerializer(BaseModelSerializerMixin, serializers.ModelSerializer):
 
-    class Meta:
+    class Meta(BaseModelSerializerMixin.Meta):
         model = Tag
-        fields = '__all__'
 
 
-class categorySerializer(serializers.ModelSerializer):
+class categorySerializer(BaseModelSerializerMixin, serializers.ModelSerializer):
 
-    class Meta:
+    class Meta(BaseModelSerializerMixin.Meta):
         model = Category
-        fields = '__all__'
 
 
-class articleSerializer(serializers.ModelSerializer):
+class articleSerializer(BaseModelSerializerMixin, serializers.ModelSerializer, ):
 
-    class Meta:
+    class Meta(BaseModelSerializerMixin.Meta):
         model = Article
-        fields = '__all__'
