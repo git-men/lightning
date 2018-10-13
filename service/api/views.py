@@ -9,18 +9,13 @@ from rest_framework.decorators import action
 from utils import exceptions
 from utils.api_response import success_response
 
+from .const import (
+    DISPLAY_FIELDS,
+    EXPAND_FIELDS,
+    FILTER_CONDITIONS,
+)
 from .operators import build_filter_conditions
 from .serializers import create_serializer_class, multiple_create_serializer_class
-
-
-# 常量声明
-
-# 客户端传入过滤条件的关键字
-FILTER_CONDITIONS = 'filters'
-# 客户端传入展示字段的关键字
-DISPLAY_FIELDS = 'display_fields'
-# 展开字段的传入
-EXPAND_FIELDS = 'expand_fields'
 
 
 class FormMixin(object):
@@ -70,7 +65,13 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
         return result
 
     def get_expand_fields(self):
-        """获取扩展字段并作为属性值赋予"""
+        """获取扩展字段并作为属性值赋予
+
+        注意使用扩展字段 get 方法和 post 方法的区别
+
+        get 方法使用 query string，这里需要解析
+        post 方法直接放到 body 中
+        """
         if self.action in ['list', 'retrieve']:
             fields = self.request.query_params.get(EXPAND_FIELDS)
             self.expand_fields = fields.split(',') if fields else None
@@ -91,7 +92,11 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
         return self.model.objects.all().prefetch_related(*field_list)
 
     def get_serializer_class(self, expand_fields=None):
-        """动态的获取序列化类"""
+        """动态的获取序列化类
+
+        - 如果没有嵌套字段，则动态创建最简单的序列化类
+        - 如果有嵌套字段，则动态创建引用字段的嵌套序列化类
+        """
         if not self.expand_fields:
             return create_serializer_class(self.model)
         return multiple_create_serializer_class(self.model, self.expand_fields)
@@ -99,6 +104,8 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     def _get_filter_queryset(self, queryset):
         """
         此方法只用于 set 方法，用于检测客户端传入的过滤条件
+
+        TODO: 详情页需要考虑筛选条件，这里考量获取详情是否也使用 POST 方法
 
         客户端传入的过滤条件的数据结构如下：
 
@@ -123,6 +130,7 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
 
     @action(methods=['POST'], detail=False, url_path='list')
     def set(self, request, app, model, **kwargs):
+        """获取列表数据"""
         queryset = self.filter_queryset(self.get_queryset())
         if queryset.exists():
             queryset = self._get_filter_queryset(queryset)

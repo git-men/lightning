@@ -1,4 +1,5 @@
 import operator
+
 from functools import reduce
 from django.db.models import Q
 
@@ -22,7 +23,8 @@ OPERATOR_MAP = {
 
 
 def build_filter_conditions(filters):
-    """构造过滤器"""
+    """构造过滤器
+    """
 
     assert isinstance(filters, list), 'filters 应该是一个列表的数据结构'
     if not filters:

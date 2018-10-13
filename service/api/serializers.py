@@ -23,8 +23,6 @@ class BaseModelSerializerMixin:
         #         key: result[key]
         #         for key in display_fields
         #     }
-
-        # expand_fields = request.data.get('expand_fields')
         return result
 
 
