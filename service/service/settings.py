@@ -29,7 +29,7 @@ environ.Env.read_env()
 SECRET_KEY = '*7v=vsh$w@y!d=2qm4+9nvz#^mh63k@_!p2cp-j()v#%1#w9*b'
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 DEBUG = env('DEBUG')
 

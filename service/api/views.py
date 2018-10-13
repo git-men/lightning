@@ -141,7 +141,12 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
         return success_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_validate_form()(data=request.data)
+        """
+        这里校验表单和序列化类分开创建
+
+        原因：序列化类有可能嵌套
+        """
+        serializer = self.get_validate_form(self.action)(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         instance = self.perform_create(serializer)
@@ -154,7 +159,7 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_validate_form()(instance, data=request.data, partial=partial)
+        serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
         instance = self.perform_update(serializer)
