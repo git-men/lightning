@@ -13,12 +13,12 @@ from blog.models import Tag, Category, Article
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', )
+    list_display = ('id', 'name', )
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'show', 'parent')
+    list_display = ('id', 'name', 'show', 'parent')
 
 
 @admin.register(Article)

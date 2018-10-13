@@ -1,5 +1,6 @@
-from collections import OrderedDict
 import imaplib
+from collections import OrderedDict
+
 from rest_framework import serializers
 
 

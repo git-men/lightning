@@ -14,6 +14,7 @@ from .const import (
     EXPAND_FIELDS,
     FILTER_CONDITIONS,
 )
+from .forms import create_form_class
 from .operators import build_filter_conditions
 from .serializers import create_serializer_class, multiple_create_serializer_class
 
@@ -23,11 +24,11 @@ class FormMixin(object):
 
     def get_create_form(self):
         """获取创建数据的验证表单"""
-        pass
+        return create_form_class(self.model)
 
     def get_update_form(self):
         """获取更新数据的验证表单"""
-        pass
+        return create_form_class(self.model)
 
     def get_validate_form(self, action):
         """获取验证表单"""
@@ -36,6 +37,12 @@ class FormMixin(object):
 
 class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     """通用的管理接口视图"""
+
+    def perform_create(self, serializer):
+        return serializer.save()
+
+    def perform_update(self, serializer):
+        return serializer.save()
 
     def perform_authentication(self, request):
         """
@@ -127,6 +134,40 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
                 return queryset.filter(cons)
             return queryset
         return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_validate_form()(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        instance = self.perform_create(serializer)
+
+        # 如果有联合查询，单个对象创建后并没有联合查询
+        instance = self.get_queryset().filter(id=instance.id).first()
+        serializer = self.get_serializer(instance)
+        return success_response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_validate_form()(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        instance = self.perform_update(serializer)
+        serializer = self.get_serializer(instance)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+        return success_response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return success_response()
 
     @action(methods=['POST'], detail=False, url_path='list')
     def set(self, request, app, model, **kwargs):
