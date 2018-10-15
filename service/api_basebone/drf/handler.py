@@ -25,7 +25,7 @@ def exception_handler(exc, context):
         return business_exception_handler(exc, context)
 
     if isinstance(exc, ValidationError):
-        return error_response(PARAMETER_FORMAT_ERROR, data=exc.detail)
+        return error_response(PARAMETER_FORMAT_ERROR, error_data=exc.detail)
 
     response = default_exception_handler(exc, context)
     if response:
