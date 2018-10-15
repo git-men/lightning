@@ -158,11 +158,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'api.drf.handler.exception_handler',
-    'DEFAULT_PAGINATION_CLASS': 'api.drf.pagination.PageNumberPagination',
+    'EXCEPTION_HANDLER': 'api_basebone.drf.handler.exception_handler',
+    'DEFAULT_PAGINATION_CLASS': 'api_basebone.drf.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'api.drf.authentication.CsrfExemptSessionAuthentication',
+        'api_basebone.drf.authentication.CsrfExemptSessionAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
 }
