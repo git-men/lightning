@@ -25,6 +25,13 @@ ERROR_PHRASES = {
 
 
 class BusinessException(Exception):
+    """通用业务异常类
+
+    此类包含：
+    - 参数格式错误
+    - 服务异常错误
+    - 业务错误
+    """
 
     default_error_code = "9000"
     default_error_message = "系统错误"
@@ -42,5 +49,5 @@ class BusinessException(Exception):
             self.error_message = force_text(self.default_error_message)
         self.error_data = error_data
 
-    def __unicode__(self):
-        return self.error_message
+    def __str__(self):
+        return f'{self.error_code}:{self.error_message}'

@@ -158,11 +158,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'utils.handler.exception_handler',
-    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.PageNumberPagination',
+    'EXCEPTION_HANDLER': 'api.drf.handler.exception_handler',
+    'DEFAULT_PAGINATION_CLASS': 'api.drf.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'utils.authentication.CsrfExemptSessionAuthentication',
+        'api.drf.authentication.CsrfExemptSessionAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
 }
