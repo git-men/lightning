@@ -14,10 +14,9 @@ from .core.const import (
 )
 from .forms import create_form_class
 
+from .serializers import create_serializer_class, multiple_create_serializer_class
 from .utils.api_response import success_response
 from .utils.operators import build_filter_conditions
-
-from .serializers import create_serializer_class, multiple_create_serializer_class
 
 
 class FormMixin(object):
