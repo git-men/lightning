@@ -2,8 +2,9 @@ import importlib
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth import get_user_model
 
-from rest_framework import viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
 from .core import exceptions
@@ -12,10 +13,12 @@ from .core.const import (
     EXPAND_FIELDS,
     FILTER_CONDITIONS,
 )
-from .forms import create_form_class
 
 from .drf.response import success_response
+from .forms import create_form_class
 from .serializers import create_serializer_class, multiple_create_serializer_class
+
+from .utils import meta
 from .utils.operators import build_filter_conditions
 
 
@@ -37,6 +40,7 @@ class FormMixin(object):
 
 class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     """通用的管理接口视图"""
+    permission_classes = (permissions.IsAuthenticated, )
 
     def perform_create(self, serializer):
         return serializer.save()
@@ -85,6 +89,19 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
         else:
             self.expand_fields = self.request.data.get(EXPAND_FIELDS)
 
+    def _get_queryset_by_filter_user(self, queryset):
+        """通过用户过滤对应的数据集
+
+        - 如果用户是超级用户，则不做任何过滤
+        - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
+        """
+        user = self.request.user
+        if user and user.is_staff and user.is_superuser:
+            return queryset
+        field = meta.get_related_model_field(self.model, get_user_model())
+        if field:
+            return queryset.filter(**{field.name: user})
+
     def get_queryset(self):
         """动态的计算结果集
 
@@ -93,10 +110,14 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
 
         expand_fields = self.expand_fields
         if not expand_fields:
-            return self.model.objects.all()
+            return self._get_queryset_by_filter_user(
+                self.model.objects.all()
+            )
 
         field_list = [item.replace('.', '__') for item in expand_fields]
-        return self.model.objects.all().prefetch_related(*field_list)
+        return self._get_queryset_by_filter_user(
+            self.model.objects.all().prefetch_related(*field_list)
+        )
 
     def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类
