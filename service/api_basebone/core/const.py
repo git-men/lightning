@@ -6,3 +6,5 @@ FILTER_CONDITIONS = 'filters'
 DISPLAY_FIELDS = 'display_fields'
 # 展开字段的传入
 EXPAND_FIELDS = 'expand_fields'
+# 排序字段
+ORDER_BY_FIELDS = 'order_by'

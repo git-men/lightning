@@ -12,18 +12,20 @@ from .core.const import (
     DISPLAY_FIELDS,
     EXPAND_FIELDS,
     FILTER_CONDITIONS,
+    ORDER_BY_FIELDS,
 )
 
 from .drf.response import success_response
 from .forms import create_form_class
-from .serializers import create_serializer_class, multiple_create_serializer_class
+from .serializers import (
+    create_serializer_class, multiple_create_serializer_class)
 
 from .utils import meta
 from .utils.operators import build_filter_conditions
 
 
 class FormMixin(object):
-    """表单处理"""
+    """表单处理集合"""
 
     def get_create_form(self):
         """获取创建数据的验证表单"""
@@ -38,15 +40,65 @@ class FormMixin(object):
         return getattr(self, 'get_{}_form'.format(action))()
 
 
-class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
-    """通用的管理接口视图"""
-    permission_classes = (permissions.IsAuthenticated, )
+class QuerySetMixin:
+    """结果集处理集合"""
 
-    def perform_create(self, serializer):
-        return serializer.save()
+    def get_queryset_by_filter_user(self, queryset):
+        """通过用户过滤对应的数据集
 
-    def perform_update(self, serializer):
-        return serializer.save()
+        - 如果用户是超级用户，则不做任何过滤
+        - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
+        """
+        user = self.request.user
+        if user and user.is_staff and user.is_superuser:
+            return queryset
+        field = meta.get_related_model_field(self.model, get_user_model())
+        if field:
+            return queryset.filter(**{field.name: user})
+
+    def get_queryset_by_order_by(self, queryset):
+        """结果集支持排序"""
+        fields = self.request.data.get(ORDER_BY_FIELDS)
+        if isinstance(fields, list) and fields:
+            return queryset.order_by(*fields)
+        return queryset
+
+    def get_queryset_by_filter_conditions(self, queryset):
+        """
+        用于检测客户端传入的过滤条件
+
+        TODO: 详情页需要考虑筛选条件，这里考量获取详情是否也使用 POST 方法
+
+        客户端传入的过滤条件的数据结构如下：
+
+        [
+            {
+                field: xxxx,
+                operator: xxxx,
+                value: xxxx
+            }
+        ]
+        """
+        if not queryset:
+            return queryset
+
+        filter_conditions = self.request.data.get(FILTER_CONDITIONS)
+        if filter_conditions:
+            cons = build_filter_conditions(filter_conditions)
+            if cons:
+                return queryset.filter(cons)
+            return queryset
+        return queryset
+
+    def _get_queryset(self, queryset):
+        methods = ['filter_user', 'filter_conditions', 'order_by']
+        for item in methods:
+            queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
+        return queryset
+
+
+class GenericViewMixin:
+    """重写 GenericAPIView 中的某些方法"""
 
     def perform_authentication(self, request):
         """
@@ -75,33 +127,6 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
         self.get_expand_fields()
         return result
 
-    def get_expand_fields(self):
-        """获取扩展字段并作为属性值赋予
-
-        注意使用扩展字段 get 方法和 post 方法的区别
-
-        get 方法使用 query string，这里需要解析
-        post 方法直接放到 body 中
-        """
-        if self.action in ['list', 'retrieve']:
-            fields = self.request.query_params.get(EXPAND_FIELDS)
-            self.expand_fields = fields.split(',') if fields else None
-        else:
-            self.expand_fields = self.request.data.get(EXPAND_FIELDS)
-
-    def _get_queryset_by_filter_user(self, queryset):
-        """通过用户过滤对应的数据集
-
-        - 如果用户是超级用户，则不做任何过滤
-        - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
-        """
-        user = self.request.user
-        if user and user.is_staff and user.is_superuser:
-            return queryset
-        field = meta.get_related_model_field(self.model, get_user_model())
-        if field:
-            return queryset.filter(**{field.name: user})
-
     def get_queryset(self):
         """动态的计算结果集
 
@@ -110,12 +135,12 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
 
         expand_fields = self.expand_fields
         if not expand_fields:
-            return self._get_queryset_by_filter_user(
+            return self._get_queryset(
                 self.model.objects.all()
             )
 
         field_list = [item.replace('.', '__') for item in expand_fields]
-        return self._get_queryset_by_filter_user(
+        return self._get_queryset(
             self.model.objects.all().prefetch_related(*field_list)
         )
 
@@ -129,32 +154,33 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
             return create_serializer_class(self.model)
         return multiple_create_serializer_class(self.model, self.expand_fields)
 
-    def _get_filter_queryset(self, queryset):
+
+class CommonManageViewSet(FormMixin,
+                          QuerySetMixin,
+                          GenericViewMixin,
+                          viewsets.ModelViewSet):
+    """通用的管理接口视图"""
+    permission_classes = (permissions.IsAuthenticated, )
+
+    def perform_create(self, serializer):
+        return serializer.save()
+
+    def perform_update(self, serializer):
+        return serializer.save()
+
+    def get_expand_fields(self):
+        """获取扩展字段并作为属性值赋予
+
+        注意使用扩展字段 get 方法和 post 方法的区别
+
+        get 方法使用 query string，这里需要解析
+        post 方法直接放到 body 中
         """
-        此方法只用于 set 方法，用于检测客户端传入的过滤条件
-
-        TODO: 详情页需要考虑筛选条件，这里考量获取详情是否也使用 POST 方法
-
-        客户端传入的过滤条件的数据结构如下：
-
-        [
-            {
-                field: xxxx,
-                operator: xxxx,
-                value: xxxx
-            }
-        ]
-        """
-        if not queryset:
-            return queryset
-
-        filter_conditions = self.request.data.get(FILTER_CONDITIONS)
-        if filter_conditions:
-            cons = build_filter_conditions(filter_conditions)
-            if cons:
-                return queryset.filter(cons)
-            return queryset
-        return queryset
+        if self.action in ['list', 'retrieve']:
+            fields = self.request.query_params.get(EXPAND_FIELDS)
+            self.expand_fields = fields.split(',') if fields else None
+        else:
+            self.expand_fields = self.request.data.get(EXPAND_FIELDS)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -199,8 +225,6 @@ class CommonManageViewSet(viewsets.ModelViewSet, FormMixin):
     def set(self, request, app, model, **kwargs):
         """获取列表数据"""
         queryset = self.filter_queryset(self.get_queryset())
-        if queryset.exists():
-            queryset = self._get_filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
