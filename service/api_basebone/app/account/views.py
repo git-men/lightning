@@ -17,7 +17,7 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
         return create_serializer_class(model)
 
     @action(methods=['post'], detail=False)
-    def logout(self, request):
+    def logout(self, request, *args, **kwargs):
         """退出登录"""
         logout(request)
         return success_response()
@@ -36,6 +36,6 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
         serializer = forms.LoginForm(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
 
-        instance = self.perform_create(serializer)
+        instance = serializer.save()
         serializer = self.get_serializer(instance)
         return success_response(serializer.data)
