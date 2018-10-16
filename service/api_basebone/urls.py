@@ -1,9 +1,24 @@
 from django.urls import path, include
 
-from .drf.routers import BaseBoneSimpleRouter as SimpleRouter
-from .views import CommonManageViewSet
+app_name = 'basebone_common'
 
-router = SimpleRouter(custom_base_name='common-manage')
-router.register('', CommonManageViewSet)
+urlpatterns = [
 
-urlpatterns = router.urls
+    # 通用管理端
+    path(
+        'basebone/<str:app>__<str:model>/',
+        include(
+            ('api_basebone.basebone_urls', app_name),
+            namespace='manage.common.basebone'
+        )
+    ),
+
+    # 通用 app 管理端
+    path(
+        'basebone/manage/',
+        include(
+            ('api_basebone.app.manage_urls', app_name),
+            namespace='manage.app.basebone'
+        )
+    ),
+]
