@@ -167,8 +167,12 @@ class GenericViewMixin:
         - 如果没有嵌套字段，则动态创建最简单的序列化类
         - 如果有嵌套字段，则动态创建引用字段的嵌套序列化类
         """
-        if not self.expand_fields:
-            return create_serializer_class(self.model)
+        # 这里只有做是为了使用 django-rest-swagger
+        expand_fields = getattr(self, 'expand_fields', None)
+        model = getattr(self, 'model', get_user_model())
+
+        if not expand_fields:
+            return create_serializer_class(model)
         return multiple_create_serializer_class(self.model, self.expand_fields)
 
 
