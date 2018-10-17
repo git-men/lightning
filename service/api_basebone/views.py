@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
-from .core import exceptions, const
+from .core import admin, exceptions, const
 from .core.const import (
     DISPLAY_FIELDS,
     EXPAND_FIELDS,
@@ -62,8 +62,10 @@ class QuerySetMixin:
             if admin_class:
                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                 try:
-                    field_name = getattr(admin_class.GMeta, 'gmeta_auth_filter_field', None)
+                    field_name = getattr(admin_class.GMeta, admin.GMETA_AUTH_FILTER_FIELD, None)
+                    print(field_name)
                     if field_name:
+                        return queryset.filter(**{field_name: 49})
                         return queryset.filter(**{field_name: user})
                     else:
                         return queryset
