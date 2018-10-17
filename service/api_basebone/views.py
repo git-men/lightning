@@ -63,9 +63,7 @@ class QuerySetMixin:
                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                 try:
                     field_name = getattr(admin_class.GMeta, admin.GMETA_AUTH_FILTER_FIELD, None)
-                    print(field_name)
                     if field_name:
-                        return queryset.filter(**{field_name: 49})
                         return queryset.filter(**{field_name: user})
                     else:
                         return queryset
