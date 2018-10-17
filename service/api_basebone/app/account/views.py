@@ -16,8 +16,8 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
         model = get_user_model()
         return create_serializer_class(model)
 
-    @action(methods=['post'], detail=False, permission_classes=(), url_path='check/login')
-    def check_login(self, request, *args, **kwargs):
+    @action(detail=False, permission_classes=(), url_path='userinfo')
+    def get_userinfo(self, request, *args, **kwargs):
         """检测是否是否登录"""
         is_login = request.user and request.user.is_authenticated
         result = {
