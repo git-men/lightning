@@ -174,6 +174,9 @@ REST_FRAMEWORK = {
     ),
 }
 
+LOGIN_URL = 'basebone/manage/account/login/'
+LOGOUT_URL = 'basebone/manage/account/login/'
+
 
 # 阿里云 OSS 配置
 ALI_YUN_OSS_KEY = env('ALI_YUN_OSS_KEY')
