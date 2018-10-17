@@ -1,5 +1,8 @@
 # from django.apps import apps
 from django.contrib import admin
+
+from api_basebone.core.admin import ModelAdmin
+
 from blog.models import Tag, Category, Article
 
 # app_list = ['blog']
@@ -12,15 +15,15 @@ from blog.models import Tag, Category, Article
 
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
+class TagAdmin(ModelAdmin):
     list_display = ('id', 'name', )
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ModelAdmin):
     list_display = ('id', 'name', 'show', 'parent')
 
 
 @admin.register(Article)
-class ArticleAdmin(admin.ModelAdmin):
+class ArticleAdmin(ModelAdmin):
     list_display = ('id', 'title', 'is_public', 'author')

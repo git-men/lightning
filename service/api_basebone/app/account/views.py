@@ -25,7 +25,7 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
             'user': None
         }
         if is_login:
-            result['user'] = self.get_serializer(request.user)
+            result['user'] = self.get_serializer(request.user).data
         return success_response(result)
 
     @action(methods=['post'], detail=False)
