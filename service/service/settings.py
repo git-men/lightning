@@ -18,6 +18,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, True),
+    ALI_YUN_OSS_KEY=(str, ''),
+    ALI_YUN_OSS_SECRET=(str, ''),
+    ALI_YUN_OSS_ENDPOINT=(str, ''),
+    ALI_YUN_OSS_HOST=(str, ''),
+    ALI_YUN_OSS_BUCKET=(str, ''),
 )
 environ.Env.read_env()
 
@@ -167,3 +172,11 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ),
 }
+
+
+# 阿里云 OSS 配置
+ALI_YUN_OSS_KEY = env('ALI_YUN_OSS_KEY')
+ALI_YUN_OSS_SECRET = env('ALI_YUN_OSS_SECRET')
+ALI_YUN_OSS_ENDPOINT = env('ALI_YUN_OSS_ENDPOINT')
+ALI_YUN_OSS_HOST = env('ALI_YUN_OSS_HOST')
+ALI_YUN_OSS_BUCKET = env('ALI_YUN_OSS_BUCKET')
