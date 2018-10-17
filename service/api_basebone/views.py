@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
-from .core import exceptions
+from .core import exceptions, const
 from .core.const import (
     DISPLAY_FIELDS,
     EXPAND_FIELDS,
@@ -18,7 +18,9 @@ from .core.const import (
 from .drf.response import success_response
 from .forms import create_form_class
 from .serializers import (
-    create_serializer_class, multiple_create_serializer_class)
+    create_serializer_class,
+    multiple_create_serializer_class
+)
 
 from .utils import meta
 from .utils.operators import build_filter_conditions
@@ -52,9 +54,23 @@ class QuerySetMixin:
         user = self.request.user
         if user and user.is_staff and user.is_superuser:
             return queryset
-        field = meta.get_related_model_field(self.model, get_user_model())
-        if field:
-            return queryset.filter(**{field.name: user})
+
+        has_user_field = meta.get_related_model_field(self.model, get_user_model())
+        if has_user_field:
+            module = importlib.import_module(f'{self.app_label}.admin')
+            admin_class = getattr(module, f'{self.model.__name__}Admin', None)
+            if admin_class:
+                # 检测 admin 配置中是否指定了 auth_filter_field 属性
+                try:
+                    field_name = getattr(admin_class.GMeta, 'gmeta_auth_filter_field', None)
+                    if field_name:
+                        return queryset.filter(**{field_name: user})
+                    else:
+                        return queryset
+                except Exception:
+                    return queryset
+            else:
+                return queryset
         return queryset
 
     def get_queryset_by_order_by(self, queryset):

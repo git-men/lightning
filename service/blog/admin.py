@@ -27,3 +27,6 @@ class CategoryAdmin(ModelAdmin):
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
     list_display = ('id', 'title', 'is_public', 'author')
+
+    class GMeta(ModelAdmin.GMeta):
+        gmeta_auth_filter_field = 'author'

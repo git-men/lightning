@@ -13,5 +13,5 @@ def get_related_model_field(model, related_model):
     """
     for f in model._meta.get_fields():
         if f.is_relation and f.concrete:
-            if f.model is related_model:
+            if f.related_model is related_model:
                 return f
