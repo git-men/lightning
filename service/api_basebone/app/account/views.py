@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, logout
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
@@ -15,6 +15,18 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         model = get_user_model()
         return create_serializer_class(model)
+
+    @action(methods=['post'], detail=False, permission_classes=(), url_path='check/login')
+    def check_login(self, request, *args, **kwargs):
+        """检测是否是否登录"""
+        is_login = request.user and request.user.is_authenticated
+        result = {
+            'login': is_login,
+            'user': None
+        }
+        if is_login:
+            result['user'] = self.get_serializer(request.user)
+        return success_response(result)
 
     @action(methods=['post'], detail=False)
     def logout(self, request, *args, **kwargs):
