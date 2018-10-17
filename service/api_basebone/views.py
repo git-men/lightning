@@ -55,6 +55,7 @@ class QuerySetMixin:
         field = meta.get_related_model_field(self.model, get_user_model())
         if field:
             return queryset.filter(**{field.name: user})
+        return queryset
 
     def get_queryset_by_order_by(self, queryset):
         """结果集支持排序"""
