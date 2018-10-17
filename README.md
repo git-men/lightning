@@ -20,8 +20,10 @@
 
 则在 .env 文件中，添加以下配置，具体参数找我们的 Boss 要，下面的参数只是演示；
 
+```python
 ALI_YUN_OSS_KEY=xxxxx
 ALI_YUN_OSS_SECRET=xxxxxxxx
 ALI_YUN_OSS_ENDPOINT=oss-cn-beijing.aliyuncs.com
 ALI_YUN_OSS_HOST=http://vinyl.oss-cn-beijing.aliyuncs.com
 ALI_YUN_OSS_BUCKET=vinyl
+```
