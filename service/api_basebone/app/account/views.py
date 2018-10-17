@@ -18,7 +18,11 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, url_path='userinfo')
     def get_userinfo(self, request, *args, **kwargs):
-        """检测是否是否登录"""
+        """
+        ## 检测是否是否登录
+
+        如果用户已登录，则直接返回此登录用户的数据结构
+        """
         serializer = self.get_serializer(request.user)
         return success_response(serializer.data)
 
@@ -30,14 +34,17 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
 
     @action(methods=['post'], detail=False, permission_classes=())
     def login(self, request, *args, **kwargs):
-        """用户登录
+        """
+        ## 用户登录
 
+        ```
         Params:
             username string 用户名
             password string 用户密码
 
         Returns:
             object 用户数据结构
+        ```
         """
         serializer = forms.LoginForm(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
