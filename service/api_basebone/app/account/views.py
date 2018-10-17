@@ -16,17 +16,11 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
         model = get_user_model()
         return create_serializer_class(model)
 
-    @action(detail=False, permission_classes=(), url_path='userinfo')
+    @action(detail=False, url_path='userinfo')
     def get_userinfo(self, request, *args, **kwargs):
         """检测是否是否登录"""
-        is_login = request.user and request.user.is_authenticated
-        result = {
-            'login': is_login,
-            'user': None
-        }
-        if is_login:
-            result['user'] = self.get_serializer(request.user).data
-        return success_response(result)
+        serializer = self.get_serializer(request.user)
+        return success_response(serializer.data)
 
     @action(methods=['post'], detail=False)
     def logout(self, request, *args, **kwargs):
