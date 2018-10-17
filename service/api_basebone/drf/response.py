@@ -41,4 +41,4 @@ def error_response(error_code, error_message=None, error_data=None):
             'error_message': error_message,
         }
 
-    return Response(response_data, status=HTTP_400_BAD_REQUEST)
+    return Response(response_data)
