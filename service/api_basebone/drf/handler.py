@@ -1,7 +1,7 @@
 import logging
 from django.conf import settings
 
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, APIException
 from rest_framework.views import exception_handler as default_exception_handler, set_rollback
 
 from .response import error_response
@@ -26,6 +26,13 @@ def exception_handler(exc, context):
 
     if isinstance(exc, ValidationError):
         return error_response(PARAMETER_FORMAT_ERROR, error_data=exc.detail)
+
+    if isinstance(exc, APIException):
+        api_exception = BusinessException(
+            error_code=exc.status_code,
+            error_message=exc.default_detail
+        )
+        return business_exception_handler(api_exception, context)
 
     response = default_exception_handler(exc, context)
     if response:
