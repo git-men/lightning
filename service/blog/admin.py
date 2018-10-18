@@ -23,10 +23,15 @@ class TagAdmin(ModelAdmin):
 class CategoryAdmin(ModelAdmin):
     list_display = ('id', 'name', 'show', 'parent')
 
+    class GMeta(ModelAdmin.GMeta):
+        parent_attr_map = (
+            ('parent', 'category_set', None),
+        )
+
 
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
     list_display = ('id', 'title', 'is_public', 'author')
 
     class GMeta(ModelAdmin.GMeta):
-        gmeta_auth_filter_field = 'author'
+        auth_filter_field = 'author'

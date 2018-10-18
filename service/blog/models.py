@@ -18,7 +18,9 @@ class Category(models.Model):
 
     name = models.CharField('名称', max_length=20)
     show = models.BooleanField('是否显示', default=True)
-    parent = models.ForeignKey('self', verbose_name='上级分类', on_delete=models.SET_NULL, null=True)
+    parent = models.ForeignKey(
+        'self', verbose_name='上级分类', on_delete=models.SET_NULL, null=True
+    )
 
     class Meta:
         verbose_name = '分类'

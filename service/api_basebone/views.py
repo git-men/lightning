@@ -107,8 +107,17 @@ class QuerySetMixin:
             return queryset
         return queryset
 
+    def get_queryset_by_with_tree(self, queryset):
+        """如果是树形结构，则需要做对应的过滤"""
+        if self.pass_meta_data_with_tree:
+            params = {
+                item[0]: item[2] for item in self.pass_meta_data_with_tree
+            }
+            return queryset.filter(**params)
+        return queryset
+
     def _get_queryset(self, queryset):
-        methods = ['filter_user', 'filter_conditions', 'order_by']
+        methods = ['filter_user', 'filter_conditions', 'order_by', 'with_tree']
         for item in methods:
             queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
         return queryset
@@ -142,7 +151,33 @@ class GenericViewMixin:
             )
 
         self.get_expand_fields()
+        self._get_data_with_tree(request)
         return result
+
+    def _get_data_with_tree(self, request):
+        """检测是否可以设置树形结构"""
+
+        self.pass_meta_data_with_tree = None
+
+        data_with_tree = False
+        # 检测客户端传进来的树形数据结构的参数
+        if request.method.upper() == 'GET':
+            data_with_tree = request.query_params.get(const.DATA_WITH_TREE, False)
+        elif request.method.upper() == 'POST':
+            data_with_tree = request.data.get(const.DATA_WITH_TREE, False)
+
+        # 如果客户端传进来的参数为真，则通过 admin 配置校验，即 admin 中有没有配置
+        if data_with_tree:
+            module = importlib.import_module(f'{self.app_label}.admin')
+            admin_class = getattr(module, f'{self.model.__name__}Admin', None)
+            if admin_class:
+                try:
+                    parent_attr_map = getattr(admin_class.GMeta, admin.GMETA_PARENT_ATTR_MAP, None)
+                    print(parent_attr_map)
+                    if parent_attr_map:
+                        self.pass_meta_data_with_tree = parent_attr_map
+                except Exception:
+                    pass
 
     def get_queryset(self):
         """动态的计算结果集
@@ -172,8 +207,10 @@ class GenericViewMixin:
         model = getattr(self, 'model', get_user_model())
 
         if not expand_fields:
-            return create_serializer_class(model)
-        return multiple_create_serializer_class(self.model, self.expand_fields)
+            return create_serializer_class(model, tree_structure=self.pass_meta_data_with_tree)
+        return multiple_create_serializer_class(
+            self.model, self.expand_fields, tree_structure=self.pass_meta_data_with_tree
+        )
 
 
 class CommonManageViewSet(FormMixin,

@@ -4,31 +4,27 @@ from collections import OrderedDict
 from rest_framework import serializers
 
 
+class RecursiveSerializer(serializers.Serializer):
+    """递归序列化类，目标是为了形成树形数据结构"""
+
+    def to_representation(self, value):
+        serializer = self.parent.parent.__class__(value, context=self.context)
+        return serializer.data
+
+
 class BaseModelSerializerMixin:
     """通用的序列化类的抽象"""
 
     class Meta:
         fields = '__all__'
 
-    def to_representation(self, instance):
-        """
-        根据客户端传入的展示字段列表进行筛选和解析
-        """
-        result = super().to_representation(instance)
-        request = self.context.get('request')
-
-        # display_fields = request.data.get('display_fields')
-        # # import pdb; pdb.set_trace()
-        # if display_fields and isinstance(display_fields, list):
-        #     return {
-        #         key: result[key]
-        #         for key in display_fields
-        #     }
-        return result
-
 
 def create_meta_class(model, exclude_fields=None):
-    """构建序列化类的 Meta"""
+    """构建序列化类的 Meta
+
+    Params:
+        exclude_fields list 排除的字段
+    """
 
     attrs = {
         'model': model,
@@ -40,13 +36,22 @@ def create_meta_class(model, exclude_fields=None):
     return type('Meta', (object, ), attrs)
 
 
-def create_serializer_class(model, exclude_fields=None, **kwargs):
-    """构建序列化类"""
+def create_serializer_class(model, exclude_fields=None, tree_structure=None, **kwargs):
+    """构建序列化类
+
+    Params:
+        tree_structure 二元元组 admin 中做对应配置
+    """
 
     attrs = {
         'Meta': create_meta_class(model, exclude_fields=None)
     }
     attrs.update(kwargs)
+
+    # 动态构建树形结构的字段
+    if tree_structure:
+        for item in tree_structure:
+            attrs[item[1]] = RecursiveSerializer(many=True)
 
     class_name = f'{model}ModelSerializer'
     return type(
@@ -94,7 +99,10 @@ def dg_attrs(index, model, field_dict, stop):
 
 
 def create_nested_serializer_class(model, field_list):
-    """构建嵌套序列化类"""
+    """构建嵌套序列化类
+
+    此方法仅仅为 multiple_create_serializer_class 方法服务
+    """
     field_length = len(field_list)
     if field_length == 1:
         return create_serializer_class(model)
@@ -123,7 +131,7 @@ def create_nested_serializer_class(model, field_list):
     return field_dict[0]['serializer']
 
 
-def multiple_create_serializer_class(model, expand_fields):
+def multiple_create_serializer_class(model, expand_fields, tree_structure=None):
     """多重创建序列化类"""
 
     expand_dict = range_expand_fields(expand_fields)
@@ -137,5 +145,5 @@ def multiple_create_serializer_class(model, expand_fields):
         attrs[key] = serializer_class(many=many)
 
     return create_serializer_class(
-        model, exclude_fields=None, **attrs
+        model, exclude_fields=None, tree_structure=tree_structure, **attrs
     )

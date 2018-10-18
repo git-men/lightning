@@ -8,4 +8,6 @@ DISPLAY_FIELDS = 'display_fields'
 EXPAND_FIELDS = 'expand_fields'
 # 排序字段
 ORDER_BY_FIELDS = 'order_by'
-META_AUTH_FILTER_FIELD = 'auth_filter_field'
+
+# 客户端请求的数据结构为树形
+DATA_WITH_TREE = 'data_with_tree'
