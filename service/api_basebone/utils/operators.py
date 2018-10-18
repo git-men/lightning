@@ -14,6 +14,7 @@ OPERATOR_MAP = {
     "startswith": "__startswith",
     "endswith": "__endswith",
     "contains": "__contains",
+    "icontains": "__icontains",
     "between": "__range",
     "near": "__near",
     "has": "__has",
