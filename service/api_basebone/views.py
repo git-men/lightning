@@ -155,6 +155,20 @@ class GenericViewMixin:
         self._get_data_with_tree(request)
         return result
 
+    def get_expand_fields(self):
+        """获取扩展字段并作为属性值赋予
+
+        注意使用扩展字段 get 方法和 post 方法的区别
+
+        get 方法使用 query string，这里需要解析
+        post 方法直接放到 body 中
+        """
+        if self.action in ['list', 'retrieve']:
+            fields = self.request.query_params.get(EXPAND_FIELDS)
+            self.expand_fields = fields.split(',') if fields else None
+        else:
+            self.expand_fields = self.request.data.get(EXPAND_FIELDS)
+
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
 
@@ -226,21 +240,8 @@ class CommonManageViewSet(FormMixin,
     def perform_update(self, serializer):
         return serializer.save()
 
-    def get_expand_fields(self):
-        """获取扩展字段并作为属性值赋予
-
-        注意使用扩展字段 get 方法和 post 方法的区别
-
-        get 方法使用 query string，这里需要解析
-        post 方法直接放到 body 中
-        """
-        if self.action in ['list', 'retrieve']:
-            fields = self.request.query_params.get(EXPAND_FIELDS)
-            self.expand_fields = fields.split(',') if fields else None
-        else:
-            self.expand_fields = self.request.data.get(EXPAND_FIELDS)
-
     def retrieve(self, request, *args, **kwargs):
+        """获取数据详情"""
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(serializer.data)
@@ -262,6 +263,7 @@ class CommonManageViewSet(FormMixin,
         return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
+        """全量更新数据"""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
@@ -275,10 +277,12 @@ class CommonManageViewSet(FormMixin,
         return success_response(serializer.data)
 
     def partial_update(self, request, *args, **kwargs):
+        """部分字段更新"""
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        """删除数据"""
         instance = self.get_object()
         self.perform_destroy(instance)
         return success_response()
