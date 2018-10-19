@@ -319,8 +319,10 @@ class CommonManageViewSet(FormMixin,
 
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
-        """批量操作
+        """
+        ## 批量操作
 
+        ```python
         这里可以执行各种操作，数据格式如下：
 
         {
@@ -331,6 +333,17 @@ class CommonManageViewSet(FormMixin,
         业务流程
             - 根据 action 获取对应的表单，然后做对应的验证
             - 执行对应的 action
+
+        批量删除的数据格式如下：
+
+        {
+            action: 'delete',
+            source: {
+                key: 'id', # 因为主键不一定是 id，也有肯能是其他
+                data: 主键的列表
+            }
+        }
+        ```
         """
         action = request.data.get('action', 'delete')
         if not action:
