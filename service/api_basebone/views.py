@@ -216,14 +216,17 @@ class GenericViewMixin:
         - 如果没有嵌套字段，则动态创建最简单的序列化类
         - 如果有嵌套字段，则动态创建引用字段的嵌套序列化类
         """
+
         # 这里只有做是为了使用 django-rest-swagger
         expand_fields = getattr(self, 'expand_fields', None)
         model = getattr(self, 'model', get_user_model())
+        pass_meta_data_with_tree = getattr(self, 'pass_meta_data_with_tree', None)
 
         if not expand_fields:
-            return create_serializer_class(model, tree_structure=self.pass_meta_data_with_tree)
+            return create_serializer_class(model, tree_structure=pass_meta_data_with_tree)
+
         return multiple_create_serializer_class(
-            self.model, self.expand_fields, tree_structure=self.pass_meta_data_with_tree
+            model, expand_fields, tree_structure=pass_meta_data_with_tree
         )
 
 
@@ -244,6 +247,18 @@ class CommonManageViewSet(FormMixin,
         """获取数据详情"""
         instance = self.get_object()
         serializer = self.get_serializer(instance)
+        return success_response(serializer.data)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            return success_response(response.data)
+
+        serializer = self.get_serializer(queryset, many=True)
         return success_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
