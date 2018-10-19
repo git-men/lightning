@@ -171,7 +171,6 @@ class GenericViewMixin:
             if admin_class:
                 try:
                     parent_attr_map = getattr(admin_class.GMeta, admin.GMETA_PARENT_ATTR_MAP, None)
-                    print(parent_attr_map)
                     if parent_attr_map:
                         self.pass_meta_data_with_tree = parent_attr_map
                 except Exception:
@@ -271,6 +270,10 @@ class CommonManageViewSet(FormMixin,
         if getattr(instance, '_prefetched_objects_cache', None):
             instance._prefetched_objects_cache = {}
         return success_response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

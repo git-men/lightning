@@ -54,6 +54,7 @@ THIRD_PARTY_APPS = [
     'django_extensions',
     'rest_framework',
     'rest_framework_swagger',
+    'api_basebone',
 ]
 
 INTERNAL_APPS = [

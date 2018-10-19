@@ -51,7 +51,7 @@ class BaseBoneSimpleRouter(SimpleRouter):
             mapping={
                 'post': 'retrieve',
                 'put': 'update',
-                # 'patch': 'partial_update',
+                'patch': 'partial_update',
                 'delete': 'destroy'
             },
             name='{basename}-detail',
