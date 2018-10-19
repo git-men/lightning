@@ -8,7 +8,7 @@ GMETA_AUTH_FILTER_FIELD = 'auth_filter_field'
 
 # 声明父亲字段和 related_name 的属性，数据结构如下：
 # (
-#   (指向自身的字段，指向自身字段的 related_name),
+#   (指向自身的字段，指向自身字段的 related_name, 默认值),
 #   ...
 # )
 # 默认为一个空的元组

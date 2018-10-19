@@ -1,0 +1,6 @@
+include AUTHORS
+include MANIFEST.in
+include requirements.in
+include *.md
+global-exclude __pycache__
+global-exclude *.py[co]
