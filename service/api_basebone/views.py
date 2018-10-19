@@ -37,6 +37,9 @@ class FormMixin(object):
         """获取更新数据的验证表单"""
         return create_form_class(self.model)
 
+    def get_partial_update_form(self):
+        return create_form_class(self.model)
+
     def get_validate_form(self, action):
         """获取验证表单"""
         return getattr(self, 'get_{}_form'.format(action))()
