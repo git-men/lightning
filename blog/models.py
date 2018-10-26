@@ -14,6 +14,19 @@ class Tag(models.Model):
         return self.name
 
 
+class ImageLib(models.Model):
+
+    name = models.CharField('名称', max_length=20, blank=True, default='')
+    url = models.URLField('图片地址', max_length=200)
+
+    class Meta:
+        verbose_name = '图库'
+        verbose_name_plural = '图库'
+
+    def __str__(self):
+        return self.name
+
+
 class Category(models.Model):
 
     name = models.CharField('名称', max_length=20)
@@ -42,6 +55,7 @@ class Article(models.Model):
         settings.AUTH_USER_MODEL, verbose_name='作者',
         on_delete=models.SET_NULL, null=True)
     tags = models.ManyToManyField(Tag, verbose_name='标签')
+    carousels = models.ManyToManyField(ImageLib, verbose_name='轮播图库')
     categories = models.ManyToManyField(Category, verbose_name='所属分类')
 
     class Meta:

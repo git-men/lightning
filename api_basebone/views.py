@@ -262,12 +262,78 @@ class CommonManageViewSet(FormMixin,
         serializer = self.get_serializer(queryset, many=True)
         return success_response(serializer.data)
 
+    def _pre_many_to_many(self, field, key, value, update_data):
+        """处理多对多关系"""
+        # 如果多对多关系的字段的值不是列表，不做处理
+        if not (isinstance(value, list) and value):
+            return
+
+        pure_data, object_data = [], []
+        for item in value:
+            object_data.append(item) if isinstance(item, dict) else pure_data.append(item)
+
+        # 如果不包含对象数据，则不做任何处理
+        if not object_data:
+            return
+
+        serializer = create_serializer_class(field.related_model)(data=object_data, many=True)
+        serializer.is_valid(raise_exception=True)
+
+        create_data = [field.related_model.objects.create(**item).id for item in object_data]
+        update_data[key] = pure_data + create_data
+        return update_data
+
+    def _pre_one_to_many(self, field, key, value, update_data):
+        """处理一对多关系"""
+        if not isinstance(value, dict):
+            return
+
+        serializer = create_serializer_class(field.related_model)(data=value)
+        serializer.is_valid(raise_exception=True)
+        update_data[key] = field.related_model.objects.create(**value).id
+        return update_data
+
+    def _create_update_pre_hand(self, request, *args, **kwargs):
+        """创建和更新的预处理
+
+        例如文章和图片存在多对多，在新建文章时，对于图片，前端有可能会 push 以下数据
+            - 包含对象的列表，[{字段：值，字段：值...}]
+            - 包含 id 的列表
+            - 包含 id 和对象的列表
+
+        对于这种场景，需要检查客户端传进来的数据，同时需要做对应的预处理
+
+        这里面包含两种关系
+        - 一对多
+        - 多不多
+
+        TODO：暂时只支持多对多关系
+        """
+        if not (request.data and isinstance(request.data, dict)):
+            return
+
+        update_data = {}
+        for key, value in request.data.items():
+            field = meta.get_relation_field(self.model, key)
+            if not field:
+                continue
+            print(field)
+
+            if field.many_to_many:
+                self._pre_many_to_many(field, key, value, update_data)
+            else:
+                self._pre_one_to_many(field, key, value, update_data)
+        request.data.update(update_data)
+
     def create(self, request, *args, **kwargs):
         """
         这里校验表单和序列化类分开创建
 
         原因：序列化类有可能嵌套
         """
+
+        self._create_update_pre_hand(request, *args, **kwargs)
+
         serializer = self.get_validate_form(self.action)(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -280,6 +346,9 @@ class CommonManageViewSet(FormMixin,
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
+
+        self._create_update_pre_hand(request, *args, **kwargs)
+
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)

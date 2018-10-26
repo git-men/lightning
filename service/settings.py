@@ -39,9 +39,8 @@ ALLOWED_HOSTS = ['*']
 DEBUG = env('DEBUG')
 
 
-# Application definition
-
-INSTALLED_APPS = [
+# 内置的 App
+BUILT_IN_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+# 第三方的 App
 THIRD_PARTY_APPS = [
     'django_extensions',
     'rest_framework',
@@ -57,12 +57,14 @@ THIRD_PARTY_APPS = [
     'api_basebone',
 ]
 
+# 项目中开发的 App
 INTERNAL_APPS = [
     'member',
     'blog',
 ]
 
-INSTALLED_APPS += THIRD_PARTY_APPS + INTERNAL_APPS
+# Application definition
+INSTALLED_APPS = BUILT_IN_APPS + THIRD_PARTY_APPS + INTERNAL_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -143,25 +145,20 @@ AUTH_PASSWORD_VALIDATORS = []
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
-
 LANGUAGE_CODE = 'zh-hans'
-
 TIME_ZONE = 'Asia/Shanghai'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
-
 STATIC_URL = '/static/'
 
 AUTH_USER_MODEL = 'member.Author'
 
+# 跨域设置
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
@@ -188,5 +185,5 @@ ALI_YUN_OSS_HOST = env('ALI_YUN_OSS_HOST')
 ALI_YUN_OSS_BUCKET = env('ALI_YUN_OSS_BUCKET')
 
 
-# django_extensions
+# Django 扩展设置
 SHELL_PLUS_PRINT_SQL = True
