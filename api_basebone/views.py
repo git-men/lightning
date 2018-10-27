@@ -26,6 +26,7 @@ from .serializers import (
 
 from .utils import meta
 from .utils.operators import build_filter_conditions
+from .app.account.forms import UserCreateUpdateForm
 
 
 class FormMixin(object):
@@ -336,7 +337,10 @@ class CommonManageViewSet(FormMixin,
 
         self._create_update_pre_hand(request, *args, **kwargs)
 
-        serializer = self.get_validate_form(self.action)(data=request.data)
+        if self.model == get_user_model():
+            serializer = UserCreateUpdateForm(data=request.data)
+        else:
+            serializer = self.get_validate_form(self.action)(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         instance = self.perform_create(serializer)
@@ -353,7 +357,11 @@ class CommonManageViewSet(FormMixin,
 
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+
+        if self.model == get_user_model():
+            serializer = UserCreateUpdateForm(data=request.data)
+        else:
+            serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
         instance = self.perform_update(serializer)
@@ -378,6 +386,8 @@ class CommonManageViewSet(FormMixin,
     def set(self, request, app, model, **kwargs):
         """获取列表数据"""
         queryset = self.filter_queryset(self.get_queryset())
+
+
 
         page = self.paginate_queryset(queryset)
         if page is not None:

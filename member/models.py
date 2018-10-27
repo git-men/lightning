@@ -3,7 +3,7 @@ from django.db import models
 
 
 class Ship(models.Model):
-    
+
     name = models.CharField('名称', max_length=20)
     title = models.CharField('标题', max_length=20, blank=True, default='')
 
@@ -26,7 +26,7 @@ class Author(AbstractUser):
     city = models.CharField('城市', max_length=20, blank=True, default='')
     gender = models.PositiveIntegerField(
         '性别', choices=GENDER_CHOICES, default=1)
-    ship = models.ForeignKey(Ship, verbose_name='船', on_delete=models.SET_NULL, null=True)
+    ship = models.ForeignKey(Ship, verbose_name='船', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         verbose_name = '作者'
