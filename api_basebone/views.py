@@ -8,6 +8,9 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
 from . import batch_actions
+
+from .app.account.forms import UserCreateUpdateForm
+
 from .core import admin, exceptions, const
 from .core.const import (
     DISPLAY_FIELDS,
@@ -18,6 +21,7 @@ from .core.const import (
 
 from .drf.response import success_response
 from .drf.pagination import PageNumberPagination
+
 from .forms import create_form_class
 from .serializers import (
     create_serializer_class,
@@ -26,7 +30,6 @@ from .serializers import (
 
 from .utils import meta, get_app
 from .utils.operators import build_filter_conditions
-from .app.account.forms import UserCreateUpdateForm
 
 
 class FormMixin(object):
@@ -359,7 +362,7 @@ class CommonManageViewSet(FormMixin,
         instance = self.get_object()
 
         if self.model == get_user_model():
-            serializer = UserCreateUpdateForm(data=request.data)
+            serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
         else:
             serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)

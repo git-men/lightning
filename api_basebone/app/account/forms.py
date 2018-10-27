@@ -30,6 +30,11 @@ class UserCreateUpdateForm(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
+        extra_kwargs = {
+            'password': {
+                'required': False
+            }
+        }
 
     def create(self, validated_data):
         """创建"""
