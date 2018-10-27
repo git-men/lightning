@@ -24,7 +24,7 @@ from .serializers import (
     multiple_create_serializer_class
 )
 
-from .utils import meta
+from .utils import meta, get_app
 from .utils.operators import build_filter_conditions
 from .app.account.forms import UserCreateUpdateForm
 
@@ -137,7 +137,7 @@ class GenericViewMixin:
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
-        if self.app_label not in settings.INSTALLED_APPS:
+        if get_app(self.app_label) not in settings.INSTALLED_APPS:
             raise exceptions.BusinessException(
                 error_code=exceptions.APP_LABEL_IS_INVALID
             )
