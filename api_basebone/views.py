@@ -17,6 +17,7 @@ from .core.const import (
 )
 
 from .drf.response import success_response
+from .drf.pagination import PageNumberPagination
 from .forms import create_form_class
 from .serializers import (
     create_serializer_class,
@@ -237,6 +238,7 @@ class CommonManageViewSet(FormMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
     permission_classes = (permissions.IsAuthenticated, )
+    pagination_class = PageNumberPagination
 
     def perform_create(self, serializer):
         return serializer.save()
