@@ -46,7 +46,7 @@ class UserCreateUpdateForm(serializers.ModelSerializer):
         if 'password' in validated_data:
             password = validated_data.pop('password')
             instance = super().update(instance, validated_data)
-            instance.password = user.set_password(password)
+            instance.set_password(password)
             instance.save(update_fields=['password'])
         else:
             instance = super().update(instance, validated_data)
