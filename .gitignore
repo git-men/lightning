@@ -103,4 +103,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-.drf_api_basebone/
+.drf_api_basebone.egg-info/
