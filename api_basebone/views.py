@@ -417,45 +417,13 @@ class CommonManageViewSet(FormMixin,
         ## 批量操作
 
         ```python
-        这里可以执行各种操作，数据格式如下：
-
         {
-            action: xxxx,
-            source: 具体的数据结构有对应的 action 决定
-        }
-
-        业务流程
-            - 根据 action 获取对应的表单，然后做对应的验证
-            - 执行对应的 action
-
-        批量删除的数据格式如下：
-
-        {
-            action: 'delete',
-            source: {
-                key: 'id', # 因为主键不一定是 id，也有肯能是其他
-                data: 主键的列表
-            }
+            action: 动作,
+            data: 主键的列表
         }
         ```
         """
-        action = request.data.get('action', 'delete')
-        if not action:
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data='缺少对应的 action'
-            )
-
-        action = action.lower()
-        form_class = getattr(batch_actions, f'{action}Form', None)
-        if not form_class:
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data='传入的 action 不支持'
-            )
-
-        serializer = form_class(data=request.data.get('source'), context=self.get_serializer_context())
+        serializer = batch_actions.BatchActionForm(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
-
         serializer.handle()
         return success_response()
