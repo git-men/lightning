@@ -40,7 +40,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
     """构建序列化类
 
     Params:
-        tree_structure 二元元组 admin 中做对应配置
+        tree_structure 元组 admin 中做对应配置
     """
 
     attrs = {
@@ -50,8 +50,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
 
     # 动态构建树形结构的字段
     if tree_structure:
-        for item in tree_structure:
-            attrs[item[1]] = RecursiveSerializer(many=True)
+        attrs[tree_structure[1]] = RecursiveSerializer(many=True)
 
     class_name = f'{model}ModelSerializer'
     return type(

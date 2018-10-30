@@ -104,3 +104,7 @@ venv.bak/
 .mypy_cache/
 
 tests/
+blog/
+member/
+service/
+manage.py

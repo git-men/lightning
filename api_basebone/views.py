@@ -50,6 +50,14 @@ class FormMixin(object):
         """获取验证表单"""
         return getattr(self, 'get_{}_form'.format(action))()
 
+    def get_bsm_model_admin(self):
+        """获取 BSM Admin 模块"""
+        try:
+            module = importlib.import_module(f'{self.app_label}.bsm.admin')
+            return getattr(module, f'{self.model.__name__}Admin', None)
+        except Exception:
+            return
+
 
 class QuerySetMixin:
     """结果集处理集合"""
@@ -64,14 +72,19 @@ class QuerySetMixin:
         if user and user.is_staff and user.is_superuser:
             return queryset
 
+        # 检测模型中是否有字段引用了用户模型
         has_user_field = meta.get_related_model_field(self.model, get_user_model())
         if has_user_field:
-            module = importlib.import_module(f'{self.app_label}.admin')
-            admin_class = getattr(module, f'{self.model.__name__}Admin', None)
+            # 如果有，则读取 BSM Admin 中的配置
+            # module = importlib.import_module(f'{self.app_label}.admin')
+            # admin_class = getattr(module, f'{self.model.__name__}Admin', None)
+            admin_class = self.get_bsm_model_admin()
+
             if admin_class:
                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                 try:
-                    field_name = getattr(admin_class.GMeta, admin.GMETA_AUTH_FILTER_FIELD, None)
+                    field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
+                    filter_by_login_user = getattr(admin_class, admin.BSM_FILTER_BY_LOGIN_USER, True)
                     if field_name:
                         return queryset.filter(**{field_name: user})
                     else:
@@ -116,9 +129,9 @@ class QuerySetMixin:
 
     def get_queryset_by_with_tree(self, queryset):
         """如果是树形结构，则需要做对应的过滤"""
-        if self.pass_meta_data_with_tree:
+        if self.tree_data:
             params = {
-                item[0]: item[2] for item in self.pass_meta_data_with_tree
+                self.tree_data[0]: self.tree_data[2]
             }
             return queryset.filter(**params)
         return queryset
@@ -178,7 +191,7 @@ class GenericViewMixin:
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
 
-        self.pass_meta_data_with_tree = None
+        self.tree_data = None
 
         data_with_tree = False
         # 检测客户端传进来的树形数据结构的参数
@@ -189,13 +202,14 @@ class GenericViewMixin:
 
         # 如果客户端传进来的参数为真，则通过 admin 配置校验，即 admin 中有没有配置
         if data_with_tree:
-            module = importlib.import_module(f'{self.app_label}.admin')
-            admin_class = getattr(module, f'{self.model.__name__}Admin', None)
+            admin_class = self.get_bsm_model_admin()
             if admin_class:
                 try:
-                    parent_attr_map = getattr(admin_class.GMeta, admin.GMETA_PARENT_ATTR_MAP, None)
-                    if parent_attr_map:
-                        self.pass_meta_data_with_tree = parent_attr_map
+                    parent_field = getattr(admin_class, admin.BSM_PARENT_FIELD, None)
+                    if parent_field:
+                        parent_field_data = meta.tree_parent_field(self.model, parent_field)
+                        if parent_field_data:
+                            self.tree_data = parent_field_data
                 except Exception:
                     pass
 
@@ -226,13 +240,13 @@ class GenericViewMixin:
         # 这里只有做是为了使用 django-rest-swagger
         expand_fields = getattr(self, 'expand_fields', None)
         model = getattr(self, 'model', get_user_model())
-        pass_meta_data_with_tree = getattr(self, 'pass_meta_data_with_tree', None)
+        tree_data = getattr(self, 'tree_data', None)
 
         if not expand_fields:
-            return create_serializer_class(model, tree_structure=pass_meta_data_with_tree)
+            return create_serializer_class(model, tree_structure=tree_data)
 
         return multiple_create_serializer_class(
-            model, expand_fields, tree_structure=pass_meta_data_with_tree
+            model, expand_fields, tree_structure=tree_data
         )
 
 
@@ -323,7 +337,6 @@ class CommonManageViewSet(FormMixin,
             field = meta.get_relation_field(self.model, key)
             if not field:
                 continue
-            print(field)
 
             if field.many_to_many:
                 self._pre_many_to_many(field, key, value, update_data)
@@ -389,9 +402,6 @@ class CommonManageViewSet(FormMixin,
     def set(self, request, app, model, **kwargs):
         """获取列表数据"""
         queryset = self.filter_queryset(self.get_queryset())
-
-
-
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
