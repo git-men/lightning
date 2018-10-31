@@ -2,8 +2,18 @@
 涉及到 model._meta 相关的工具方法
 """
 
+import importlib
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.fields import NOT_PROVIDED
+
+
+def get_concrete_fields(model):
+    return [
+        item
+        for item in model._meta.get_fields()
+        if item.concrete
+    ]
 
 
 def get_related_model_field(model, related_model):
@@ -67,4 +77,21 @@ def tree_parent_field(model, field_name):
         default_value = get_field_default_value(field)
         return (field_name, related_name, default_value)
     except Exception:
+        return
+
+
+def get_export_apps():
+    """获取导出配置的 app"""
+    apps = getattr(settings, 'BSM_EXPORT_APPS', None)
+    if apps and isinstance(apps, list):
+        return apps
+    return ['auth'] + settings.INTERNAL_APPS
+
+
+def get_bsm_model_admin(model):
+    """获取 BSM Admin 模块"""
+    try:
+        module = importlib.import_module(f'{model._meta.app_label}.bsm.admin')
+        return getattr(module, f'{model.__name__}Admin', None)
+    except Exception as e:
         return

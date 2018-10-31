@@ -12,6 +12,37 @@ BSM_FILTER_BY_LOGIN_USER = 'filter_by_login_user'
 # 声明父亲字段, 只用来针对树形结构做声明，只能配置单一的字段
 BSM_PARENT_FIELD = 'parent_field'
 
+BSM_DISPLAY = 'display'
+
+BSM_INLINE_ACTIONS = 'inline_actions'
+
+BSM_BATCH_ACTION = 'action'
+
+BSM_MODAL_FROM = 'modal_form'
+
+BSM_MODAL_CONFIG = 'modal_config'
+
+BSM_FILTER = 'filter'
+
+BSM_FORM_FIELDS = 'form_fields'
+
+BSM_GROUP_STYLE = 'group_style'
+
+# 合法的管理端的设置
+VALID_MANAGE_ATTRS = [
+    BSM_AUTH_FILTER_FIELD,
+    BSM_FILTER_BY_LOGIN_USER,
+    BSM_PARENT_FIELD,
+    BSM_DISPLAY,
+    BSM_INLINE_ACTIONS,
+    BSM_BATCH_ACTION,
+    BSM_MODAL_FROM,
+    BSM_MODAL_CONFIG,
+    BSM_FILTER,
+    BSM_FORM_FIELDS,
+    BSM_GROUP_STYLE,
+]
+
 # 属性和默认值映射
 ATTRS_DICT = {
     BSM_AUTH_FILTER_FIELD: None,

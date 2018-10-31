@@ -13,6 +13,16 @@ urlpatterns = [
         )
     ),
 
+    # 配置输出
+    path(
+        'basebone/config/',
+        include(
+            ('api_basebone.urls_config', app_name),
+            namespace='schema.config'
+        )
+    ),
+
+
     # 通用 app 管理端
     path(
         'basebone/manage/',

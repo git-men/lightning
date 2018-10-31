@@ -30,6 +30,8 @@ from .serializers import (
 
 from .utils import meta, get_app
 from .utils.operators import build_filter_conditions
+from .export.fields import get_app_model_config
+from .export.admin import get_app_admin_config
 
 
 class FormMixin(object):
@@ -427,3 +429,19 @@ class CommonManageViewSet(FormMixin,
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
+
+
+class ConfigViewSet(viewsets.GenericViewSet):
+    """读取配置接口"""
+
+    @action(detail=False, url_path='shema')
+    def get_schema(self, request, *args, **kwargs):
+        """获取 schema 配置"""
+        data = get_app_model_config()
+        return success_response(data)
+
+    @action(detail=False, url_path='admin')
+    def get_admin(self, request, *args, **kwargs):
+        """获取 admin 配置"""
+        data = get_app_admin_config()
+        return success_response(data)
