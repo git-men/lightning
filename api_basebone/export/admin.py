@@ -12,19 +12,14 @@ def admin_model_config(model):
     config = {}
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
     module = get_bsm_model_admin(model)
-    if not module:
-        return {
-            key: {}
-        }
-
-    for item in dir(module):
-        if item in VALID_MANAGE_ATTRS:
-            config[underline_to_camel(item)] = getattr(module, item, None)
+    if module:
+        for item in dir(module):
+            if item in VALID_MANAGE_ATTRS:
+                config[underline_to_camel(item)] = getattr(module, item, None)
 
     # 转换 action
     model_actions = get_model_action(model)
     if model_actions:
-        print(model_actions)
         config[BSM_BATCH_ACTION] = [
             [key, getattr(value, 'human_name', key)]
             for key, value in model_actions.items()
