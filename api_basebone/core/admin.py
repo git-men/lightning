@@ -28,6 +28,8 @@ BSM_FORM_FIELDS = 'form_fields'
 
 BSM_GROUP_STYLE = 'group_style'
 
+BSM_LIST_STYLE = 'list_style'
+
 # 合法的管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -41,6 +43,7 @@ VALID_MANAGE_ATTRS = [
     BSM_FILTER,
     BSM_FORM_FIELDS,
     BSM_GROUP_STYLE,
+    BSM_LIST_STYLE,
 ]
 
 # 属性和默认值映射
