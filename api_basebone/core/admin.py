@@ -81,7 +81,6 @@ class BSMAdminModule:
 def register(admin_class):
     _meta = admin_class.Meta.model._meta
     key = f'{_meta.app_label}__{_meta.model_name}'
-    print(key, 'this is register admin class')
     if key not in BSMAdminModule.modules:
         BSMAdminModule.modules[key] = admin_class
     return admin_class
