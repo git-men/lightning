@@ -54,21 +54,6 @@ ATTRS_DICT = {
 }
 
 
-class BaseMetaclass(type):
-
-    def __new__(cls, name, bases, attrs):
-        base_attrs = ATTRS_DICT
-        base_attrs.update(attrs)
-        return super(BaseMetaclass, cls).__new__(cls, name, bases, base_attrs)
-
-
-class ModelAdmin(DjangoModelAdmin):
-
-    @six.add_metaclass(BaseMetaclass)
-    class GMeta:
-        pass
-
-
 class BSMMetaClass(type):
     """
     重写通用的 Admin 的类，和 Django 的 ModelAdmin 完全区分开来，
@@ -81,7 +66,7 @@ class BSMMetaClass(type):
         return super(BSMMetaClass, cls).__new__(cls, name, bases, base_attrs)
 
 
-@six.add_metaclass(BSMMetaClass)
+# @six.add_metaclass(BSMMetaClass)
 class BSMAdmin:
     """通用套件全局定义管理配置的基类
 
@@ -89,3 +74,7 @@ class BSMAdmin:
     前端可以根据配置动态的构造管理后台界面
     """
     pass
+
+
+for key, value in ATTRS_DICT.items():
+    setattr(BSMAdmin, key, value)
