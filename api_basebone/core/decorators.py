@@ -13,7 +13,7 @@ def action(model, name):
         @wraps(func)
         def wrapper(request, queryset):
             return func(request, queryset)
-        wrapper.human_name = name
+        wrapper.short_description = name
 
         bsm_action_map = getattr(model, BSM_BATCH_ACTION, None)
         if bsm_action_map is None:

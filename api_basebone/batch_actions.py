@@ -17,7 +17,7 @@ def delete(request, queryset):
     queryset.delete()
 
 
-delete.human_name = '删除'
+delete.short_description = '删除'
 
 
 default_action_map = {
@@ -30,14 +30,14 @@ def get_model_action(model):
     bsm_batch_actions = {}
     bsm_batch_actions.update(default_action_map)
 
-    model_actions = None
     try:
         importlib.import_module(f'{model._meta.app_label}.bsm.actions')
         model_actions = getattr(model, BSM_BATCH_ACTION, None)
+        if model_actions:
+            bsm_batch_actions.update(model_actions)
     except Exception:
         pass
-    if model_actions:
-        bsm_batch_actions.update(model_actions)
+
     return bsm_batch_actions
 
 

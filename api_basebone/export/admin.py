@@ -21,7 +21,7 @@ def admin_model_config(model):
     model_actions = get_model_action(model)
     if model_actions:
         config[BSM_BATCH_ACTION] = [
-            [key, getattr(value, 'human_name', key)]
+            [key, getattr(value, 'short_description', key)]
             for key, value in model_actions.items()
         ]
 
@@ -31,6 +31,7 @@ def admin_model_config(model):
 
 
 def get_app_admin_config():
+    """获取应用管理的配置"""
     export_apps = get_export_apps()
     config = {}
     if not export_apps:

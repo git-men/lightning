@@ -20,7 +20,7 @@ def get_install_require_packages():
     return packages
 
 
-with open('README.MD', 'r') as file:
+with open('README.md', 'r') as file:
     long_description = file.read()
 
 
