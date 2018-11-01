@@ -88,10 +88,16 @@ def get_export_apps():
     return ['auth'] + settings.INTERNAL_APPS
 
 
-def get_bsm_model_admin(model):
-    """获取 BSM Admin 模块"""
+def get_bsm_app_admin(app_label):
+    """获取 BSM 应用的 admin"""
     try:
-        module = importlib.import_module(f'{model._meta.app_label}.bsm.admin')
-        return getattr(module, f'{model.__name__}Admin', None)
+        return importlib.import_module(f'{app_label}.bsm.admin')
     except Exception as e:
         return
+
+
+def get_bsm_model_admin(model):
+    """获取 BSM Admin 模块"""
+    module = get_bsm_app_admin(model._meta.app_label)
+    if module:
+        return getattr(module, f'{model.__name__}Admin', None)

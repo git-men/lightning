@@ -2,7 +2,7 @@ from django.apps import apps
 
 from api_basebone.batch_actions import get_model_action
 from api_basebone.core.admin import VALID_MANAGE_ATTRS, BSM_BATCH_ACTION
-from api_basebone.utils.meta import get_export_apps, get_bsm_model_admin
+from api_basebone.utils.meta import get_export_apps, get_bsm_model_admin, get_bsm_app_admin
 from api_basebone.utils.format import underline_to_camel
 
 
@@ -12,6 +12,7 @@ def admin_model_config(model):
     config = {}
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
     module = get_bsm_model_admin(model)
+
     if module:
         for item in dir(module):
             if item in VALID_MANAGE_ATTRS:
@@ -30,6 +31,15 @@ def admin_model_config(model):
     }
 
 
+def load_admin_module():
+    """加载 admin 的 module"""
+    export_apps = get_export_apps()
+    if not export_apps:
+        return
+    for app_label in export_apps:
+        get_bsm_app_admin(app_label)
+
+
 def get_app_admin_config():
     """获取应用管理的配置"""
     export_apps = get_export_apps()
@@ -41,7 +51,6 @@ def get_app_admin_config():
         try:
             app = apps.get_app_config(item)
             for m in app.get_models():
-                print(item, m)
                 config.update(admin_model_config(m))
         except Exception:
             pass

@@ -22,7 +22,6 @@ urlpatterns = [
         )
     ),
 
-
     # 通用 app 管理端
     path(
         'basebone/manage/',

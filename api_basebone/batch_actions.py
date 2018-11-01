@@ -37,7 +37,6 @@ def get_model_action(model):
             bsm_batch_actions.update(model_actions)
     except Exception:
         pass
-
     return bsm_batch_actions
 
 

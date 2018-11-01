@@ -16,24 +16,29 @@ BSM_DISPLAY = 'display'
 
 BSM_INLINE_ACTIONS = 'inline_actions'
 
+# 批量操作
 BSM_BATCH_ACTION = 'action'
 
 BSM_MODAL_FROM = 'modal_form'
 
 BSM_MODAL_CONFIG = 'modal_config'
 
+# 表单的过滤
 BSM_FILTER = 'filter'
 
+# 表单
 BSM_FORM_FIELDS = 'form_fields'
 
+# 表单分组的风格
 BSM_GROUP_STYLE = 'group_style'
 
+# 列表的风格
 BSM_LIST_STYLE = 'list_style'
 
-# 合法的管理端的设置
+# 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
-    BSM_FILTER_BY_LOGIN_USER,
+    # BSM_FILTER_BY_LOGIN_USER,
     BSM_PARENT_FIELD,
     BSM_DISPLAY,
     BSM_INLINE_ACTIONS,
@@ -54,19 +59,6 @@ ATTRS_DICT = {
 }
 
 
-class BSMMetaClass(type):
-    """
-    重写通用的 Admin 的类，和 Django 的 ModelAdmin 完全区分开来，
-    这里为了统一属性的，重写 Meta    
-    """
-
-    def __new__(cls, name, bases, attrs):
-        base_attrs = ATTRS_DICT
-        base_attrs.update(attrs)
-        return super(BSMMetaClass, cls).__new__(cls, name, bases, base_attrs)
-
-
-# @six.add_metaclass(BSMMetaClass)
 class BSMAdmin:
     """通用套件全局定义管理配置的基类
 
@@ -78,3 +70,18 @@ class BSMAdmin:
 
 for key, value in ATTRS_DICT.items():
     setattr(BSMAdmin, key, value)
+
+
+class BSMAdminModule:
+    """管理项目的 admin 的所有的 BSM 类"""
+
+    modules = {}
+
+
+def register(admin_class):
+    _meta = admin_class.Meta.model._meta
+    key = f'{_meta.app_label}__{_meta.model_name}'
+    print(key, 'this is register admin class')
+    if key not in BSMAdminModule.modules:
+        BSMAdminModule.modules[key] = admin_class
+    return admin_class
