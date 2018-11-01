@@ -60,6 +60,10 @@ FIELDS = {
         'name': 'text',
         'displayName': '长文本',
     },
+    'RichText': {
+        'name': 'richtext',
+        'displayName': '富文本',
+    },
     'Integer': {
         'name': 'integer',
         'displayName': '整型',

@@ -17,14 +17,32 @@ DJANGO_FIELD_TYPE_MAP = {
     'IntegerField': 'Integer',
     'TextField': 'Text',
     'TimeField': 'Time',
-    'URLField': 'string',
+    'URLField': 'String',
     'ForeignKey': 'Ref',
     'OneToOneField': 'Ref',
     'ManyToManyField': 'RefMult',
+    'BoneRichTextField': 'RichText',
+    'BoneImageUrlField': 'Image',
 }
 
 
+def get_gmeta_class(model):
+    """获取模型中的 GMeta 类"""
+    return getattr(model, 'GMeta', None)
+
+
 class FieldConfig:
+
+    def _get_extra_params(self, field, data_type):
+        """获取 Gmeta 中声明的表单的重置的配置"""
+        gmeta_class = get_gmeta_class(field.model)
+        if not gmeta_class:
+            return {}
+        field_form_config = getattr(gmeta_class, 'field_form_config', None)
+        if not field_form_config:
+            return {}
+
+        return field_form_config.get(field.name, {})
 
     def _get_common_field_params(self, field, data_type):
         config = {
@@ -46,9 +64,16 @@ class FieldConfig:
 
         return config
 
+    def normal_field_params(self, field, data_type):
+        base = self._get_common_field_params(field, data_type)
+        base['maxLength'] = field.max_length
+        base.update(self._get_extra_params(field, data_type))
+        return base
+
     def string_params(self, field, data_type):
         base = self._get_common_field_params(field, data_type)
         base['maxLength'] = field.max_length
+        base.update(self._get_extra_params(field, data_type))
         return base
 
     def ref_params(self, field, data_type):
@@ -61,6 +86,7 @@ class FieldConfig:
         base = self._get_common_field_params(field, data_type)
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+        base.update(self._get_extra_params(field, data_type))
         return base
 
 
@@ -71,21 +97,34 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
+    model_gmeta = get_gmeta_class(model)
+    title_field = 'id' if model_gmeta is None else getattr(model_gmeta, 'title_field', 'id')
+
     config = []
     for item in fields:
-        field_type = DJANGO_FIELD_TYPE_MAP.get(item.get_internal_type(), None)
+        field_type = None
+
+        # 抓取 internal_type
+        field_type_func = getattr(item, 'get_bsm_internal_type', None)
+
+        if field_type_func:
+            field_type = DJANGO_FIELD_TYPE_MAP.get(item.get_bsm_internal_type())
+        else:
+            field_type = DJANGO_FIELD_TYPE_MAP.get(item.get_internal_type())
+
         if field_type is not None:
             data_type = FIELDS.get(field_type)['name']
             function = getattr(field_config, '{}_params'.format(field_type.lower()), None)
             if function is not None:
                 config.append(function(item, data_type))
             else:
-                config.append(field_config._get_common_field_params(item, data_type))
+                config.append(field_config.normal_field_params(item, data_type))
 
     return {
         key: {
             'name': key,
             'displayName': model._meta.verbose_name,
+            'titleField': title_field,
             'fields': config
         }
     }
