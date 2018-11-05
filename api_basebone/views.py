@@ -442,7 +442,7 @@ class CommonManageViewSet(FormMixin,
 class ConfigViewSet(viewsets.GenericViewSet):
     """读取配置接口"""
 
-    @action(detail=False, url_path='shema')
+    @action(detail=False, url_path='schema')
     def get_schema(self, request, *args, **kwargs):
         """获取 schema 配置"""
         data = get_app_model_config()
