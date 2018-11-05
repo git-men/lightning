@@ -24,6 +24,11 @@ class Command(BaseCommand):
             help='指定导出配置的类型, 可选 admin schema, all'
         )
 
+    def _get_host(self):
+        """获取请求服务地址"""
+        default_host = 'http://127.0.0.1:8000'
+        return getattr(settings, 'BSM_EXPORT_SERVICE_HOST', default_host)
+
     def _get_admin_config(self, action):
         """导出 admin 配置"""
         if action not in ['all', 'admin']:
@@ -31,8 +36,10 @@ class Command(BaseCommand):
 
         try:
             print('-------------------开始导出 admin 配置------------------')
-            content = {'result': get_app_admin_config()}
-            content = render_to_string(self.ADMIN_TEMPLATE, content)
+            host = self._get_host()
+            url = os.path.join(host, 'basebone/config/admin/')
+            data = requests.get(url).json()
+            content = render_to_string(self.ADMIN_TEMPLATE, data)
             admin_file = os.path.join(settings.FRONT_END_PROJECT_PATH, 'src/admin/index.js')
             with open(admin_file, 'r+') as f:
                 f.truncate()
@@ -49,8 +56,10 @@ class Command(BaseCommand):
 
         try:
             print('-------------------开始导出 schema 配置------------------')
-            content = {'result': get_app_model_config()}
-            content = render_to_string(self.SCHEMA_TEMPLATE, content)
+            host = self._get_host()
+            url = os.path.join(host, 'basebone/config/schema/')
+            data = requests.get(url).json()
+            content = render_to_string(self.SCHEMA_TEMPLATE, data)
 
             schema_file = os.path.join(settings.FRONT_END_PROJECT_PATH, 'src/schemas/config.json')
             with open(schema_file, 'r+') as f:
