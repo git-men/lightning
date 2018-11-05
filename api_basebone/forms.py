@@ -1,4 +1,7 @@
+from django.contrib.auth import get_user_model
+
 from rest_framework import serializers
+from api_basebone.utils.meta import get_custom_form_module
 
 
 def create_meta_class(model, exclude_fields=None):
@@ -28,3 +31,17 @@ def create_form_class(model, exclude_fields=None, **kwargs):
         (serializers.ModelSerializer, ),
         attrs
     )
+
+
+def get_form_class(model, action, exclude_fields=None, **kwargs):
+    """获取表单类"""
+
+    action_map = {
+        'create': 'Create',
+        'update': 'Update',
+    }
+
+    module = get_custom_form_module(model)
+    class_name = '{}{}Form'.format(model.__name__, action_map[action])
+    form = getattr(module, class_name, None)
+    return create_form_class(model, exclude_fields=exclude_fields, **kwargs) if form is None else form

@@ -7,6 +7,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.fields import NOT_PROVIDED
 
+from api_basebone.core.admin import BSMAdminModule
+
 
 def get_concrete_fields(model):
     return [
@@ -98,6 +100,25 @@ def get_bsm_app_admin(app_label):
 
 def get_bsm_model_admin(model):
     """获取 BSM Admin 模块"""
-    module = get_bsm_app_admin(model._meta.app_label)
-    if module:
-        return getattr(module, f'{model.__name__}Admin', None)
+    key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
+    return BSMAdminModule.modules.get(key)
+
+
+def load_custom_admin_module():
+    """加载符合约定的 admin 的 module"""
+    export_apps = get_export_apps()
+    if not export_apps:
+        return
+    for app_label in export_apps:
+        get_bsm_app_admin(app_label)
+
+
+def get_custom_form_module(model):
+    """获取用户自定义的表单模块
+
+    TODO: 暂时应用下面的不能写入到其他应用下面
+    """
+    try:
+        return importlib.import_module(f'{app_label}.bsm.forms')
+    except Exception:
+        return

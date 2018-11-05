@@ -2,7 +2,7 @@ from django.apps import apps
 
 from api_basebone.batch_actions import get_model_batch_actions
 from api_basebone.core.admin import VALID_MANAGE_ATTRS, BSM_BATCH_ACTION, BSMAdminModule
-from api_basebone.utils.meta import get_export_apps, get_bsm_model_admin, get_bsm_app_admin
+from api_basebone.utils.meta import get_export_apps, get_bsm_app_admin
 from api_basebone.utils.format import underline_to_camel
 
 
@@ -10,6 +10,7 @@ def admin_model_config(model):
     """获取模型对应的 admin 的配置"""
 
     config = {}
+
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
     module = BSMAdminModule.modules.get(key)
 

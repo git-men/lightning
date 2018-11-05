@@ -22,7 +22,7 @@ from .core.const import (
 from .drf.response import success_response
 from .drf.pagination import PageNumberPagination
 
-from .forms import create_form_class
+from .forms import get_form_class
 from .serializers import (
     create_serializer_class,
     multiple_create_serializer_class
@@ -39,14 +39,14 @@ class FormMixin(object):
 
     def get_create_form(self):
         """获取创建数据的验证表单"""
-        return create_form_class(self.model)
+        return get_form_class(self.model, 'create')
 
     def get_update_form(self):
         """获取更新数据的验证表单"""
-        return create_form_class(self.model)
+        return get_form_class(self.model, 'update')
 
     def get_partial_update_form(self):
-        return create_form_class(self.model)
+        return get_form_class(self.model, 'update')
 
     def get_validate_form(self, action):
         """获取验证表单"""
@@ -78,8 +78,6 @@ class QuerySetMixin:
         has_user_field = meta.get_related_model_field(self.model, get_user_model())
         if has_user_field:
             # 如果有，则读取 BSM Admin 中的配置
-            # module = importlib.import_module(f'{self.app_label}.admin')
-            # admin_class = getattr(module, f'{self.model.__name__}Admin', None)
             admin_class = self.get_bsm_model_admin()
 
             if admin_class:
@@ -89,12 +87,8 @@ class QuerySetMixin:
                     filter_by_login_user = getattr(admin_class, admin.BSM_FILTER_BY_LOGIN_USER, True)
                     if field_name:
                         return queryset.filter(**{field_name: user})
-                    else:
-                        return queryset
                 except Exception:
-                    return queryset
-            else:
-                return queryset
+                    pass
         return queryset
 
     def get_queryset_by_order_by(self, queryset):
@@ -151,6 +145,11 @@ class GenericViewMixin:
     def perform_authentication(self, request):
         """
         截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
+
+        - 检验 app 和 model 是否合法
+        - 记录模型对象
+        - 处理展开字段
+        - 处理树形数据
         """
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
@@ -209,6 +208,8 @@ class GenericViewMixin:
                 try:
                     parent_field = getattr(admin_class, admin.BSM_PARENT_FIELD, None)
                     if parent_field:
+                        # 获取父亲字段数据，包含字段名，related_name 和 默认值
+                        # 这些数据在其他地方会用到
                         parent_field_data = meta.tree_parent_field(self.model, parent_field)
                         if parent_field_data:
                             self.tree_data = parent_field_data
@@ -218,14 +219,12 @@ class GenericViewMixin:
     def get_queryset(self):
         """动态的计算结果集
 
-        这里做好是否关联查询
+        - 如果是展开字段，这里做好是否关联查询
         """
 
         expand_fields = self.expand_fields
         if not expand_fields:
-            return self._get_queryset(
-                self.model.objects.all()
-            )
+            return self._get_queryset(self.model.objects.all())
 
         field_list = [item.replace('.', '__') for item in expand_fields]
         return self._get_queryset(
@@ -239,14 +238,16 @@ class GenericViewMixin:
         - 如果有嵌套字段，则动态创建引用字段的嵌套序列化类
         """
 
-        # 这里只有做是为了使用 django-rest-swagger
+        # FIXME: 这里只有做是为了使用 django-rest-swagger，否则会报错，因为 swagger 还是很笨
         expand_fields = getattr(self, 'expand_fields', None)
         model = getattr(self, 'model', get_user_model())
         tree_data = getattr(self, 'tree_data', None)
 
         if not expand_fields:
+            # 如果没有展开字段，则直接创建模型对应的序列化类
             return create_serializer_class(model, tree_structure=tree_data)
 
+        # 如果有展开字段，则创建嵌套的序列化类
         return multiple_create_serializer_class(
             model, expand_fields, tree_structure=tree_data
         )
@@ -425,7 +426,8 @@ class CommonManageViewSet(FormMixin,
         }
         ```
         """
-        serializer = batch_actions.BatchActionForm(data=request.data, context=self.get_serializer_context())
+        serializer = batch_actions.BatchActionForm(
+            data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
