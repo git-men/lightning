@@ -68,7 +68,6 @@ class FieldConfig:
 
     def normal_field_params(self, field, data_type):
         base = self._get_common_field_params(field, data_type)
-        base['maxLength'] = field.max_length
         base.update(self._get_extra_params(field, data_type))
         return base
 
@@ -132,7 +131,7 @@ def get_model_field_config(model):
     }
 
 
-def get_app_model_config():
+def get_app_field_schema():
     """获取应用模型配置"""
     export_apps = get_export_apps()
     config = {}
