@@ -8,8 +8,10 @@
 
 import importlib
 from rest_framework import serializers
+
 from api_basebone.core import exceptions
 from api_basebone.core.decorators import BSM_BATCH_ACTION
+from api_basebone.core.exceptions import BusinessException, BATCH_ACTION_HAND_ERROR
 
 
 def delete(request, queryset):
@@ -25,8 +27,11 @@ default_action_map = {
 }
 
 
-def get_model_action(model):
-    """获取模型的批量操作动作"""
+def get_model_batch_actions(model):
+    """获取模型的批量操作动作的映射
+
+    默认的动作和用户自定义的动作的结合，用户自定义的动作可以覆盖默认的动作
+    """
     bsm_batch_actions = {}
     bsm_batch_actions.update(default_action_map)
 
@@ -46,32 +51,31 @@ class BatchActionForm(serializers.Serializer):
     action = serializers.CharField(max_length=20)
     data = serializers.ListField(min_length=1)
 
-    def get_model_action_map(self):
-        """获取模型的动作映射"""
-        view = self.context['view']
-        try:
-            importlib.import_module(f'{view.app_label}.bsm.actions')
-            return getattr(view.model, BSM_BATCH_ACTION, None)
-        except Exception:
-            return
-
     def validate_action(self, value):
-        """校验 action"""
-        bsm_batch_actions = {}
-        bsm_batch_actions.update(default_action_map)
-        model_action = self.get_model_action_map()
-        if model_action:
-            bsm_batch_actions.update(model_action)
-        if value not in bsm_batch_actions:
+        """
+        - 校验 action
+        - 记录当前批量动作
+        """
+        view = self.context['view']
+        actions = get_model_batch_actions(view.model)
+
+        if value not in actions:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data='传入的 action: {} 不支持'.format(value)
             )
-        self.bsm_batch_action = bsm_batch_actions[value]
+        self.bsm_batch_action = actions[value]
         return value
 
     def validate_data(self, value):
+        """
+        - 校验 data
+        - 记录当前批量的数据
+        """
         model = self.context.get('view').model
+
+        # 默认使用 id
+        # TODO:  可以在某个地方指定查询的字段，例如可以是 slug
         filter_params = {'id__in': value}
 
         queryset = model.objects.filter(**filter_params)
@@ -85,4 +89,10 @@ class BatchActionForm(serializers.Serializer):
 
     def handle(self):
         request = self.context['request']
-        return self.bsm_batch_action(request, self.bsm_batch_queryset)
+        try:
+            return self.bsm_batch_action(request, self.bsm_batch_queryset)
+        except Exception as e:
+            raise BusinessException(
+                error_code=BATCH_ACTION_HAND_ERROR,
+                error_data=str(e)
+            )

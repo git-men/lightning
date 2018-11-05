@@ -1,6 +1,6 @@
 from django.apps import apps
 
-from api_basebone.batch_actions import get_model_action
+from api_basebone.batch_actions import get_model_batch_actions
 from api_basebone.core.admin import VALID_MANAGE_ATTRS, BSM_BATCH_ACTION, BSMAdminModule
 from api_basebone.utils.meta import get_export_apps, get_bsm_model_admin, get_bsm_app_admin
 from api_basebone.utils.format import underline_to_camel
@@ -20,8 +20,8 @@ def admin_model_config(model):
         if item in VALID_MANAGE_ATTRS:
             config[underline_to_camel(item)] = getattr(module, item, None)
 
-    # 转换 action
-    model_actions = get_model_action(model)
+    # 转换 batch action
+    model_actions = get_model_batch_actions(model)
     if model_actions:
         config[BSM_BATCH_ACTION] = [
             [key, getattr(value, 'short_description', key)]
