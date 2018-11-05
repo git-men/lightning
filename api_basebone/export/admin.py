@@ -29,9 +29,7 @@ def admin_model_config(model):
             for key, value in model_actions.items()
         ]
 
-    return {
-        key: config
-    }
+    return {key: config}
 
 
 def load_admin_module():

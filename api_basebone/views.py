@@ -54,11 +54,12 @@ class FormMixin(object):
 
     def get_bsm_model_admin(self):
         """获取 BSM Admin 模块"""
-        try:
-            module = importlib.import_module(f'{self.app_label}.bsm.admin')
-            return getattr(module, f'{self.model.__name__}Admin', None)
-        except Exception:
-            return
+        # try:
+        #     module = importlib.import_module(f'{self.app_label}.bsm.admin')
+        #     return getattr(module, f'{self.model.__name__}Admin', None)
+        # except Exception:
+        #     return
+        return meta.get_bsm_model_admin(self.model)
 
 
 class QuerySetMixin:
@@ -173,7 +174,12 @@ class GenericViewMixin:
 
         self.get_expand_fields()
         self._get_data_with_tree(request)
+        self._load_custom_admin_module()
         return result
+
+    def _load_custom_admin_module(self):
+        """加载用户自定义的 admin，其 admin 是继承 BSMAdminModule"""
+        meta.load_custom_admin_module()
 
     def get_expand_fields(self):
         """获取扩展字段并作为属性值赋予
