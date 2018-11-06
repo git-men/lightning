@@ -6,6 +6,8 @@ from api_basebone.utils.meta import get_concrete_fields, get_export_apps
 
 from .specs import FIELDS
 
+DEFAULT_DJANOG_FIELD_TYPE = 'Text'
+
 DJANGO_FIELD_TYPE_MAP = {
     'AutoField': 'Integer',
     'BooleanField': 'Bool',
@@ -61,9 +63,10 @@ class FieldConfig:
             config['editable'] = field.editable
 
         if field.default is not NOT_PROVIDED:
-            if not inspect.isfunction(field.default):
+            if inspect.isclass(i.default):
+                config['default'] = i.default()
+            elif not inspect.isfunction(field.default):
                 config['default'] = field.default
-
         return config
 
     def normal_field_params(self, field, data_type):
