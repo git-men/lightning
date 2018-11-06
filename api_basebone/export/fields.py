@@ -63,8 +63,8 @@ class FieldConfig:
             config['editable'] = field.editable
 
         if field.default is not NOT_PROVIDED:
-            if inspect.isclass(i.default):
-                config['default'] = i.default()
+            if inspect.isclass(field.default):
+                config['default'] = field.default()
             elif not inspect.isfunction(field.default):
                 config['default'] = field.default
         return config
