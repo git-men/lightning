@@ -141,9 +141,8 @@ def get_model_field_config(model):
                 'type': 'bref',
             }
             reverse_config['displayName'] = field.verbose_name
-            tag = 'mref' if field.many_to_many else 'ref'
             meta = item.related_model._meta
-            reverse_config[tag] = '{}__{}'.format(meta.app_label, meta.model_name)
+            reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
             config.append(reverse_config)
 
     return {
