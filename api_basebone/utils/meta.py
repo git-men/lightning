@@ -27,7 +27,7 @@ def get_field_by_reverse_field(field):
     model = field.related_model
     relation_fields = [
         item for item in get_concrete_fields(model)
-        if item.is_relation and field.model is item.related_model
+        if item.is_relation and field.model is item.related_model and field.model is not item.model
     ]
 
     if not relation_fields:

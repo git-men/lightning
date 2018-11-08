@@ -131,13 +131,16 @@ def get_model_field_config(model):
     reverse_fields = get_reverse_fields(model)
     if reverse_fields:
         for item in reverse_fields:
+            field = get_field_by_reverse_field(item)
+            if not field:
+                continue
+
             reverse_config = {
                 'name': item.name,
                 'required': False,
                 'type': 'bref',
             }
-            field = get_field_by_reverse_field(item)
-            reverse_config['displayName'] = field.name
+            reverse_config['displayName'] = field.verbose_name
             tag = 'mref' if field.many_to_many else 'ref'
             meta = item.related_model._meta
             reverse_config[tag] = '{}__{}'.format(meta.app_label, meta.model_name)
