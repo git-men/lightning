@@ -2,7 +2,10 @@ import inspect
 
 from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
-from api_basebone.utils.meta import get_concrete_fields, get_export_apps
+from api_basebone.utils.meta import (
+    get_concrete_fields, get_export_apps, get_reverse_fields,
+    get_field_by_reverse_field,
+)
 
 from .specs import FIELDS
 
@@ -123,6 +126,22 @@ def get_model_field_config(model):
                 config.append(function(item, data_type))
             else:
                 config.append(field_config.normal_field_params(item, data_type))
+
+    # 添加反转字段
+    reverse_fields = get_reverse_fields(model)
+    if reverse_fields:
+        for item in reverse_fields:
+            reverse_config = {
+                'name': item.name,
+                'required': False,
+                'type': 'bref',
+            }
+            field = get_field_by_reverse_field(item)
+            reverse_config['displayName'] = field.name
+            tag = 'mref' if field.many_to_many else 'ref'
+            meta = item.related_model._meta
+            reverse_config[tag] = '{}__{}'.format(meta.app_label, meta.model_name)
+            config.append(reverse_config)
 
     return {
         key: {

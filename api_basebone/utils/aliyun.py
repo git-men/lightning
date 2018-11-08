@@ -61,5 +61,34 @@ class AliYunOSS:
         }
         return token_dict
 
+    def upload_file(self, remote_file, local_file, replace=True):
+        """上传文件
+
+        Params:
+            remote_file string 远端文件名称
+            local_file string 本地文件名称
+            replace boolean 是否替换原文件
+
+        Returns:
+            string or None
+                - string 代表上传成功
+                - None 代表上传失败
+        """
+        status, exists = 200, False
+
+        try:
+            if not replace:
+                exists = self.bucket.object_exists(remote_file)
+
+            if not exists:
+                status = self.bucket.put_object_from_file(remote_file, local_file).status
+
+            if status == 200:
+                return f'{self.OSS_HOST}/{remote_file}'
+
+            logger.error(f'upload to aliyun oss faile {status}')
+        except Exception as e:
+            logger.error(f'upload to aliyun oss faile {e}')
+
 
 aliyun = AliYunOSS()
