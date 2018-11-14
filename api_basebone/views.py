@@ -313,14 +313,43 @@ class CommonManageViewSet(FormMixin,
         return update_data
 
     def _pre_one_to_many(self, field, key, value, update_data):
-        """处理一对多关系"""
+        """处理一对多关系
+
+        - 如果数据不是一个字典，则直接返回
+        - 如果数据是字典，字典中没有包含则对字典中的数据进行创建
+        """
         if not isinstance(value, dict):
             return
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
 
-        serializer = create_serializer_class(field.related_model)(data=value)
+        if pk_field_name not in value:
+            # 如果传进来的数据不包含主键，则代表是创建数据
+            serializer = create_serializer_class(field.related_model)(data=value)
+            serializer.is_valid(raise_exception=True)
+            update_data[key] = serializer.save().id
+            return update_data
+
+        # 如果传进来的数据包含主键，则代表是更新数据
+        instance = related_model.objects.filter(**{pk_field_name: value[pk_field_name]}).first()
+        if not instance:
+            raise exceptions.BusinessException(
+                error_code=exceptions.OBJECT_NOT_FOUND,
+                error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+            )
+        serializer = create_serializer_class(related_model)(instance=instance, data=value, partial=True)
         serializer.is_valid(raise_exception=True)
-        update_data[key] = field.related_model.objects.create(**value).id
+        serializer.save()
+        update_data[key] = value[pk_field_name]
         return update_data
+
+    def _pre_reverse_field_one_to_many(self, filed, key, value, update_data):
+        """处理反向字段的多对一的数据"""
+        pass
+
+    def _pre_reverse_field_many_to_many(self, field, key, value, updated_data):
+        """处理反向字段的多对多数据"""
+        pass
 
     def _create_update_pre_hand(self, request, *args, **kwargs):
         """创建和更新的预处理
@@ -332,25 +361,30 @@ class CommonManageViewSet(FormMixin,
 
         对于这种场景，需要检查客户端传进来的数据，同时需要做对应的预处理
 
-        这里面包含两种关系
-        - 一对多
-        - 多不多
-
-        TODO：暂时只支持多对多关系
+        这里面包含四种关系
+        - 正向的一对多
+        - 正向的多不多
+        - 反向的一对多
+        - 反向的多对多
         """
         if not (request.data and isinstance(request.data, dict)):
             return
 
         update_data = {}
         for key, value in request.data.items():
-            field = meta.get_relation_field(self.model, key)
+            field = meta.get_relation_field(self.model, key, reverse=True)
             if not field:
                 continue
 
-            if field.many_to_many:
-                self._pre_many_to_many(field, key, value, update_data)
+            if field.concrete:
+                # 处理正向关系字段的数据
+                if field.many_to_many:
+                    self._pre_many_to_many(field, key, value, update_data)
+                else:
+                    self._pre_one_to_many(field, key, value, update_data)
             else:
-                self._pre_one_to_many(field, key, value, update_data)
+                # 处理反向字段的数据
+                pass
         request.data.update(update_data)
 
     def create(self, request, *args, **kwargs):

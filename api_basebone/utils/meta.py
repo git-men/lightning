@@ -65,12 +65,25 @@ def get_related_model_field(model, related_model):
                 return f
 
 
-def get_relation_field(model, field_name):
-    """获取字段引用的模型"""
+def get_relation_field(model, field_name, reverse=False):
+    """获取模型指定名称的关系字段
+
+    Params:
+        model 模型类
+        field_name 字段名
+        reverse bool 是否包含反向的关系字段
+
+    Returns:
+        field object 字段对象
+    """
     try:
         field = model._meta.get_field(field_name)
+        if not field.is_relation:
+            return
 
-        if field.is_relation and field.concrete:
+        if reverse:
+            return field
+        elif field.concrete:
             return field
     except Exception:
         return
