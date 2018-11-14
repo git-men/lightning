@@ -24,25 +24,26 @@ def get_field_by_reverse_field(field):
 
     例如 product 引用了 User，通过 User 的反转字段查找到 product 中对应的字段
     """
-    model = field.related_model
-    relation_fields = [
-        item for item in get_concrete_fields(model)
-        if item.is_relation and field.model is item.related_model and field.model is not item.model
-    ]
+    # model = field.related_model
+    # relation_fields = [
+    #     item for item in get_concrete_fields(model)
+    #     if item.is_relation and field.model is item.related_model and field.model is not item.model
+    # ]
 
-    if not relation_fields:
-        return
-    if len(relation_fields) == 1:
-        return relation_fields[0]
+    # if not relation_fields:
+    #     return
+    # if len(relation_fields) == 1:
+    #     return relation_fields[0]
 
-    # 如果一个模型引用一个模型多次，这时候需要根据 related_name 来进行判断
-    fields_map = {}
-    for item in relation_fields:
-        related_name = item.remote_field.related_name
-        if related_name is None:
-            related_name = item.model._meta.model_name
-        fields_map[related_name] = item
-    return fields_map.get(field.name)
+    # # 如果一个模型引用一个模型多次，这时候需要根据 related_name 来进行判断
+    # fields_map = {}
+    # for item in relation_fields:
+    #     related_name = item.remote_field.related_name
+    #     if related_name is None:
+    #         related_name = item.model._meta.model_name
+    #     fields_map[related_name] = item
+    # return fields_map.get(field.name)
+    return field.remote_field
 
 
 def get_concrete_fields(model):
@@ -65,12 +66,25 @@ def get_related_model_field(model, related_model):
                 return f
 
 
-def get_relation_field(model, field_name):
-    """获取字段引用的模型"""
+def get_relation_field(model, field_name, reverse=False):
+    """获取模型指定名称的关系字段
+
+    Params:
+        model 模型类
+        field_name 字段名
+        reverse bool 是否包含反向的关系字段
+
+    Returns:
+        field object 字段对象
+    """
     try:
         field = model._meta.get_field(field_name)
+        if not field.is_relation:
+            return
 
-        if field.is_relation and field.concrete:
+        if reverse:
+            return field
+        elif field.concrete:
             return field
     except Exception:
         return

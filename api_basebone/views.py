@@ -3,6 +3,7 @@ import importlib
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import DatabaseError, transaction
 
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
@@ -292,8 +293,14 @@ class CommonManageViewSet(FormMixin,
         return success_response(serializer.data)
 
     def _pre_many_to_many(self, field, key, value, update_data):
-        """处理多对多关系"""
-        # 如果多对多关系的字段的值不是列表，不做处理
+        """处理多对多关系
+
+        - 如果多对多关系的字段的值不是列表，则不做任何处理
+        - 如果传进来的值是一个列表，则不做任何处理
+
+        上面的后续校验扔给下一步的创建或者更新的表单验证
+
+        """
         if not (isinstance(value, list) and value):
             return
 
@@ -305,22 +312,204 @@ class CommonManageViewSet(FormMixin,
         if not object_data:
             return
 
-        serializer = create_serializer_class(field.related_model)(data=object_data, many=True)
-        serializer.is_valid(raise_exception=True)
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
 
-        create_data = [field.related_model.objects.create(**item).id for item in object_data]
-        update_data[key] = pure_data + create_data
+        create_list, update_list = [], []
+        for item in object_data:
+            update_list.append(item) if pk_field_name in item else create_list.append(item)
+
+        if create_list:
+            serializer = create_serializer_class(related_model)(data=create_list, many=True)
+            serializer.is_valid(raise_exception=True)
+
+            create_ids = [related_model.objects.create(**item).id for item in create_list]
+            pure_data += create_ids
+
+        if update_list:
+            update_data_map = {item[pk_field_name]: item for item in update_list}
+            filter_params = {
+                f'{pk_field_name}__in': update_data_map.keys()
+            }
+            queryset = related_model.objects.filter(**filter_params)
+            if queryset.count() != len(update_list):
+                raise exceptions.BusinessException(
+                    error_code=exceptions.OBJECT_NOT_FOUND,
+                    error_data=f'{key}: {update_list} 存在不合法的数据'
+                )
+
+            for instance in queryset.iterator():
+                data = update_data_map.get(getattr(instance, pk_field_name, None))
+                serializer = create_serializer_class(related_model)(instance=instance, data=data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            pure_data += update_data_map.keys()
+
+        update_data[key] = pure_data
         return update_data
 
     def _pre_one_to_many(self, field, key, value, update_data):
-        """处理一对多关系"""
+        """处理一对多关系
+
+        - 如果数据不是一个字典，则直接返回
+        - 如果数据是字典，字典中没有包含则对字典中的数据进行创建
+        """
         if not isinstance(value, dict):
             return
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
 
-        serializer = create_serializer_class(field.related_model)(data=value)
+        if pk_field_name not in value:
+            # 如果传进来的数据不包含主键，则代表是创建数据
+            serializer = create_serializer_class(field.related_model)(data=value)
+            serializer.is_valid(raise_exception=True)
+            update_data[key] = serializer.save().id
+            return update_data
+
+        # 如果传进来的数据包含主键，则代表是更新数据
+        instance = related_model.objects.filter(**{pk_field_name: value[pk_field_name]}).first()
+        if not instance:
+            raise exceptions.BusinessException(
+                error_code=exceptions.OBJECT_NOT_FOUND,
+                error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+            )
+        serializer = create_serializer_class(related_model)(instance=instance, data=value, partial=True)
         serializer.is_valid(raise_exception=True)
-        update_data[key] = field.related_model.objects.create(**value).id
+        serializer.save()
+        update_data[key] = value[pk_field_name]
         return update_data
+
+    def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=True):
+        """处理反向字段的多对一的数据
+
+        对于此种场景，数据格式是包含对象的列表或者已经存在对象的主键
+
+        场景描述：
+            class AModel(models.Model):
+                pass
+
+            class BModel(models.Model):
+                a = models.ForgignKey(AModel)
+                name = models.CharField()
+
+        AModel 请求数据时，字段中包含 bmodel 对象如下数据格式：
+
+            bmodel: [
+                {
+                    name: 'xxxx'
+                }
+            ]
+            或者 
+            bmodel: [
+                {
+                    'id': xxxx,
+                    'name': 'update xxxxx'
+                }
+            ]
+        """
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
+
+        if not (isinstance(value, list) and value):
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data=f'{key}: {value} 只能包含对象的列表'
+            )
+
+        for item in value:
+            if not isinstance(item, dict):
+                raise exceptions.BusinessException(
+                    error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                    error_data=f'{key}: {value} 包含了非对象格式的数据'
+                )
+
+            if not detail and pk_field_name in item:
+                raise DatabaseError(f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据')
+
+        for item_value in value:
+            if pk_field_name in item_value:
+                # 此时说明是更新的数据
+                pk_value = related_model._meta.pk.to_python(item[pk_field_name])
+
+                filter_params = {
+                    pk_field_name: pk_value,
+                    field.remote_field.name: instance
+                }
+                obj = related_model.objects.filter(**filter_params).first()
+                if not obj:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.OBJECT_NOT_FOUND,
+                        error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+                    )
+
+                serializer = create_serializer_class(related_model)(instance=obj, data=item_value, partial=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            else:
+                # 如果传进来的数据不包含主键，则代表是创建数据
+                serializer = create_serializer_class(field.related_model)(data=item_value)
+                serializer.is_valid(raise_exception=True)
+                obj = serializer.save()
+                setattr(obj, field.remote_field.name, instance)
+                obj.save()
+
+    def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
+        """处理反向字段的多对多数据
+
+        场景类似上面杉树的注释
+        """
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
+
+        if not (isinstance(value, list) and value):
+            return
+
+        pure_data, object_data, related_obj_set = [], [], set()
+        for item in value:
+            object_data.append(item) if isinstance(item, dict) else pure_data.append(item)
+
+        if pure_data:
+            queryset = related_model.objects.filter(
+                **{f'{pk_field_name}__in': pure_data}
+            )
+            if len(pure_data) != queryset.count():
+                raise DatabaseError(
+                    f'{key}: {value} 包含不合法的主键数据'
+                )
+            for item in queryset.iterator():
+                related_obj_set.add(item.id)
+
+        # 如果不包含对象数据，则不做任何处理
+        if not object_data:
+            create_list, update_list = [], []
+            for item in object_data:
+                update_list.append(item) if pk_field_name in item else create_list.append(item)
+
+            if create_list:
+                serializer = create_serializer_class(related_model)(data=create_list, many=True)
+                serializer.is_valid(raise_exception=True)
+                create_ids = [related_model.objects.create(**item).id for item in create_list]
+                related_obj_set.update(create_ids)
+
+            if update_list:
+                update_data_map = {item[pk_field_name]: item for item in update_list}
+                filter_params = {
+                    f'{pk_field_name}__in': update_data_map.keys()
+                }
+                queryset = related_model.objects.filter(**filter_params)
+                if queryset.count() != len(update_list):
+                    raise DatabaseError(f'{key}: {update_list} 存在不合法的数据')
+
+                for instance in queryset.iterator():
+                    data = update_data_map.get(getattr(instance, pk_field_name, None))
+                    serializer = create_serializer_class(related_model)(instance=instance, data=data, partial=True)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                related_obj_set.update(update_data_map.keys())
+        related_name = meta.get_relation_field_related_name(related_model, field.remote_field.name)
+        relation = getattr(instance, related_name, None)
+        if relation:
+            relation.set(list(related_obj_set))
 
     def _create_update_pre_hand(self, request, *args, **kwargs):
         """创建和更新的预处理
@@ -333,10 +522,8 @@ class CommonManageViewSet(FormMixin,
         对于这种场景，需要检查客户端传进来的数据，同时需要做对应的预处理
 
         这里面包含两种关系
-        - 一对多
-        - 多不多
-
-        TODO：暂时只支持多对多关系
+        - 正向的一对多
+        - 正向的多不多
         """
         if not (request.data and isinstance(request.data, dict)):
             return
@@ -347,11 +534,31 @@ class CommonManageViewSet(FormMixin,
             if not field:
                 continue
 
-            if field.many_to_many:
-                self._pre_many_to_many(field, key, value, update_data)
-            else:
-                self._pre_one_to_many(field, key, value, update_data)
+            if field.concrete:
+                # 处理正向关系字段的数据
+                if field.many_to_many:
+                    self._pre_many_to_many(field, key, value, update_data)
+                else:
+                    self._pre_one_to_many(field, key, value, update_data)
         request.data.update(update_data)
+
+    def _create_update_after_hand(self, request, instance, detail=True):
+        """创建或者更新完毕后，处理反向字段的数据"""
+
+        if not (request.data and isinstance(request.data, dict)):
+            return
+
+        for key, value in request.data.items():
+            field = meta.get_relation_field(self.model, key, reverse=True)
+            if not field:
+                continue
+
+            # 这里说明是反向字段
+            if not field.concrete and field.remote_field:
+                if field.many_to_many:
+                    self._after_reverse_field_many_to_many(field, key, value, instance, detail=detail)
+                else:
+                    self._after_reverse_field_one_to_many(field, key, value, instance, detail=detail)
 
     def create(self, request, *args, **kwargs):
         """
@@ -359,42 +566,58 @@ class CommonManageViewSet(FormMixin,
 
         原因：序列化类有可能嵌套
         """
+        try:
+            with transaction.atomic():
+                self._create_update_pre_hand(request, *args, **kwargs)
 
-        self._create_update_pre_hand(request, *args, **kwargs)
+                if self.model == get_user_model():
+                    serializer = UserCreateUpdateForm(data=request.data)
+                else:
+                    serializer = self.get_validate_form(self.action)(data=request.data)
+                serializer.is_valid(raise_exception=True)
 
-        if self.model == get_user_model():
-            serializer = UserCreateUpdateForm(data=request.data)
-        else:
-            serializer = self.get_validate_form(self.action)(data=request.data)
-        serializer.is_valid(raise_exception=True)
+                instance = self.perform_create(serializer)
 
-        instance = self.perform_create(serializer)
+                # 如果有联合查询，单个对象创建后并没有联合查询
+                instance = self.get_queryset().filter(id=instance.id).first()
+                serializer = self.get_serializer(instance)
 
-        # 如果有联合查询，单个对象创建后并没有联合查询
-        instance = self.get_queryset().filter(id=instance.id).first()
-        serializer = self.get_serializer(instance)
-        return success_response(serializer.data)
+                self._create_update_after_hand(request, instance, detail=False)
+                return success_response(serializer.data)
+        except DatabaseError as e:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_BUSINESS_ERROR,
+                error_data=str(e)
+            )
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
+        try:
+            with transaction.atomic():
+                self._create_update_pre_hand(request, *args, **kwargs)
 
-        self._create_update_pre_hand(request, *args, **kwargs)
+                partial = kwargs.pop('partial', False)
+                instance = self.get_object()
 
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
+                if self.model == get_user_model():
+                    serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
+                else:
+                    serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+                serializer.is_valid(raise_exception=True)
 
-        if self.model == get_user_model():
-            serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
-        else:
-            serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
+                instance = self.perform_update(serializer)
+                serializer = self.get_serializer(instance)
 
-        instance = self.perform_update(serializer)
-        serializer = self.get_serializer(instance)
+                if getattr(instance, '_prefetched_objects_cache', None):
+                    instance._prefetched_objects_cache = {}
 
-        if getattr(instance, '_prefetched_objects_cache', None):
-            instance._prefetched_objects_cache = {}
-        return success_response(serializer.data)
+                self._create_update_after_hand(request, instance)
+                return success_response(serializer.data)
+        except DatabaseError as e:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_BUSINESS_ERROR,
+                error_data=str(e)
+            )
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
