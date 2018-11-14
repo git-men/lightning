@@ -292,8 +292,14 @@ class CommonManageViewSet(FormMixin,
         return success_response(serializer.data)
 
     def _pre_many_to_many(self, field, key, value, update_data):
-        """处理多对多关系"""
-        # 如果多对多关系的字段的值不是列表，不做处理
+        """处理多对多关系
+
+        - 如果多对多关系的字段的值不是列表，则不做任何处理
+        - 如果传进来的值是一个列表，则不做任何处理
+
+        上面的后续校验扔给下一步的创建或者更新的表单验证
+
+        """
         if not (isinstance(value, list) and value):
             return
 
@@ -305,11 +311,40 @@ class CommonManageViewSet(FormMixin,
         if not object_data:
             return
 
-        serializer = create_serializer_class(field.related_model)(data=object_data, many=True)
-        serializer.is_valid(raise_exception=True)
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
 
-        create_data = [field.related_model.objects.create(**item).id for item in object_data]
-        update_data[key] = pure_data + create_data
+        create_list, update_list = [], []
+        for item in object_data:
+            update_list.append(item) if pk_field_name in item else create_list.append(item)
+
+        if create_list:
+            serializer = create_serializer_class(related_model)(data=create_list, many=True)
+            serializer.is_valid(raise_exception=True)
+
+            create_ids = [related_model.objects.create(**item).id for item in create_list]
+            pure_data += create_ids
+
+        if update_list:
+            update_data_map = {item[pk_field_name]: item for item in update_list}
+            filter_params = {
+                f'{pk_field_name}__in': update_data_map.keys()
+            }
+            queryset = related_model.objects.filter(**filter_params)
+            if queryset.count() != len(update_list):
+                raise exceptions.BusinessException(
+                    error_code=exceptions.OBJECT_NOT_FOUND,
+                    error_data=f'{key}: {update_list} 存在不合法的数据'
+                )
+
+            for instance in queryset.iterator():
+                data = update_data_map.get(getattr(instance, pk_field_name, None))
+                serializer = create_serializer_class(related_model)(instance=instance, data=data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            pure_data += update_data_map.keys()
+
+        update_data[key] = pure_data
         return update_data
 
     def _pre_one_to_many(self, field, key, value, update_data):
