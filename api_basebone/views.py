@@ -382,7 +382,7 @@ class CommonManageViewSet(FormMixin,
     def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=True):
         """处理反向字段的多对一的数据
 
-        对于此种场景，数据格式是对象或者已经存在对象的主键
+        对于此种场景，数据格式是包含对象的列表或者已经存在对象的主键
 
         场景描述：
             class AModel(models.Model):
@@ -394,14 +394,18 @@ class CommonManageViewSet(FormMixin,
 
         AModel 请求数据时，字段中包含 bmodel 对象如下数据格式：
 
-            bmodel: {
-                name: 'xxxx'
-            }
+            bmodel: [
+                {
+                    name: 'xxxx'
+                }
+            ]
             或者 
-            bmodel: {
-                'id': xxxx,
-                'name': 'update xxxxx'
-            }
+            bmodel: [
+                {
+                    'id': xxxx,
+                    'name': 'update xxxxx'
+                }
+            ]
         """
         related_model = field.related_model
         pk_field_name = related_model._meta.pk.name
@@ -450,8 +454,62 @@ class CommonManageViewSet(FormMixin,
                 obj.save()
 
     def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
-        """处理反向字段的多对多数据"""
-        pass
+        """处理反向字段的多对多数据
+
+        场景类似上面杉树的注释
+        """
+        related_model = field.related_model
+        pk_field_name = related_model._meta.pk.name
+
+        if not (isinstance(value, list) and value):
+            return
+
+        pure_data, object_data, related_obj_set = [], [], set()
+        for item in value:
+            object_data.append(item) if isinstance(item, dict) else pure_data.append(item)
+
+        if pure_data:
+            queryset = related_model.objects.filter(
+                **{f'{pk_field_name}__in': pure_data}
+            )
+            if len(pure_data) != queryset.count():
+                raise DatabaseError(
+                    f'{key}: {value} 包含不合法的主键数据'
+                )
+            for item in queryset.iterator():
+                related_obj_set.add(item.id)
+
+        # 如果不包含对象数据，则不做任何处理
+        if not object_data:
+            create_list, update_list = [], []
+            for item in object_data:
+                update_list.append(item) if pk_field_name in item else create_list.append(item)
+
+            if create_list:
+                serializer = create_serializer_class(related_model)(data=create_list, many=True)
+                serializer.is_valid(raise_exception=True)
+                create_ids = [related_model.objects.create(**item).id for item in create_list]
+                related_obj_set.update(create_ids)
+
+            if update_list:
+                update_data_map = {item[pk_field_name]: item for item in update_list}
+                filter_params = {
+                    f'{pk_field_name}__in': update_data_map.keys()
+                }
+                queryset = related_model.objects.filter(**filter_params)
+                if queryset.count() != len(update_list):
+                    raise DatabaseError(f'{key}: {update_list} 存在不合法的数据')
+
+                for instance in queryset.iterator():
+                    data = update_data_map.get(getattr(instance, pk_field_name, None))
+                    serializer = create_serializer_class(related_model)(instance=instance, data=data, partial=True)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                related_obj_set.update(update_data_map.keys())
+        related_name = meta.get_relation_field_related_name(related_model, field.remote_field.name)
+        relation = getattr(instance, related_name, None)
+        if relation:
+            relation.set(list(related_obj_set))
 
     def _create_update_pre_hand(self, request, *args, **kwargs):
         """创建和更新的预处理
@@ -463,11 +521,9 @@ class CommonManageViewSet(FormMixin,
 
         对于这种场景，需要检查客户端传进来的数据，同时需要做对应的预处理
 
-        这里面包含四种关系
+        这里面包含两种关系
         - 正向的一对多
         - 正向的多不多
-        - 反向的一对多
-        - 反向的多对多
         """
         if not (request.data and isinstance(request.data, dict)):
             return
