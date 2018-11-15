@@ -499,7 +499,7 @@ class CommonManageViewSet(FormMixin,
                         pure_id_list.append(getattr(obj, pk_field_name))
         if detail and pure_id_list:
             pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
-            related_model.objects.exlude(**{f'{pk_field_name}__in': pure_id_list}).delete()
+            related_model.objects.exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
 
     def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
         """处理反向字段的多对多数据
