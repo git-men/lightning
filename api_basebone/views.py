@@ -246,7 +246,6 @@ class GenericViewMixin:
                 field_list.append(item.replace('.', '__'))
 
         # field_list = [item.replace('.', '__') for item in expand_fields]
-        # field_list = ['article_set']
         return self._get_queryset(
             self.model.objects.all().prefetch_related(*field_list)
         )

@@ -35,6 +35,9 @@ BSM_GROUP_STYLE = 'group_style'
 # 列表的风格
 BSM_LIST_STYLE = 'list_style'
 
+# 内联表单设置
+BSM_INLINE_FORM_FIELDS = 'inline_form_fields'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -49,6 +52,7 @@ VALID_MANAGE_ATTRS = [
     BSM_FORM_FIELDS,
     BSM_GROUP_STYLE,
     BSM_LIST_STYLE,
+    BSM_INLINE_FORM_FIELDS,
 ]
 
 # 属性和默认值映射
