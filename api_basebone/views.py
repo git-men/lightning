@@ -442,6 +442,7 @@ class CommonManageViewSet(FormMixin,
                         relation = getattr(instance, related_name, None)
                         if relation:
                             relation.all().delete()
+                            return
                 except Exception as e:
                     raise exceptions.BusinessException(
                         error_code=exceptions.PARAMETER_FORMAT_ERROR,
@@ -496,7 +497,7 @@ class CommonManageViewSet(FormMixin,
                     obj.save()
                     if detail:
                         pure_id_list.append(getattr(obj, pk_field_name))
-        if detail:
+        if detail and pure_id_list:
             pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
             related_model.objects.exlude(**{f'{pk_field_name}__in': pure_id_list}).delete()
 
