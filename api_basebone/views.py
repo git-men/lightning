@@ -439,7 +439,7 @@ class CommonManageViewSet(FormMixin,
                         field.related_model, field.remote_field.name
                     )
                     if related_name:
-                        relation = getattr(instance, related_name, None)
+                        relation = getattr(instance, related_name[0], None)
                         if relation:
                             relation.all().delete()
                             return
