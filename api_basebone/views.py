@@ -55,11 +55,6 @@ class FormMixin(object):
 
     def get_bsm_model_admin(self):
         """获取 BSM Admin 模块"""
-        # try:
-        #     module = importlib.import_module(f'{self.app_label}.bsm.admin')
-        #     return getattr(module, f'{self.model.__name__}Admin', None)
-        # except Exception:
-        #     return
         return meta.get_bsm_model_admin(self.model)
 
 
@@ -424,7 +419,10 @@ class CommonManageViewSet(FormMixin,
                 )
 
             if not detail and pk_field_name in item:
-                raise DatabaseError(f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据')
+                raise exceptions.BusinessException(
+                    error_code=exceptions.PARAMETER_BUSINESS_ERROR,
+                    error_data=f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据'
+                )
 
         for item_value in value:
             if pk_field_name in item_value:
@@ -473,8 +471,9 @@ class CommonManageViewSet(FormMixin,
                 **{f'{pk_field_name}__in': pure_data}
             )
             if len(pure_data) != queryset.count():
-                raise DatabaseError(
-                    f'{key}: {value} 包含不合法的主键数据'
+                raise exceptions.BusinessException(
+                    error_code=exceptions.PARAMETER_BUSINESS_ERROR,
+                    error_data=f'{key}: {value} 包含不合法的主键数据'
                 )
             for item in queryset.iterator():
                 related_obj_set.add(item.id)
@@ -498,7 +497,10 @@ class CommonManageViewSet(FormMixin,
                 }
                 queryset = related_model.objects.filter(**filter_params)
                 if queryset.count() != len(update_list):
-                    raise DatabaseError(f'{key}: {update_list} 存在不合法的数据')
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=f'{key}: {update_list} 存在不合法的数据'
+                    )
 
                 for instance in queryset.iterator():
                     data = update_data_map.get(getattr(instance, pk_field_name, None))
@@ -568,22 +570,28 @@ class CommonManageViewSet(FormMixin,
         """
         try:
             with transaction.atomic():
-                self._create_update_pre_hand(request, *args, **kwargs)
+                try:
+                    self._create_update_pre_hand(request, *args, **kwargs)
 
-                if self.model == get_user_model():
-                    serializer = UserCreateUpdateForm(data=request.data)
-                else:
-                    serializer = self.get_validate_form(self.action)(data=request.data)
-                serializer.is_valid(raise_exception=True)
+                    if self.model == get_user_model():
+                        serializer = UserCreateUpdateForm(data=request.data)
+                    else:
+                        serializer = self.get_validate_form(self.action)(data=request.data)
+                    serializer.is_valid(raise_exception=True)
 
-                instance = self.perform_create(serializer)
+                    instance = self.perform_create(serializer)
 
-                # 如果有联合查询，单个对象创建后并没有联合查询
-                instance = self.get_queryset().filter(id=instance.id).first()
-                serializer = self.get_serializer(instance)
+                    # 如果有联合查询，单个对象创建后并没有联合查询
+                    instance = self.get_queryset().filter(id=instance.id).first()
+                    serializer = self.get_serializer(instance)
 
-                self._create_update_after_hand(request, instance, detail=False)
-                return success_response(serializer.data)
+                    self._create_update_after_hand(request, instance, detail=False)
+                    return success_response(serializer.data)
+                except exceptions.BusinessException as e:
+                    message = e.error_data if e.error_data else e.error_message
+                    raise DatabaseError(message)
+                except Exception as e:
+                    raise DatabaseError(str(e))
         except DatabaseError as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_BUSINESS_ERROR,
@@ -594,25 +602,31 @@ class CommonManageViewSet(FormMixin,
         """全量更新数据"""
         try:
             with transaction.atomic():
-                self._create_update_pre_hand(request, *args, **kwargs)
+                try:
+                    self._create_update_pre_hand(request, *args, **kwargs)
 
-                partial = kwargs.pop('partial', False)
-                instance = self.get_object()
+                    partial = kwargs.pop('partial', False)
+                    instance = self.get_object()
 
-                if self.model == get_user_model():
-                    serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
-                else:
-                    serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
-                serializer.is_valid(raise_exception=True)
+                    if self.model == get_user_model():
+                        serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
+                    else:
+                        serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+                    serializer.is_valid(raise_exception=True)
 
-                instance = self.perform_update(serializer)
-                serializer = self.get_serializer(instance)
+                    instance = self.perform_update(serializer)
+                    serializer = self.get_serializer(instance)
 
-                if getattr(instance, '_prefetched_objects_cache', None):
-                    instance._prefetched_objects_cache = {}
+                    if getattr(instance, '_prefetched_objects_cache', None):
+                        instance._prefetched_objects_cache = {}
 
-                self._create_update_after_hand(request, instance)
-                return success_response(serializer.data)
+                    self._create_update_after_hand(request, instance)
+                    return success_response(serializer.data)
+                except exceptions.BusinessException as e:
+                    message = e.error_data if e.error_data else e.error_message
+                    raise DatabaseError(message)
+                except Exception as e:
+                    raise DatabaseError(str(e))
         except DatabaseError as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_BUSINESS_ERROR,
