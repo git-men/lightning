@@ -424,51 +424,81 @@ class CommonManageViewSet(FormMixin,
         related_model = field.related_model
         pk_field_name = related_model._meta.pk.name
 
-        if not (isinstance(value, list) and value):
+        if not isinstance(value, list):
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'{key}: {value} 只能包含对象的列表'
+                error_data=f'{key}: {value} 只能是列表'
             )
 
-        for item in value:
-            if not isinstance(item, dict):
-                raise exceptions.BusinessException(
-                    error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                    error_data=f'{key}: {value} 包含了非对象格式的数据'
-                )
-
-            if not detail and pk_field_name in item:
-                raise exceptions.BusinessException(
-                    error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                    error_data=f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据'
-                )
-
-        for item_value in value:
-            if pk_field_name in item_value:
-                # 此时说明是更新的数据
-                pk_value = related_model._meta.pk.to_python(item[pk_field_name])
-
-                filter_params = {
-                    pk_field_name: pk_value,
-                    field.remote_field.name: instance
-                }
-                obj = related_model.objects.filter(**filter_params).first()
-                if not obj:
+        # 这里需要判断创造和更新
+        if detail:
+            # 如果是更新，如果传入空的数据，则删除掉对应的数据
+            if not value:
+                try:
+                    related_name = meta.get_relation_field_related_name(
+                        field.related_model, field.remote_field.name
+                    )
+                    if related_name:
+                        relation = getattr(instance, related_name, None)
+                        if relation:
+                            relation.all().delete()
+                except Exception as e:
                     raise exceptions.BusinessException(
-                        error_code=exceptions.OBJECT_NOT_FOUND,
-                        error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=str(e)
+                    )
+        else:
+            # 如果是创建，则什么都不做
+            if not value:
+                return
+
+        pure_id_list, object_data_list = [], []
+        for item in value:
+            if isinstance(item, dict):
+                object_data_list.append(item)
+                pure_id_list.append(item.get(pk_field_name))
+            else:
+                pure_id_list.append(item)
+
+        if object_data_list:
+            for item in object_data_list:
+                if not detail and pk_field_name in item:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_BUSINESS_ERROR,
+                        error_data=f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据'
                     )
 
-                serializer = create_serializer_class(related_model)(instance=obj, data=item_value, partial=True)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-            else:
-                # 如果传进来的数据不包含主键，则代表是创建数据
-                serializer = create_serializer_class(field.related_model)(data=item_value)
-                serializer.is_valid(raise_exception=True)
-                obj = serializer.save()
-                setattr(obj, field.remote_field.name, instance)
-                obj.save()
+            for item_value in object_data_list:
+                if pk_field_name in item_value:
+                    # 此时说明是更新的数据
+                    pk_value = related_model._meta.pk.to_python(item[pk_field_name])
+
+                    filter_params = {
+                        pk_field_name: pk_value,
+                        field.remote_field.name: instance
+                    }
+                    obj = related_model.objects.filter(**filter_params).first()
+                    if not obj:
+                        raise exceptions.BusinessException(
+                            error_code=exceptions.OBJECT_NOT_FOUND,
+                            error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+                        )
+
+                    serializer = create_serializer_class(related_model)(instance=obj, data=item_value, partial=True)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                else:
+                    # 如果传进来的数据不包含主键，则代表是创建数据
+                    serializer = create_serializer_class(field.related_model)(data=item_value)
+                    serializer.is_valid(raise_exception=True)
+                    obj = serializer.save()
+                    setattr(obj, field.remote_field.name, instance)
+                    obj.save()
+                    if detail:
+                        pure_id_list.append(getattr(obj, pk_field_name))
+        if detail:
+            pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
+            related_model.objects.exlude(**{f'{pk_field_name}__in': pure_id_list}).delete()
 
     def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
         """处理反向字段的多对多数据
