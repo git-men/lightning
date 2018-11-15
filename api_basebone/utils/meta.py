@@ -19,6 +19,10 @@ def get_reverse_fields(model):
     ]
 
 
+def check_field_is_reverse(field):
+    return field.auto_created and not field.concrete
+
+
 def get_field_by_reverse_field(field):
     """获取字段，通过反转字段
 

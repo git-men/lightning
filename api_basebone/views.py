@@ -185,10 +185,10 @@ class GenericViewMixin:
         get 方法使用 query string，这里需要解析
         post 方法直接放到 body 中
         """
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list']:
             fields = self.request.query_params.get(EXPAND_FIELDS)
             self.expand_fields = fields.split(',') if fields else None
-        else:
+        elif self.action in ['retrieve', 'set']:
             self.expand_fields = self.request.data.get(EXPAND_FIELDS)
 
     def _get_data_with_tree(self, request):
@@ -222,13 +222,31 @@ class GenericViewMixin:
         """动态的计算结果集
 
         - 如果是展开字段，这里做好是否关联查询
+        - FIXME: 反向的字段暂时只支持一级
         """
 
         expand_fields = self.expand_fields
         if not expand_fields:
             return self._get_queryset(self.model.objects.all())
 
-        field_list = [item.replace('.', '__') for item in expand_fields]
+        reverse_field_map = {
+            item.name: item for item in meta.get_reverse_fields(self.model)
+        }
+        field_list = []
+        for item in expand_fields:
+            # 如果扩展字段是反向字段，则获取 related_name
+            if item.split('.')[0] in reverse_field_map:
+                field = reverse_field_map.get(item.split('.')[0])
+                related_name = meta.get_relation_field_related_name(
+                    field.related_model, field.remote_field.name
+                )
+                if related_name and isinstance(related_name, tuple):
+                    field_list.append(related_name[0])
+            else:
+                field_list.append(item.replace('.', '__'))
+
+        # field_list = [item.replace('.', '__') for item in expand_fields]
+        # field_list = ['article_set']
         return self._get_queryset(
             self.model.objects.all().prefetch_related(*field_list)
         )
@@ -250,9 +268,10 @@ class GenericViewMixin:
             return create_serializer_class(model, tree_structure=tree_data)
 
         # 如果有展开字段，则创建嵌套的序列化类
-        return multiple_create_serializer_class(
+        serializer_class = multiple_create_serializer_class(
             model, expand_fields, tree_structure=tree_data
         )
+        return serializer_class
 
 
 class CommonManageViewSet(FormMixin,

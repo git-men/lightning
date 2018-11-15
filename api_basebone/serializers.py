@@ -1,7 +1,13 @@
 import imaplib
 from collections import OrderedDict
 
+from django.db import models
+
 from rest_framework import serializers
+from rest_framework.fields import SkipField
+from rest_framework.relations import PKOnlyObject
+
+from .utils import meta
 
 
 class RecursiveSerializer(serializers.Serializer):
@@ -17,6 +23,44 @@ class BaseModelSerializerMixin:
 
     class Meta:
         fields = '__all__'
+
+    def to_representation(self, instance):
+        """
+        Object instance -> Dict of primitive datatypes.
+        """
+        ret = OrderedDict()
+        fields = self._readable_fields
+
+        # 获取反向字段 related_name 和 name 的映射
+        model, reverse_field_map = self.Meta.model, {}
+        reverse_fields = meta.get_reverse_fields(model)
+
+        if reverse_fields:
+            for item in reverse_fields:
+                related_name = meta.get_relation_field_related_name(
+                    item.related_model, item.remote_field.name
+                )
+                if related_name:
+                    reverse_field_map[related_name[0]] = item.name
+
+        for field in fields:
+            try:
+                attribute = field.get_attribute(instance)
+            except SkipField:
+                continue
+
+            check_for_none = attribute.pk if isinstance(attribute, PKOnlyObject) else attribute
+            if check_for_none is None:
+                ret[field.field_name] = None
+            elif isinstance(attribute, models.Manager):
+                data = attribute.all()
+
+                # 检测字段是否是反向字段的 related_name, 如果是，转换为反向字段的名称
+                field_name = reverse_field_map[field.field_name] if field.field_name in reverse_field_map else field.field_name 
+                ret[field_name] = field.to_representation(data)
+            else:
+                ret[field.field_name] = field.to_representation(attribute)
+        return ret
 
 
 def create_meta_class(model, exclude_fields=None):
@@ -138,11 +182,19 @@ def multiple_create_serializer_class(model, expand_fields, tree_structure=None):
 
     for key, value in expand_dict.items():
         field = model._meta.get_field(key)
-        serializer_class = create_nested_serializer_class(field.related_model, value)
 
-        many = True if field.many_to_many else False
-        attrs[key] = serializer_class(many=many)
-
+        if meta.check_field_is_reverse(field):
+            many = False if field.one_to_one else True
+            serializer_class = create_serializer_class(field.related_model)
+            related_name = meta.get_relation_field_related_name(
+                field.related_model, field.remote_field.name
+            )
+            if related_name:
+                attrs[related_name[0]] = serializer_class(many=many)
+        else:
+            serializer_class = create_nested_serializer_class(field.related_model, value)
+            many = True if field.many_to_many else False
+            attrs[key] = serializer_class(many=many)
     return create_serializer_class(
         model, exclude_fields=None, tree_structure=tree_structure, **attrs
     )
