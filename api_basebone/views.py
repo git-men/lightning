@@ -185,6 +185,7 @@ class GenericViewMixin:
         get 方法使用 query string，这里需要解析
         post 方法直接放到 body 中
         """
+        self.expand_fields = None
         if self.action in ['list']:
             fields = self.request.query_params.get(EXPAND_FIELDS)
             self.expand_fields = fields.split(',') if fields else None
