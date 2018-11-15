@@ -140,8 +140,9 @@ def get_model_field_config(model):
                 'required': False,
                 'type': 'bref',
             }
-            reverse_config['displayName'] = field.verbose_name
             meta = item.related_model._meta
+            model_verbose_name = meta.verbose_name if meta.verbose_name else meta.model_name
+            reverse_config['displayName'] = model_verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
             config.append(reverse_config)
 
