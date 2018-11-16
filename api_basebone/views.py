@@ -174,7 +174,13 @@ class GenericViewMixin:
         return result
 
     def _load_custom_admin_module(self):
-        """加载用户自定义的 admin，其 admin 是继承 BSMAdminModule"""
+        """
+        加载用户自定义的 admin，其 admin 是继承 BSMAdminModule
+
+        重要：
+            FIXME: 不按照顺序加载，因为 BSMAdmin 机制类似 django Admin，一个应用中的模型配置
+                   可以写到其他模型中
+        """
         meta.load_custom_admin_module()
 
     def get_expand_fields(self):

@@ -19,6 +19,14 @@ def get_reverse_fields(model):
     ]
 
 
+def get_all_relation_fields(model):
+    """获取模型中所有的关系字段"""
+    return [
+        item for item in model.get_fields()
+        if item.is_relation
+    ]
+
+
 def check_field_is_reverse(field):
     return field.auto_created and not field.concrete
 
@@ -146,9 +154,9 @@ def get_export_apps():
 def get_bsm_app_admin(app_label):
     """获取 BSM 应用的 admin"""
     try:
-        return importlib.import_module(f'{app_label}.bsm.admin')
+        bsm_module = importlib.import_module(f'{app_label}.bsm.admin')
     except Exception as e:
-        return
+        print('load bsm app admin exception: {}'.format(str(3)))
 
 
 def get_bsm_model_admin(model):
@@ -173,5 +181,5 @@ def get_custom_form_module(model):
     """
     try:
         return importlib.import_module(f'{app_label}.bsm.forms')
-    except Exception:
-        return
+    except Exception  as e:
+        print('get user custom form module exception: {}'.format(str(e)))

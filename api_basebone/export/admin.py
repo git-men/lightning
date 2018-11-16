@@ -59,6 +59,6 @@ def get_app_admin_config():
                 model_admin_config = admin_model_config(m)
                 if model_admin_config:
                     config.update(model_admin_config)
-        except Exception:
-            pass
+        except Exception as e:
+            print('get bsm model config exception: {}'.format(str(e)))
     return config
