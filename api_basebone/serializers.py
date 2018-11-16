@@ -93,7 +93,7 @@ def create_meta_class(model, exclude_fields=None):
     if exclude_fields is not None:
         attrs['exclude'] = exclude_fields
     else:
-        attrs['fields']: '__all__'
+        attrs['fields'] = '__all__'
 
     return type('Meta', (object, ), attrs)
 

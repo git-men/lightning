@@ -48,5 +48,28 @@ ORDER_BY_FIELDS = 'order_by'
 """
 DATA_WITH_TREE = 'data_with_tree'
 
-
+"""在序列化时，指定排除的字段，数据格式为列表或者元组"""
 GMETA_SERIALIZER_EXCLUDE_FIELDS = 'exclude_fields'
+
+"""输出 schema 中的 title_field，数据类型：字符串"""
+GMETA_TITLE_FIELD = 'title_field'
+
+"""
+字段的重置配置，例如觉得字段默认的 verbose_name 不好看可以使用此配置，例子如下：
+
+field_form_config = {
+    'comments': {
+        'verbose_name': '我是谁',
+        'required': False,
+    }
+}
+"""
+GMETA_FIELD_CONFIG = 'field_form_config'
+
+"""django 中声明的字段的配置和输出配置键的映射
+
+此常量供业务内部调用
+"""
+GMETA_FIELD_CONFIG_MAP = {
+    'verbose_name': 'displayName'
+}
