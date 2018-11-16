@@ -33,6 +33,7 @@ from .utils import meta, get_app
 from .utils.operators import build_filter_conditions
 from .export.fields import get_app_field_schema
 from .export.admin import get_app_admin_config
+from .pip_flow import add_login_user_data
 
 
 class FormMixin(object):
@@ -171,6 +172,8 @@ class GenericViewMixin:
         self.get_expand_fields()
         self._get_data_with_tree(request)
         self._load_custom_admin_module()
+
+        add_login_user_data(self, request.data)
         return result
 
     def _load_custom_admin_module(self):
@@ -340,10 +343,11 @@ class CommonManageViewSet(FormMixin,
             update_list.append(item) if pk_field_name in item else create_list.append(item)
 
         if create_list:
-            serializer = create_serializer_class(related_model)(data=create_list, many=True)
-            serializer.is_valid(raise_exception=True)
-
-            create_ids = [related_model.objects.create(**item).id for item in create_list]
+            create_ids = []
+            for item_data in create_list:
+                serializer = create_serializer_class(related_model)(data=item_data)
+                serializer.is_valid(raise_exception=True)
+                create_ids.append(serializer.save().id)
             pure_data += create_ids
 
         if update_list:
