@@ -7,7 +7,22 @@ from rest_framework import serializers
 from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
 
+from .core import const
 from .utils import meta
+
+
+def get_model_exclude_fields(model):
+    """获取模型序列化输出时的排除字段
+
+    Params:
+        model class django 模型类
+    """
+    gmeta_class = getattr(model, 'GMeta', None)
+    if gmeta_class:
+        exclude = getattr(gmeta_class, const.GMETA_SERIALIZER_EXCLUDE_FIELDS, None)
+        if exclude and isinstance(exclude, (list, tuple)):
+            fields = [item.name for item in model._meta.get_fields()]
+            return [item for item in exclude if item in fields]
 
 
 class RecursiveSerializer(serializers.Serializer):
@@ -72,10 +87,13 @@ def create_meta_class(model, exclude_fields=None):
 
     attrs = {
         'model': model,
-        'fields': '__all__'
     }
+
+    exclude_fields = get_model_exclude_fields(model)
     if exclude_fields is not None:
         attrs['exclude'] = exclude_fields
+    else:
+        attrs['fields']: '__all__'
 
     return type('Meta', (object, ), attrs)
 

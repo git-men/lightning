@@ -47,3 +47,6 @@ ORDER_BY_FIELDS = 'order_by'
 数据格式 Bool：true 或者 false
 """
 DATA_WITH_TREE = 'data_with_tree'
+
+
+GMETA_SERIALIZER_EXCLUDE_FIELDS = 'exclude_fields'
