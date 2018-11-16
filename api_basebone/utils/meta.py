@@ -9,6 +9,16 @@ from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core.admin import BSMAdminModule
 
+# Django 内部定义的应用
+DJANGO_INTERNAL_APPS = [
+    'admin',
+    'auth',
+    'contenttypes',
+    'sessions',
+    'messages',
+    'staticfiles',
+]
+
 
 def get_reverse_fields(model):
     """获取模型的反向字段"""
@@ -156,7 +166,7 @@ def get_bsm_app_admin(app_label):
     try:
         bsm_module = importlib.import_module(f'{app_label}.bsm.admin')
     except Exception as e:
-        print('load bsm app admin exception: {}'.format(str(3)))
+        print('load bsm app admin exception: {}, {}'.format(app_label,  e))
 
 
 def get_bsm_model_admin(model):
@@ -170,8 +180,10 @@ def load_custom_admin_module():
     export_apps = get_export_apps()
     if not export_apps:
         return
+
     for app_label in export_apps:
-        get_bsm_app_admin(app_label)
+        if app_label not in DJANGO_INTERNAL_APPS:
+            get_bsm_app_admin(app_label)
 
 
 def get_custom_form_module(model):
@@ -181,5 +193,5 @@ def get_custom_form_module(model):
     """
     try:
         return importlib.import_module(f'{app_label}.bsm.forms')
-    except Exception  as e:
-        print('get user custom form module exception: {}'.format(str(e)))
+    except Exception as e:
+        print('load user custom bsm form exception: {}, {}'.format(app_label, e))

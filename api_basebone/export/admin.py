@@ -1,8 +1,13 @@
 from django.apps import apps
 
 from api_basebone.batch_actions import get_model_batch_actions
-from api_basebone.core.admin import VALID_MANAGE_ATTRS, BSM_BATCH_ACTION, BSMAdminModule
-from api_basebone.utils.meta import get_export_apps, get_bsm_app_admin
+from api_basebone.core.admin import (
+    VALID_MANAGE_ATTRS,
+    BSM_BATCH_ACTION,
+    BSMAdminModule,
+)
+
+from api_basebone.utils import meta
 from api_basebone.utils.format import underline_to_camel
 
 
@@ -32,33 +37,24 @@ def admin_model_config(model):
     return {key: config}
 
 
-def load_admin_module():
-    """加载 admin 的 module"""
-    export_apps = get_export_apps()
-    if not export_apps:
-        return
-    for app_label in export_apps:
-        get_bsm_app_admin(app_label)
-
-
 def get_app_admin_config():
     """获取应用管理的配置"""
-    export_apps = get_export_apps()
+    export_apps = meta.get_export_apps()
     config = {}
     if not export_apps:
         return config
 
     # 动态加载配置
-    load_admin_module()
+    meta.load_custom_admin_module()
 
     for item in export_apps:
         try:
             app = apps.get_app_config(item)
-            for m in app.get_models():
+            for model in app.get_models():
                 # 获取配置，如果配置为空，则不显示到最终的配置中去
-                model_admin_config = admin_model_config(m)
+                model_admin_config = admin_model_config(model)
                 if model_admin_config:
                     config.update(model_admin_config)
         except Exception as e:
-            print('get bsm model config exception: {}'.format(str(e)))
+            print(f'get bsm model config exception: {item} {e}')
     return config
