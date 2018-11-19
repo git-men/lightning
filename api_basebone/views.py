@@ -228,6 +228,21 @@ class GenericViewMixin:
                 except Exception:
                     pass
 
+    def translate_expand_fields(self, expand_fields):
+        for out_index, item in enumerate(expand_fields):
+            field_list = item.split('.')
+            model = self.model
+            for index, value in enumerate(field_list):
+                field = model._meta.get_field(value)
+                if meta.check_field_is_reverse(field):
+                    result = meta.get_relation_field_related_name(field.related_model, field.remote_field.name)
+                    if result:
+                        field_list[index] = result[0]
+                if field.is_relation:
+                    model = field.related_model
+            expand_fields[out_index] = '.'.join(field_list)
+        return expand_fields
+
     def get_queryset(self):
         """动态的计算结果集
 
@@ -239,23 +254,8 @@ class GenericViewMixin:
         if not expand_fields:
             return self._get_queryset(self.model.objects.all())
 
-        reverse_field_map = {
-            item.name: item for item in meta.get_reverse_fields(self.model)
-        }
-        field_list = []
-        for item in expand_fields:
-            # 如果扩展字段是反向字段，则获取 related_name
-            if item.split('.')[0] in reverse_field_map:
-                field = reverse_field_map.get(item.split('.')[0])
-                related_name = meta.get_relation_field_related_name(
-                    field.related_model, field.remote_field.name
-                )
-                if related_name and isinstance(related_name, tuple):
-                    field_list.append(related_name[0])
-            else:
-                field_list.append(item.replace('.', '__'))
-
-        # field_list = [item.replace('.', '__') for item in expand_fields]
+        expand_fields = self.translate_expand_fields(expand_fields)
+        field_list = [item.replace('.', '__') for item in expand_fields]
         return self._get_queryset(
             self.model.objects.all().prefetch_related(*field_list)
         )

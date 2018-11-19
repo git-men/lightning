@@ -1,5 +1,5 @@
 import imaplib
-from collections import OrderedDict
+from collections import OrderedDict, Mapping
 
 from django.db import models
 
@@ -122,41 +122,71 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
     )
 
 
-def range_expand_fields(fields):
-    assert isinstance(fields, list), '扩展字段应该是一个列表'
+def get_field(model, field_name):
+    valid_fields = {
+        item.name: item for item in model._meta.get_fields()
+    }
+    if field_name in valid_fields:
+        return valid_fields[field_name]
+    related_field_map = {}
+    for field in meta.get_reverse_fields(model):
+        related_name = meta.get_relation_field_related_name(
+            field.related_model, field.remote_field.name
+        )
+        if related_name:
+            related_field_map[related_name[0]] = field
 
-    result = {}
-    for item in fields:
-        if '.' not in item:
-            if item not in result:
-                result[item] = [item]
+    if field_name in related_field_map:
+        return related_field_map[field_name]
+
+
+def dict_merge(dct, merge_dct):
+    """递归合并字典
+
+    Params:
+        dct dict 源字典
+        merge_dict dict 待合并的字典
+    """
+    for key, value in merge_dct.items():
+        if key in dct and isinstance(dct[key], dict) and isinstance(merge_dct[key], Mapping):
+            dict_merge(dct[key], merge_dct[key])
         else:
-            name = item.split('.', maxsplit=1)[0]
-            if name not in result:
-                result[name] = [item]
-            else:
-                result[name].append(item)
+            dct[key] = merge_dct[key]
+    return dct
 
-    for key, value in result.items():
-        result[key] = sorted(value, key=len, reverse=True)[0].split('.')
+
+def generate_nest_dict(fields):
+    """生成嵌套的字典
+
+    例如：abc.allen.girl 将会处理成
+
+    {
+        'abc': {
+            'allen': {
+                'girl': {}
+            }
+        }
+    }
+    """
+    tree_dict = {}
+    for key in reversed(fields.split('.')):
+        tree_dict = {key: tree_dict}
+    return tree_dict
+
+
+def sort_expand_fields(fields):
+    """
+    整理扩展字段
+
+    Params:
+        fields list 扩展字段的列表
+    """
+    assert isinstance(fields, list), '扩展字段应该是一个列表'
+    result = {}
+
+    for item in fields:
+        dict_merge(result, generate_nest_dict(item))
     return result
-
-
-def dg_attrs(index, model, field_dict, stop):
-    if index == 0:
-        model = model
-    else:
-        field_name = field_dict[index]['field_name']
-        field = model._meta.get_field(field_name)
-
-        field_dict[index]['field'] = field
-        field_dict[index]['model'] = field.related_model
-        field_dict[index]['many'] = field.many_to_many
-        model = field.related_model
-
-    index += 1
-    if index < stop:
-        dg_attrs(index, model, field_dict, stop)
 
 
 def create_nested_serializer_class(model, field_list):
@@ -164,55 +194,36 @@ def create_nested_serializer_class(model, field_list):
 
     此方法仅仅为 multiple_create_serializer_class 方法服务
     """
-    field_length = len(field_list)
-    if field_length == 1:
-        return create_serializer_class(model)
+    field_nest = field_list
 
-    field_dict = OrderedDict()
-    for index, item in enumerate(field_list):
-        field_dict[index] = {
-            'field_name': item,
-            'model': model,
-        }
+    attrs = {}
+    for key, value in field_nest.items():
+        field = get_field(model, key)
+        many = field.many_to_many
+        if meta.check_field_is_reverse(field):
+            many = False if field.one_to_one else True
 
-    dg_attrs(0, model, field_dict, field_length)
-
-    for key, value in reversed(field_dict.items()):
-        if key == (field_length - 1):
-            value['serializer'] = create_serializer_class(value['model'])
+        if not value:
+            attrs[key] = create_serializer_class(field.related_model)(many=many)
         else:
-            prev_value = field_dict[key + 1]
-            many = True if prev_value['many'] else False
-            serializer_class = prev_value['serializer']
-
-            attrs = {
-                prev_value['field_name']: serializer_class(many=many)
-            }
-            value['serializer'] = create_serializer_class(value['model'], **attrs)
-    return field_dict[0]['serializer']
+            attrs[key] = create_nested_serializer_class(field.related_model, value)(many=many)
+    return create_serializer_class(model, **attrs)
 
 
 def multiple_create_serializer_class(model, expand_fields, tree_structure=None):
     """多重创建序列化类"""
-
-    expand_dict = range_expand_fields(expand_fields)
     attrs = {}
 
+    expand_dict = sort_expand_fields(expand_fields)
     for key, value in expand_dict.items():
-        field = model._meta.get_field(key)
+        field = get_field(model, key)
+        serializer_class = create_nested_serializer_class(field.related_model, value)
 
+        # 如果是反向字段，则使用另外一种方式
+        many = True if field.many_to_many else False
         if meta.check_field_is_reverse(field):
             many = False if field.one_to_one else True
-            serializer_class = create_serializer_class(field.related_model)
-            related_name = meta.get_relation_field_related_name(
-                field.related_model, field.remote_field.name
-            )
-            if related_name:
-                attrs[related_name[0]] = serializer_class(many=many)
-        else:
-            serializer_class = create_nested_serializer_class(field.related_model, value)
-            many = True if field.many_to_many else False
-            attrs[key] = serializer_class(many=many)
+        attrs[key] = serializer_class(many=many)
     return create_serializer_class(
         model, exclude_fields=None, tree_structure=tree_structure, **attrs
     )
