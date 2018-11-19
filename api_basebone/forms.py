@@ -9,10 +9,12 @@ def create_meta_class(model, exclude_fields=None):
 
     attrs = {
         'model': model,
-        'fields': '__all__'
     }
-    if exclude_fields is not None:
+
+    if exclude_fields is not None and isinstance(exclude, (list, tuple)):
         attrs['exclude'] = exclude_fields
+    else:
+        attrs['fields'] = '__all__'
 
     return type('Meta', (object, ), attrs)
 
