@@ -169,9 +169,9 @@ class GenericViewMixin:
                 error_code=exceptions.CANT_NOT_GET_MODEL
             )
 
+        self._load_custom_admin_module()
         self.get_expand_fields()
         self._get_data_with_tree(request)
-        self._load_custom_admin_module()
 
         add_login_user_data(self, request.data)
         return result
@@ -200,6 +200,17 @@ class GenericViewMixin:
             self.expand_fields = fields.split(',') if fields else None
         elif self.action in ['retrieve', 'set']:
             self.expand_fields = self.request.data.get(EXPAND_FIELDS)
+            # 详情的展开字段和列表的展开字段分开处理
+            if not self.expand_fields and self.action == 'retrieve':
+                # 对于详情的展开，直接读取 admin 中的配置
+                admin_class = self.get_bsm_model_admin()
+                if admin_class:
+                    try:
+                        detail_expand_fields = getattr(admin_class, admin.BSM_DETAIL_EXPAND_FIELDS, None)
+                        if detail_expand_fields:
+                            self.expand_fields = detail_expand_fields
+                    except Exception:
+                        pass
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
@@ -229,6 +240,7 @@ class GenericViewMixin:
                     pass
 
     def translate_expand_fields(self, expand_fields):
+        """转换展开字段"""
         for out_index, item in enumerate(expand_fields):
             field_list = item.split('.')
             model = self.model

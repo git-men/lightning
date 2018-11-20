@@ -38,6 +38,9 @@ BSM_LIST_STYLE = 'list_style'
 # 内联表单设置
 BSM_INLINE_FORM_FIELDS = 'inline_form_fields'
 
+# 详情的展开字段列表
+BSM_DETAIL_EXPAND_FIELDS = 'detail_expand_fields'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -53,6 +56,7 @@ VALID_MANAGE_ATTRS = [
     BSM_GROUP_STYLE,
     BSM_LIST_STYLE,
     BSM_INLINE_FORM_FIELDS,
+    BSM_DETAIL_EXPAND_FIELDS,
 ]
 
 # 属性和默认值映射
