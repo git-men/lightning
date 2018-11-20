@@ -123,11 +123,22 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
 
 
 def get_field(model, field_name):
+    """
+    获取字段
+
+    Params:
+        field_name str 字段名或者反向字段的 related_name
+
+    Returns:
+        field 指定 model 的字段
+    """
     valid_fields = {
         item.name: item for item in model._meta.get_fields()
     }
     if field_name in valid_fields:
         return valid_fields[field_name]
+
+    # 如果没有找到指定的字段，则通过反向字段的 related_name 进行查找
     related_field_map = {}
     for field in meta.get_reverse_fields(model):
         related_name = meta.get_relation_field_related_name(
@@ -217,13 +228,12 @@ def multiple_create_serializer_class(model, expand_fields, tree_structure=None):
     expand_dict = sort_expand_fields(expand_fields)
     for key, value in expand_dict.items():
         field = get_field(model, key)
-        serializer_class = create_nested_serializer_class(field.related_model, value)
-
         # 如果是反向字段，则使用另外一种方式
-        many = True if field.many_to_many else False
+        many = field.many_to_many
         if meta.check_field_is_reverse(field):
             many = False if field.one_to_one else True
-        attrs[key] = serializer_class(many=many)
+
+        attrs[key] = create_nested_serializer_class(field.related_model, value)(many=many)
     return create_serializer_class(
         model, exclude_fields=None, tree_structure=tree_structure, **attrs
     )

@@ -198,3 +198,68 @@ def get_custom_form_module(model):
     except Exception as e:
         print('load user custom bsm form exception: {}, {}'.format(model._meta.app_label, e))
         return
+
+
+def get_dict_expand_fields_by_level(model, level):
+    """根据 level 获取展开的字段
+
+    Params:
+        model class  django 模型类
+        level int 层级
+
+    Returns:
+        list
+    """
+    assert isinstance(level, int), 'level 应该是整型的数字'
+    if level <= 0:
+        return {}
+    relation_fields = get_all_relation_fields(model)
+    if not relation_fields:
+        return {}
+
+    result = {}
+    for item in relation_fields:
+        result[item.name] = get_dict_expand_fields_by_level(
+            item.related_model, level - 1
+        )
+    return result
+
+
+def expand_fields_to_list(field_dict, parent=None, result=None):
+    """
+    字典型的展开字段数据转换为列表
+    """
+    if result is None:
+        result = []
+
+    if not field_dict:
+        return
+
+    for key, value in field_dict.items():
+        temporary_parent = f'{parent}.{key}' if parent else key
+
+        if not value:
+            result.append(temporary_parent)
+        else:
+            expand_fields_to_list(value, parent=temporary_parent, result=result)
+    return result
+
+
+def get_expand_fields_by_level(model, level):
+    """获取模型指定层数的展开字段
+
+    Params:
+        model class django 模型类
+        level int 展开字段的层数
+
+    Returns:
+        list
+    """
+    fields = get_dict_expand_fields_by_level(model, level)
+    result = []
+    if not fields:
+        return
+    for key, value in fields.items():
+        item_expands = expand_fields_to_list({key: value})
+        result += item_expands
+    return result
