@@ -36,11 +36,13 @@ def get_model_batch_actions(model):
     bsm_batch_actions.update(default_action_map)
 
     try:
-        importlib.import_module(f'{model._meta.app_label}.bsm.actions')
-        model_actions = getattr(model, BSM_BATCH_ACTION, None)
-        if model_actions:
-            bsm_batch_actions.update(model_actions)
-    except Exception:
+        module_name = f'{model._meta.app_config.name}.bsm.actions'
+        module = importlib.util.find_spec(module_name)
+        if module:
+            model_actions = getattr(model, BSM_BATCH_ACTION, None)
+            if model_actions:
+                bsm_batch_actions.update(model_actions)
+    except ModuleNotFoundError:
         pass
     return bsm_batch_actions
 

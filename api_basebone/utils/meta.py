@@ -3,21 +3,13 @@
 """
 
 import importlib
+
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core.admin import BSMAdminModule
-
-# Django 内部定义的应用
-DJANGO_INTERNAL_APPS = [
-    'admin',
-    'auth',
-    'contenttypes',
-    'sessions',
-    'messages',
-    'staticfiles',
-]
 
 
 def get_reverse_fields(model):
@@ -162,17 +154,19 @@ def get_export_apps():
     return ['auth'] + settings.INTERNAL_APPS
 
 
-def get_bsm_app_admin(app_label):
-    """获取 BSM 应用的 admin"""
+def load_bsm_app_admin(app):
+    """加载应用的 admin"""
     try:
-        bsm_module = importlib.import_module(f'{app_label}.bsm.admin')
-    except Exception as e:
-        print('load bsm app admin exception: {}, {}'.format(app_label,  e))
+        module_name = f'{app.name}.bsm.admin'
+        module = importlib.util.find_spec(module_name)
+        if module:
+            importlib.import_module(module_name)
+    except ModuleNotFoundError:
         return
 
 
 def get_bsm_model_admin(model):
-    """获取 BSM Admin 模块"""
+    """获取 Admin 类"""
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
     return BSMAdminModule.modules.get(key)
 
@@ -184,8 +178,7 @@ def load_custom_admin_module():
         return
 
     for app_label in export_apps:
-        if app_label not in DJANGO_INTERNAL_APPS:
-            get_bsm_app_admin(app_label)
+        load_bsm_app_admin(apps.get_app_config(app_label))
 
 
 def get_custom_form_module(model):
@@ -194,9 +187,11 @@ def get_custom_form_module(model):
     TODO: 暂时应用下面的不能写入到其他应用下面
     """
     try:
-        return importlib.import_module(f'{model._meta.app_label}.bsm.forms')
-    except Exception as e:
-        print('load user custom bsm form exception: {}, {}'.format(model._meta.app_label, e))
+        module_name = f'{model._meta.app_config.name}.bsm.forms'
+        module = importlib.util.find_spec(module_name)
+        if module:
+            return importlib.import_module(module_name)
+    except ModuleNotFoundError:
         return
 
 
