@@ -26,8 +26,6 @@ from api_basebone.restful.serializers import (
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
-from api_basebone.export.fields import get_app_field_schema
-from api_basebone.export.admin import get_app_admin_config
 
 
 class FormMixin(object):
@@ -613,19 +611,3 @@ class CommonManageViewSet(FormMixin,
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
-
-
-class ConfigViewSet(viewsets.GenericViewSet):
-    """读取配置接口"""
-
-    @action(detail=False, url_path='schema')
-    def get_schema(self, request, *args, **kwargs):
-        """获取 schema 配置"""
-        data = get_app_field_schema()
-        return success_response(data)
-
-    @action(detail=False, url_path='admin')
-    def get_admin(self, request, *args, **kwargs):
-        """获取 admin 配置"""
-        data = get_app_admin_config()
-        return success_response(data)

@@ -117,5 +117,4 @@ def add_login_user_data(view, data):
                                             value[field_name] = user
                                 except Exception:
                                     pass
-    print(data)
     return data
