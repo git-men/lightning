@@ -156,22 +156,12 @@ class GenericViewMixin:
 
         self.model = apps.all_models[self.app_label][self.model_slug]
 
-        self._load_custom_admin_module()
+        meta.load_custom_admin_module()
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
         add_login_user_data(self, request.data)
         return result
-
-    def _load_custom_admin_module(self):
-        """
-        加载用户自定义的 admin，其 admin 是继承 BSMAdminModule
-
-        重要：
-            FIXME: 不按照顺序加载，因为 BSMAdmin 机制类似 django Admin，一个应用中的模型配置
-                   可以写到其他模型中
-        """
-        meta.load_custom_admin_module()
 
     def get_expand_fields(self):
         """获取扩展字段并作为属性值赋予
@@ -252,9 +242,7 @@ class GenericViewMixin:
 
         expand_fields = self.translate_expand_fields(expand_fields)
         field_list = [item.replace('.', '__') for item in expand_fields]
-        return self._get_queryset(
-            self.model.objects.all().prefetch_related(*field_list)
-        )
+        return self._get_queryset(self.model.objects.all().prefetch_related(*field_list))
 
     def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类
@@ -262,14 +250,14 @@ class GenericViewMixin:
         - 如果没有嵌套字段，则动态创建最简单的序列化类
         - 如果有嵌套字段，则动态创建引用字段的嵌套序列化类
         """
-
         # FIXME: 这里只有做是为了使用 django-rest-swagger，否则会报错，因为 swagger 还是很笨
         expand_fields = getattr(self, 'expand_fields', None)
+        # FIXME: 这里设置了一个默认值，是为了避免 swagger 报错
         model = getattr(self, 'model', get_user_model())
         tree_data = getattr(self, 'tree_data', None)
 
+        # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            # 如果没有展开字段，则直接创建模型对应的序列化类
             return create_serializer_class(model, tree_structure=tree_data)
 
         # 如果有展开字段，则创建嵌套的序列化类
