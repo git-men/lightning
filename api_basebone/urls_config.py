@@ -1,3 +1,7 @@
+"""
+输出配置的路由
+"""
+
 from django.urls import path, include
 
 from .drf.routers import BaseBoneSimpleRouter as SimpleRouter

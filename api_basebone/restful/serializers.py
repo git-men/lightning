@@ -7,8 +7,8 @@ from rest_framework import serializers
 from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
 
-from .core import const
-from .utils import meta
+from api_basebone.core import const
+from api_basebone.utils import meta
 
 
 def get_model_exclude_fields(model):

@@ -8,7 +8,6 @@
 
 import importlib
 from rest_framework import serializers
-
 from api_basebone.core import exceptions
 from api_basebone.core.decorators import BSM_BATCH_ACTION
 from api_basebone.core.exceptions import BusinessException, BATCH_ACTION_HAND_ERROR

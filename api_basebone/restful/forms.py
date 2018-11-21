@@ -46,4 +46,6 @@ def get_form_class(model, action, exclude_fields=None, **kwargs):
     module = get_custom_form_module(model)
     class_name = '{}{}Form'.format(model.__name__, action_map[action])
     form = getattr(module, class_name, None)
-    return create_form_class(model, exclude_fields=exclude_fields, **kwargs) if form is None else form
+    if form is None:
+        return create_form_class(model, exclude_fields=exclude_fields, **kwargs)
+    return form

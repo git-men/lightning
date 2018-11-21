@@ -6,32 +6,28 @@ from django.db import DatabaseError, transaction
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
-from . import batch_actions
+from api_basebone.app.account.forms import UserCreateUpdateForm
 
-from .app.account.forms import UserCreateUpdateForm
+from api_basebone.core import admin, exceptions, const
 
-from .core import admin, exceptions, const
-from .core.const import (
-    DISPLAY_FIELDS,
-    EXPAND_FIELDS,
-    FILTER_CONDITIONS,
-    ORDER_BY_FIELDS,
+from api_basebone.drf.response import success_response
+from api_basebone.drf.pagination import PageNumberPagination
+
+from api_basebone.restful.forms import get_form_class
+from api_basebone.restful.manage import batch_actions
+from api_basebone.restful.pip_flow import add_login_user_data
+from api_basebone.restful.relations import (
+    _create_update_pre_hand
 )
-
-from .drf.response import success_response
-from .drf.pagination import PageNumberPagination
-
-from .forms import get_form_class
-from .serializers import (
+from api_basebone.restful.serializers import (
     create_serializer_class,
     multiple_create_serializer_class
 )
 
-from .utils import meta, get_app
-from .utils.operators import build_filter_conditions
-from .export.fields import get_app_field_schema
-from .export.admin import get_app_admin_config
-from .pip_flow import add_login_user_data
+from api_basebone.utils import meta, get_app
+from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.export.fields import get_app_field_schema
+from api_basebone.export.admin import get_app_admin_config
 
 
 class FormMixin(object):
@@ -89,7 +85,7 @@ class QuerySetMixin:
 
     def get_queryset_by_order_by(self, queryset):
         """结果集支持排序"""
-        fields = self.request.data.get(ORDER_BY_FIELDS)
+        fields = self.request.data.get(const.ORDER_BY_FIELDS)
         if isinstance(fields, list) and fields:
             return queryset.order_by(*fields)
         return queryset
@@ -111,7 +107,7 @@ class QuerySetMixin:
         if not queryset:
             return queryset
 
-        filter_conditions = self.request.data.get(FILTER_CONDITIONS)
+        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         if filter_conditions:
             cons = build_filter_conditions(filter_conditions)
             if cons:
@@ -143,29 +139,24 @@ class GenericViewMixin:
         截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
 
         - 检验 app 和 model 是否合法
+        - 加载 admin 模块
         - 记录模型对象
         - 处理展开字段
         - 处理树形数据
+        - 给数据自动插入用户数据
         """
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
+        # 检测应用是否在 INSTALLED_APPS 中
         if get_app(self.app_label) not in settings.INSTALLED_APPS:
-            raise exceptions.BusinessException(
-                error_code=exceptions.APP_LABEL_IS_INVALID
-            )
+            raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
 
+        # 检测模型是否合法
         if self.model_slug not in apps.all_models[self.app_label]:
-            raise exceptions.BusinessException(
-                error_code=exceptions.MODEL_SLUG_IS_INVALID
-            )
+            raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
 
-        try:
-            self.model = apps.get_model(f'{self.app_label}.{self.model_slug}')
-        except Exception:
-            raise exceptions.BusinessException(
-                error_code=exceptions.CANT_NOT_GET_MODEL
-            )
+        self.model = apps.all_models[self.app_label][self.model_slug]
 
         self._load_custom_admin_module()
         self.get_expand_fields()
@@ -194,10 +185,10 @@ class GenericViewMixin:
         """
         self.expand_fields = None
         if self.action in ['list']:
-            fields = self.request.query_params.get(EXPAND_FIELDS)
+            fields = self.request.query_params.get(const.EXPAND_FIELDS)
             self.expand_fields = fields.split(',') if fields else None
         elif self.action in ['retrieve', 'set']:
-            self.expand_fields = self.request.data.get(EXPAND_FIELDS)
+            self.expand_fields = self.request.data.get(const.EXPAND_FIELDS)
             # 详情的展开字段和列表的展开字段分开处理
             if not self.expand_fields and self.action == 'retrieve':
                 # 对于详情的展开，直接读取 admin 中的配置
@@ -212,7 +203,6 @@ class GenericViewMixin:
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
-
         self.tree_data = None
 
         data_with_tree = False
@@ -257,9 +247,7 @@ class GenericViewMixin:
         """动态的计算结果集
 
         - 如果是展开字段，这里做好是否关联查询
-        - FIXME: 反向的字段暂时只支持一级
         """
-
         expand_fields = self.expand_fields
         if not expand_fields:
             return self._get_queryset(self.model.objects.all())
@@ -583,7 +571,7 @@ class CommonManageViewSet(FormMixin,
         if relation:
             relation.set(list(related_obj_set))
 
-    def _create_update_pre_hand(self, request, *args, **kwargs):
+    def old_create_update_pre_hand(self, request, *args, **kwargs):
         """创建和更新的预处理
 
         例如文章和图片存在多对多，在新建文章时，对于图片，前端有可能会 push 以下数据
@@ -641,7 +629,7 @@ class CommonManageViewSet(FormMixin,
         try:
             with transaction.atomic():
                 try:
-                    self._create_update_pre_hand(request, *args, **kwargs)
+                    _create_update_pre_hand(self, request.data)
 
                     if self.model == get_user_model():
                         serializer = UserCreateUpdateForm(data=request.data)
@@ -673,7 +661,8 @@ class CommonManageViewSet(FormMixin,
         try:
             with transaction.atomic():
                 try:
-                    self._create_update_pre_hand(request, *args, **kwargs)
+                    # self._create_update_pre_hand(request, *args, **kwargs)
+                    _create_update_pre_hand(self, request.data)
 
                     partial = kwargs.pop('partial', False)
                     instance = self.get_object()

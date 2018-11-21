@@ -15,6 +15,12 @@ def add_login_user_data(view, data):
 
     对于字段，这里分：正向的关系字段，反向的关系字段
     """
+    if view.request.method.upper() in ['GET', 'OPTIONS', 'DELETE']:
+        return
+
+    if not view.request.data:
+        return
+
     model_name, model = view.model_slug, view.model
 
     # 第一部分，先检测模型中的字段是否有引用用户模型，如果有，则注入用户数据
