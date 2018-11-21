@@ -3,7 +3,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
 from api_basebone.drf.response import success_response
-from api_basebone.serializers import create_serializer_class
+from api_basebone.restful.serializers import create_serializer_class
 from . import forms
 
 
