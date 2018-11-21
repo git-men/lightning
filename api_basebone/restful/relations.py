@@ -217,73 +217,9 @@ def reverse_one_to_many(self, field, value, instance, detail=True):
     # 如果是更新，则删除掉对应的数据
     if detail and pure_id_list:
         pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
-        # related_model.objects.exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
         relation = meta.get_relation_field_related_name(related_model, field.remote_field.name)
         if relation:
             getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
-
-
-def reverse_many_to_many(self, field, value, instance, detail=True):
-        """处理反向字段的多对多数据
-
-        场景类似上面杉树的注释
-        """
-        related_model, key = field.related_model, field.name
-        pk_field_name = related_model._meta.pk.name
-
-        if not (isinstance(value, list) and value):
-            return
-
-        pure_data, object_data, related_obj_set = [], [], set()
-        for item in value:
-            object_data.append(item) if isinstance(item, dict) else pure_data.append(item)
-
-        if pure_data:
-            queryset = related_model.objects.filter(
-                **{f'{pk_field_name}__in': pure_data}
-            )
-            if len(pure_data) != queryset.count():
-                raise exceptions.BusinessException(
-                    error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                    error_data=f'{key}: {value} 包含不合法的主键数据'
-                )
-            for item in queryset.iterator():
-                related_obj_set.add(item.id)
-
-        # 如果不包含对象数据，则不做任何处理
-        if not object_data:
-            create_list, update_list = [], []
-            for item in object_data:
-                update_list.append(item) if pk_field_name in item else create_list.append(item)
-
-            if create_list:
-                serializer = create_serializer_class(related_model)(data=create_list, many=True)
-                serializer.is_valid(raise_exception=True)
-                create_ids = [related_model.objects.create(**item).id for item in create_list]
-                related_obj_set.update(create_ids)
-
-            if update_list:
-                update_data_map = {item[pk_field_name]: item for item in update_list}
-                filter_params = {
-                    f'{pk_field_name}__in': update_data_map.keys()
-                }
-                queryset = related_model.objects.filter(**filter_params)
-                if queryset.count() != len(update_list):
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=f'{key}: {update_list} 存在不合法的数据'
-                    )
-
-                for instance in queryset.iterator():
-                    data = update_data_map.get(getattr(instance, pk_field_name, None))
-                    serializer = create_serializer_class(related_model)(instance=instance, data=data, partial=True)
-                    serializer.is_valid(raise_exception=True)
-                    serializer.save()
-                related_obj_set.update(update_data_map.keys())
-        related_name = meta.get_relation_field_related_name(related_model, field.remote_field.name)
-        relation = getattr(instance, related_name, None)
-        if relation:
-            relation.set(list(related_obj_set))
 
 
 def forward_relation_hand(self, data):
@@ -336,7 +272,5 @@ def reverse_relation_hand(self, instance, detail=True):
 
         if meta.check_field_is_reverse(field):
             # 这里说明反向字段肯定传了进来，值的校验放在各个处理方法中
-            if field.many_to_many:
-                reverse_many_to_many(self, field, value, instance, detail=detail)
-            else:
+            if not field.many_to_many:
                 reverse_one_to_many(self, field, value, instance, detail=detail)

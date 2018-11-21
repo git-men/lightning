@@ -300,114 +300,6 @@ class CommonManageViewSet(FormMixin,
         serializer = self.get_serializer(queryset, many=True)
         return success_response(serializer.data)
 
-    def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=True):
-        """处理反向字段的多对一的数据
-
-        对于此种场景，数据格式是包含对象的列表或者已经存在对象的主键
-
-        场景描述：
-            class AModel(models.Model):
-                pass
-
-            class BModel(models.Model):
-                a = models.ForgignKey(AModel)
-                name = models.CharField()
-
-        AModel 请求数据时，字段中包含 bmodel 对象如下数据格式：
-
-            bmodel: [
-                {
-                    name: 'xxxx'
-                }
-            ]
-            或者 
-            bmodel: [
-                {
-                    'id': xxxx,
-                    'name': 'update xxxxx'
-                }
-            ]
-        """
-        related_model = field.related_model
-        pk_field_name = related_model._meta.pk.name
-
-        if not isinstance(value, list):
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'{key}: {value} 只能是列表'
-            )
-
-        # 这里需要判断创造和更新
-        if detail:
-            # 如果是更新，如果传入空的数据，则删除掉对应的数据
-            if not value:
-                try:
-                    related_name = meta.get_relation_field_related_name(
-                        field.related_model, field.remote_field.name
-                    )
-                    if related_name:
-                        relation = getattr(instance, related_name[0], None)
-                        if relation:
-                            relation.all().delete()
-                            return
-                except Exception as e:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=str(e)
-                    )
-        else:
-            # 如果是创建，则什么都不做
-            if not value:
-                return
-
-        pure_id_list, object_data_list = [], []
-        for item in value:
-            if isinstance(item, dict):
-                object_data_list.append(item)
-                pure_id_list.append(item.get(pk_field_name))
-            else:
-                pure_id_list.append(item)
-
-        if object_data_list:
-            for item in object_data_list:
-                if not detail and pk_field_name in item:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                        error_data=f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据'
-                    )
-
-            for item_value in object_data_list:
-                if pk_field_name in item_value:
-                    # 此时说明是更新的数据
-                    pk_value = related_model._meta.pk.to_python(item[pk_field_name])
-
-                    filter_params = {
-                        pk_field_name: pk_value,
-                        field.remote_field.name: instance
-                    }
-                    obj = related_model.objects.filter(**filter_params).first()
-                    if not obj:
-                        raise exceptions.BusinessException(
-                            error_code=exceptions.OBJECT_NOT_FOUND,
-                            error_data=f'{key}: {value} 指定的主键找不到对应的数据'
-                        )
-
-                    serializer = create_serializer_class(related_model)(instance=obj, data=item_value, partial=True)
-                    serializer.is_valid(raise_exception=True)
-                    serializer.save()
-                else:
-                    # 如果传进来的数据不包含主键，则代表是创建数据
-                    serializer = create_serializer_class(field.related_model)(data=item_value)
-                    serializer.is_valid(raise_exception=True)
-                    obj = serializer.save()
-                    setattr(obj, field.remote_field.name, instance)
-                    obj.save()
-                    if detail:
-                        pure_id_list.append(getattr(obj, pk_field_name))
-        if detail and pure_id_list:
-            pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
-            related_model.objects.exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
-
     def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
         """处理反向字段的多对多数据
 
@@ -470,24 +362,6 @@ class CommonManageViewSet(FormMixin,
         if relation:
             relation.set(list(related_obj_set))
 
-    def old_reverse_relation_hand(self, request, instance, detail=True):
-        """创建或者更新完毕后，处理反向字段的数据"""
-
-        if not (request.data and isinstance(request.data, dict)):
-            return
-
-        for key, value in request.data.items():
-            field = meta.get_relation_field(self.model, key, reverse=True)
-            if not field:
-                continue
-
-            # 这里说明是反向字段
-            if not field.concrete and field.remote_field:
-                if field.many_to_many:
-                    self._after_reverse_field_many_to_many(field, key, value, instance, detail=detail)
-                else:
-                    self._after_reverse_field_one_to_many(field, key, value, instance, detail=detail)
-
     def create(self, request, *args, **kwargs):
         """
         这里校验表单和序列化类分开创建
@@ -511,7 +385,6 @@ class CommonManageViewSet(FormMixin,
                     instance = self.get_queryset().filter(id=instance.id).first()
                     serializer = self.get_serializer(instance)
 
-                    # self.reverse_relation_hand(request, instance, detail=False)
                     reverse_relation_hand(self, instance, detail=False)
                     return success_response(serializer.data)
                 except exceptions.BusinessException as e:
@@ -547,7 +420,6 @@ class CommonManageViewSet(FormMixin,
                     if getattr(instance, '_prefetched_objects_cache', None):
                         instance._prefetched_objects_cache = {}
 
-                    # self.reverse_relation_hand(request, instance)
                     reverse_relation_hand(self, instance)
                     return success_response(serializer.data)
                 except exceptions.BusinessException as e:

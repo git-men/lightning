@@ -44,6 +44,7 @@ def add_login_user_data(view, data):
                     if field_name not in data:
                         data[field_name] = user.id
             except Exception as e:
+                raise e
                 print(e)
 
     relation_fields = meta.get_all_relation_fields(model)
@@ -72,9 +73,10 @@ def add_login_user_data(view, data):
                                     field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
                                     if field_name:
                                         # 如果用户数据中没有传递用户的数据，则进行插入
-                                        if field_name not in child_item:
+                                        if field_name not in reverse_item:
                                             reverse_item[field_name] = user.id
                                 except Exception as e:
+                                    raise e
                                     print(e)
             else:
                 # 这里说明是正向字段
@@ -99,6 +101,7 @@ def add_login_user_data(view, data):
                                             if field_name not in child_item:
                                                 child_item[field_name] = user.id
                                     except Exception as e:
+                                        raise e
                                         print(e)
                 else:
                     # 使用字典数据结构
@@ -116,5 +119,6 @@ def add_login_user_data(view, data):
                                         if field_name not in value:
                                             value[field_name] = user
                                 except Exception:
+                                    raise e
                                     pass
     return data
