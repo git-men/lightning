@@ -38,8 +38,8 @@ BSM_LIST_STYLE = 'list_style'
 # 内联表单设置
 BSM_INLINE_FORM_FIELDS = 'inline_form_fields'
 
-# 详情的展开字段列表
-BSM_DETAIL_EXPAND_FIELDS = 'detail_expand_fields'
+# 数据详情的展开字段列表
+BSM_DETAIL_EXPAND_FIELDS = 'form_expand_fields'
 
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
