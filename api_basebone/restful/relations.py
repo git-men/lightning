@@ -6,8 +6,8 @@ from api_basebone.restful.serializers import (
 )
 
 
-def _pre_many_to_many(self, field, value, update_data):
-    """处理多对多关系
+def forward_many_to_many(self, field, value, update_data):
+    """处理正向的多对多关系
 
     - 如果多对多关系的字段的值不是列表，则不做任何处理
     - 如果传进来的值是一个列表，则不做任何处理
@@ -64,8 +64,8 @@ def _pre_many_to_many(self, field, value, update_data):
     return update_data
 
 
-def _pre_one_to_many(self, field, value, update_data):
-    """处理一对多关系
+def forward_one_to_many(self, field, value, update_data):
+    """处理正向的一对多关系
 
     - 如果数据不是一个字典，则直接返回
     - 如果数据是字典，字典中没有包含主键，则对字典中的数据进行创建
@@ -98,10 +98,13 @@ def _pre_one_to_many(self, field, value, update_data):
     return update_data
 
 
-def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=True):
+def reverse_one_to_many(self, field, value, instance, detail=True):
     """处理反向字段的多对一的数据
 
     对于此种场景，数据格式是包含对象的列表或者已经存在对象的主键
+
+    注意事项：
+    - 创建时，不能传入包含主键的数据
 
     场景描述：
         class AModel(models.Model):
@@ -113,22 +116,27 @@ def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=T
 
     AModel 请求数据时，字段中包含 bmodel 对象如下数据格式：
 
-        bmodel: [
-            {
-                name: 'xxxx'
-            }
-        ]
-        或者 
-        bmodel: [
-            {
-                'id': xxxx,
-                'name': 'update xxxxx'
-            }
-        ]
+        FIXME: 创建和更新时可以传入：
+            bmodel: [
+                {
+                    name: 'xxxx'
+                }
+            ]
+
+        或者
+
+        FIXME: 只有更新时可以传入包含主键的数据:
+            bmodel: [
+                {
+                    'id': xxxx,
+                    'name': 'update xxxxx'
+                }
+            ]
     """
-    related_model = field.related_model
+    related_model, key = field.related_model, field.name
     pk_field_name = related_model._meta.pk.name
 
+    # 进行到这一步，说明对应的键时存在的，对于反向字段，就直接校验数据
     if not isinstance(value, list):
         raise exceptions.BusinessException(
             error_code=exceptions.PARAMETER_FORMAT_ERROR,
@@ -145,6 +153,7 @@ def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=T
                 )
                 if related_name:
                     relation = getattr(instance, related_name[0], None)
+                    print(relation)
                     if relation:
                         relation.all().delete()
                         return
@@ -154,7 +163,7 @@ def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=T
                     error_data=str(e)
                 )
     else:
-        # 如果是创建，则什么都不做
+        # 如果是创建，如果传进来的值为空
         if not value:
             return
 
@@ -162,11 +171,13 @@ def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=T
     for item in value:
         if isinstance(item, dict):
             object_data_list.append(item)
-            pure_id_list.append(item.get(pk_field_name))
+            if pk_field_name in item:
+                pure_id_list.append(item[pk_field_name])
         else:
             pure_id_list.append(item)
 
     if object_data_list:
+        # TODO: 创建时，不能传入包含主键的数据
         for item in object_data_list:
             if not detail and pk_field_name in item:
                 raise exceptions.BusinessException(
@@ -177,7 +188,7 @@ def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=T
         for item_value in object_data_list:
             if pk_field_name in item_value:
                 # 此时说明是更新的数据
-                pk_value = related_model._meta.pk.to_python(item[pk_field_name])
+                pk_value = related_model._meta.pk.to_python(item_value[pk_field_name])
 
                 filter_params = {
                     pk_field_name: pk_value,
@@ -202,17 +213,22 @@ def _after_reverse_field_one_to_many(self, field, key, value, instance, detail=T
                 obj.save()
                 if detail:
                     pure_id_list.append(getattr(obj, pk_field_name))
+
+    # 如果是更新，则删除掉对应的数据
     if detail and pure_id_list:
         pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
-        related_model.objects.exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
+        # related_model.objects.exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
+        relation = meta.get_relation_field_related_name(related_model, field.remote_field.name)
+        if relation:
+            getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
 
 
-def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
+def reverse_many_to_many(self, field, value, instance, detail=True):
         """处理反向字段的多对多数据
 
         场景类似上面杉树的注释
         """
-        related_model = field.related_model
+        related_model, key = field.related_model, field.name
         pk_field_name = related_model._meta.pk.name
 
         if not (isinstance(value, list) and value):
@@ -270,10 +286,11 @@ def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=
             relation.set(list(related_obj_set))
 
 
-def _create_update_pre_hand(self, data):
-    """创建和更新的预处理，这里只处理正向字段
+def forward_relation_hand(self, data):
+    """正向的关系字段预处理
 
     例如文章和图片存在多对多，在新建文章时，对于图片，前端有可能会 push 以下数据
+
         - 包含对象的列表，[{字段：值，字段：值...}]
         - 包含 id 的列表
         - 包含 id 和对象的列表
@@ -298,8 +315,28 @@ def _create_update_pre_hand(self, data):
 
         if field.concrete:
             if field.many_to_many:
-                _pre_many_to_many(self, field, value, update_data)
+                forward_many_to_many(self, field, value, update_data)
             else:
-                _pre_one_to_many(self, field, value, update_data)
+                forward_one_to_many(self, field, value, update_data)
     data.update(update_data)
     return data
+
+
+def reverse_relation_hand(self, instance, detail=True):
+    """反向关系字段的处理"""
+    request = self.request
+    if not (request.data and isinstance(request.data, dict)):
+        return
+
+    for key, value in request.data.items():
+        # 查找关系字段
+        field = meta.get_relation_field(self.model, key, reverse=True)
+        if not field:
+            continue
+
+        if meta.check_field_is_reverse(field):
+            # 这里说明反向字段肯定传了进来，值的校验放在各个处理方法中
+            if field.many_to_many:
+                reverse_many_to_many(self, field, value, instance, detail=detail)
+            else:
+                reverse_one_to_many(self, field, value, instance, detail=detail)

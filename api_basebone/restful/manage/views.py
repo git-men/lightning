@@ -17,11 +17,12 @@ from api_basebone.restful.forms import get_form_class
 from api_basebone.restful.manage import batch_actions
 from api_basebone.restful.pip_flow import add_login_user_data
 from api_basebone.restful.relations import (
-    _create_update_pre_hand
+    forward_relation_hand,
+    reverse_relation_hand,
 )
 from api_basebone.restful.serializers import (
     create_serializer_class,
-    multiple_create_serializer_class
+    multiple_create_serializer_class,
 )
 
 from api_basebone.utils import meta, get_app
@@ -469,7 +470,7 @@ class CommonManageViewSet(FormMixin,
         if relation:
             relation.set(list(related_obj_set))
 
-    def _create_update_after_hand(self, request, instance, detail=True):
+    def old_reverse_relation_hand(self, request, instance, detail=True):
         """创建或者更新完毕后，处理反向字段的数据"""
 
         if not (request.data and isinstance(request.data, dict)):
@@ -496,7 +497,7 @@ class CommonManageViewSet(FormMixin,
         try:
             with transaction.atomic():
                 try:
-                    _create_update_pre_hand(self, request.data)
+                    forward_relation_hand(self, request.data)
 
                     if self.model == get_user_model():
                         serializer = UserCreateUpdateForm(data=request.data)
@@ -510,7 +511,8 @@ class CommonManageViewSet(FormMixin,
                     instance = self.get_queryset().filter(id=instance.id).first()
                     serializer = self.get_serializer(instance)
 
-                    self._create_update_after_hand(request, instance, detail=False)
+                    # self.reverse_relation_hand(request, instance, detail=False)
+                    reverse_relation_hand(self, instance, detail=False)
                     return success_response(serializer.data)
                 except exceptions.BusinessException as e:
                     message = e.error_data if e.error_data else e.error_message
@@ -528,7 +530,7 @@ class CommonManageViewSet(FormMixin,
         try:
             with transaction.atomic():
                 try:
-                    _create_update_pre_hand(self, request.data)
+                    forward_relation_hand(self, request.data)
 
                     partial = kwargs.pop('partial', False)
                     instance = self.get_object()
@@ -545,7 +547,8 @@ class CommonManageViewSet(FormMixin,
                     if getattr(instance, '_prefetched_objects_cache', None):
                         instance._prefetched_objects_cache = {}
 
-                    self._create_update_after_hand(request, instance)
+                    # self.reverse_relation_hand(request, instance)
+                    reverse_relation_hand(self, instance)
                     return success_response(serializer.data)
                 except exceptions.BusinessException as e:
                     message = e.error_data if e.error_data else e.error_message
