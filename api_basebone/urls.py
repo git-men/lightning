@@ -8,8 +8,17 @@ urlpatterns = [
     path(
         'basebone/<str:app>__<str:model>/',
         include(
-            ('api_basebone.basebone_urls', app_name),
+            ('api_basebone.restful.manage.urls', app_name),
             namespace='manage.common.basebone'
+        )
+    ),
+
+    # 通用客户端
+    path(
+        'basebone/client/<str:app>__<str:model>/',
+        include(
+            ('api_basebone.restful.client.urls', app_name),
+            namespace='client.common.basebone'
         )
     ),
 
@@ -17,7 +26,7 @@ urlpatterns = [
     path(
         'basebone/config/',
         include(
-            ('api_basebone.urls_config', app_name),
+            ('api_basebone.restful.manage.config_urls', app_name),
             namespace='schema.config'
         )
     ),
