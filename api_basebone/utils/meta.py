@@ -131,7 +131,7 @@ def get_export_apps():
     apps = getattr(settings, 'BSM_EXPORT_APPS', None)
     if apps and isinstance(apps, list):
         return apps
-    return ['auth'] + settings.INTERNAL_APPS
+    return []
 
 
 def get_bsm_model_admin(model):
