@@ -2,6 +2,8 @@ import inspect
 
 from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
+
+from api_basebone.core import const
 from api_basebone.utils.meta import (
     get_concrete_fields, get_export_apps, get_reverse_fields,
     get_field_by_reverse_field,
@@ -9,6 +11,7 @@ from api_basebone.utils.meta import (
 
 from .specs import FIELDS
 
+# 默认的 django 字段类型
 DEFAULT_DJANOG_FIELD_TYPE = 'Text'
 
 DJANGO_FIELD_TYPE_MAP = {
@@ -32,19 +35,6 @@ DJANGO_FIELD_TYPE_MAP = {
     'BoneImageUrlField': 'Image',
 }
 
-GMETA_TITLE_FIELD = 'title_field'
-GMETA_FIELD_CONFIG = 'field_form_config'
-
-# django 中声明的字段的配置和输出配置键的映射
-GMETA_FIELD_CONFIG_MAP = {
-    'verbose_name': 'displayName'
-}
-
-
-def get_gmeta_class(model):
-    """获取模型中的 GMeta 类"""
-    return getattr(model, 'GMeta', None)
-
 
 def get_attr_in_gmeta_class(model, config_name, default_value=None):
     """获取指定模型 GMeta 类中指定的属性
@@ -55,7 +45,7 @@ def get_attr_in_gmeta_class(model, config_name, default_value=None):
         default_value 任何数据类型 默认数据
     """
 
-    gmeta_class = get_gmeta_class(model)
+    gmeta_class = getattr(model, 'GMeta', None)
     if not gmeta_class:
         return default_value
     return getattr(gmeta_class, config_name, default_value)
@@ -65,13 +55,13 @@ class FieldConfig:
 
     def reset_field_config(self, field, data_type=None):
         """根据 Gmeta 中声明的字段的配置进行重置"""
-        field_config = get_attr_in_gmeta_class(field.model, GMETA_FIELD_CONFIG, {}).get(field.name, {})
+        field_config = get_attr_in_gmeta_class(field.model, const.GMETA_FIELD_CONFIG, {}).get(field.name, {})
         if not field_config:
             return field_config
 
         # 做 django 中的写法和输出的配置的转换
         result = {
-            GMETA_FIELD_CONFIG_MAP[key] if key in GMETA_FIELD_CONFIG_MAP else key: value
+            const.GMETA_FIELD_CONFIG_MAP[key] if key in const.GMETA_FIELD_CONFIG_MAP else key: value
             for key, value in field_config.items()
         }
         return result
@@ -140,7 +130,7 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
-    title_field = get_attr_in_gmeta_class(model, GMETA_TITLE_FIELD, 'id')
+    title_field = get_attr_in_gmeta_class(model, const.GMETA_TITLE_FIELD, 'id')
 
     config = []
     for item in fields:
@@ -195,15 +185,13 @@ def get_model_field_config(model):
 
 
 def get_app_field_schema():
-    """获取应用模型配置"""
-    export_apps = get_export_apps()
-    config = {}
+    """输出应用模型配置"""
+    config, export_apps = {}, get_export_apps()
+    if not export_apps:
+        return config
 
     for item in export_apps:
-        try:
-            app = apps.get_app_config(item)
-            for m in app.get_models():
-                config.update(get_model_field_config(m))
-        except Exception:
-            pass
+        app = apps.get_app_config(item)
+        for model in app.get_models():
+            config.update(get_model_field_config(model))
     return config
