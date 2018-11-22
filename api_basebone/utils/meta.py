@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core.admin import BSMAdminModule
+from api_basebone.utils import module
 
 
 def get_reverse_fields(model):
@@ -133,17 +134,6 @@ def get_export_apps():
     return ['auth'] + settings.INTERNAL_APPS
 
 
-def load_bsm_app_admin(app):
-    """加载应用的 admin"""
-    try:
-        module_name = f'{app.name}.bsm.admin'
-        module = importlib.util.find_spec(module_name)
-        if module:
-            importlib.import_module(module_name)
-    except ModuleNotFoundError:
-        return
-
-
 def get_bsm_model_admin(model):
     """获取 Admin 类"""
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
@@ -157,21 +147,8 @@ def load_custom_admin_module():
         return
 
     for app_label in export_apps:
-        load_bsm_app_admin(apps.get_app_config(app_label))
-
-
-def get_custom_form_module(model):
-    """获取用户自定义的表单模块
-
-    TODO: 暂时应用下面的不能写入到其他应用下面
-    """
-    try:
-        module_name = f'{model._meta.app_config.name}.bsm.forms'
-        module = importlib.util.find_spec(module_name)
-        if module:
-            return importlib.import_module(module_name)
-    except ModuleNotFoundError:
-        return
+        app = apps.get_app_config(app_label)
+        module.get_admin_module(app.name, module.BSM_ADMIN)
 
 
 def get_dict_expand_fields_by_level(model, level):

@@ -10,7 +10,7 @@ import importlib
 from rest_framework import serializers
 from api_basebone.core import exceptions
 from api_basebone.core.decorators import BSM_BATCH_ACTION
-from api_basebone.core.exceptions import BusinessException, BATCH_ACTION_HAND_ERROR
+from api_basebone.utils import module
 
 
 def delete(request, queryset):
@@ -31,19 +31,15 @@ def get_model_batch_actions(model):
 
     默认的动作和用户自定义的动作的结合，用户自定义的动作可以覆盖默认的动作
     """
-    bsm_batch_actions = {}
-    bsm_batch_actions.update(default_action_map)
+    batch_actions = {}
+    batch_actions.update(default_action_map)
 
-    try:
-        module_name = f'{model._meta.app_config.name}.bsm.actions'
-        module = importlib.util.find_spec(module_name)
-        if module:
-            model_actions = getattr(model, BSM_BATCH_ACTION, None)
-            if model_actions:
-                bsm_batch_actions.update(model_actions)
-    except ModuleNotFoundError:
-        pass
-    return bsm_batch_actions
+    action_module = module.get_admin_module(model._meta.app_config.name, module.BSM_BATCH_ACTION)
+    if action_module:
+        model_actions = getattr(model, BSM_BATCH_ACTION, None)
+        if model_actions:
+            batch_actions.update(model_actions)
+    return batch_actions
 
 
 class BatchActionForm(serializers.Serializer):
@@ -74,10 +70,7 @@ class BatchActionForm(serializers.Serializer):
         - 记录当前批量的数据
         """
         model = self.context.get('view').model
-
-        # 默认使用 id
-        # TODO:  可以在某个地方指定查询的字段，例如可以是 slug
-        filter_params = {'id__in': value}
+        filter_params = {f'{model._meta.pk.name}__in': value}
 
         queryset = model.objects.filter(**filter_params)
         if len(value) != queryset.count():
@@ -93,7 +86,7 @@ class BatchActionForm(serializers.Serializer):
         try:
             return self.bsm_batch_action(request, self.bsm_batch_queryset)
         except Exception as e:
-            raise BusinessException(
-                error_code=BATCH_ACTION_HAND_ERROR,
+            raise exceptions.BusinessException(
+                error_code=exceptions.BATCH_ACTION_HAND_ERROR,
                 error_data=str(e)
             )
