@@ -371,7 +371,7 @@ class CommonManageViewSet(FormMixin,
         try:
             with transaction.atomic():
                 try:
-                    forward_relation_hand(self, request.data)
+                    forward_relation_hand(self.model, request.data)
 
                     if self.model == get_user_model():
                         serializer = UserCreateUpdateForm(data=request.data)
@@ -385,7 +385,7 @@ class CommonManageViewSet(FormMixin,
                     instance = self.get_queryset().filter(id=instance.id).first()
                     serializer = self.get_serializer(instance)
 
-                    reverse_relation_hand(self, instance, detail=False)
+                    reverse_relation_hand(self.model, request.data, instance, detail=False)
                     return success_response(serializer.data)
                 except exceptions.BusinessException as e:
                     message = e.error_data if e.error_data else e.error_message
@@ -403,7 +403,7 @@ class CommonManageViewSet(FormMixin,
         try:
             with transaction.atomic():
                 try:
-                    forward_relation_hand(self, request.data)
+                    forward_relation_hand(self.model, request.data)
 
                     partial = kwargs.pop('partial', False)
                     instance = self.get_object()
@@ -420,7 +420,7 @@ class CommonManageViewSet(FormMixin,
                     if getattr(instance, '_prefetched_objects_cache', None):
                         instance._prefetched_objects_cache = {}
 
-                    reverse_relation_hand(self, instance)
+                    reverse_relation_hand(self.model, request.data, instance)
                     return success_response(serializer.data)
                 except exceptions.BusinessException as e:
                     message = e.error_data if e.error_data else e.error_message

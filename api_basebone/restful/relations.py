@@ -6,7 +6,7 @@ from api_basebone.restful.serializers import (
 )
 
 
-def forward_many_to_many(self, field, value, update_data):
+def forward_many_to_many(field, value, update_data):
     """处理正向的多对多关系
 
     - 如果多对多关系的字段的值不是列表，则不做任何处理
@@ -37,6 +37,10 @@ def forward_many_to_many(self, field, value, update_data):
     if create_list:
         create_ids = []
         for item_data in create_list:
+
+            # FIXME: 嵌套处理
+            forward_relation_hand(model, item_data)
+
             serializer = create_serializer_class(model)(data=item_data)
             serializer.is_valid(raise_exception=True)
             create_ids.append(serializer.save().id)
@@ -56,6 +60,9 @@ def forward_many_to_many(self, field, value, update_data):
 
         for instance in queryset.iterator():
             item_data = update_data_map.get(getattr(instance, pk_field_name, None))
+
+            # FIXME: 嵌套处理
+            forward_relation_hand(model, item_data)
             serializer = create_serializer_class(model)(instance=instance, data=item_data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -64,7 +71,7 @@ def forward_many_to_many(self, field, value, update_data):
     return update_data
 
 
-def forward_one_to_many(self, field, value, update_data):
+def forward_one_to_many(field, value, update_data):
     """处理正向的一对多关系
 
     - 如果数据不是一个字典，则直接返回
@@ -79,6 +86,9 @@ def forward_one_to_many(self, field, value, update_data):
 
     # 如果传进来的数据不包含主键，则代表是创建数据
     if pk_field_name not in value:
+        # FIXME: 嵌套处理
+        forward_relation_hand(model, value)
+
         serializer = create_serializer_class(model)(data=value)
         serializer.is_valid(raise_exception=True)
         update_data[key] = serializer.save().id
@@ -91,6 +101,10 @@ def forward_one_to_many(self, field, value, update_data):
             error_code=exceptions.OBJECT_NOT_FOUND,
             error_data=f'{key}: {value} 指定的主键找不到对应的数据'
         )
+
+    # FIXME: 嵌套处理
+    forward_relation_hand(model, value)
+
     serializer = create_serializer_class(model)(instance=instance, data=value, partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
@@ -98,7 +112,7 @@ def forward_one_to_many(self, field, value, update_data):
     return update_data
 
 
-def reverse_one_to_many(self, field, value, instance, detail=True):
+def reverse_one_to_many(field, value, instance, detail=True):
     """处理反向字段的多对一的数据
 
     对于此种场景，数据格式是包含对象的列表或者已经存在对象的主键
@@ -133,8 +147,8 @@ def reverse_one_to_many(self, field, value, instance, detail=True):
                 }
             ]
     """
-    related_model, key = field.related_model, field.name
-    pk_field_name = related_model._meta.pk.name
+    model, key = field.related_model, field.name
+    pk_field_name = model._meta.pk.name
 
     # 进行到这一步，说明对应的键时存在的，对于反向字段，就直接校验数据
     if not isinstance(value, list):
@@ -149,11 +163,10 @@ def reverse_one_to_many(self, field, value, instance, detail=True):
         if not value:
             try:
                 related_name = meta.get_relation_field_related_name(
-                    field.related_model, field.remote_field.name
+                    model, field.remote_field.name
                 )
                 if related_name:
                     relation = getattr(instance, related_name[0], None)
-                    print(relation)
                     if relation:
                         relation.all().delete()
                         return
@@ -166,6 +179,8 @@ def reverse_one_to_many(self, field, value, instance, detail=True):
         # 如果是创建，如果传进来的值为空
         if not value:
             return
+
+    value = forward_relation_hand(model, value)
 
     pure_id_list, object_data_list = [], []
     for item in value:
@@ -188,41 +203,40 @@ def reverse_one_to_many(self, field, value, instance, detail=True):
         for item_value in object_data_list:
             if pk_field_name in item_value:
                 # 此时说明是更新的数据
-                pk_value = related_model._meta.pk.to_python(item_value[pk_field_name])
+                pk_value = model._meta.pk.to_python(item_value[pk_field_name])
 
                 filter_params = {
                     pk_field_name: pk_value,
                     field.remote_field.name: instance
                 }
-                obj = related_model.objects.filter(**filter_params).first()
+                obj = model.objects.filter(**filter_params).first()
                 if not obj:
                     raise exceptions.BusinessException(
                         error_code=exceptions.OBJECT_NOT_FOUND,
                         error_data=f'{key}: {value} 指定的主键找不到对应的数据'
                     )
 
-                serializer = create_serializer_class(related_model)(instance=obj, data=item_value, partial=True)
+                serializer = create_serializer_class(model)(instance=obj, data=item_value, partial=True)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
             else:
                 # 如果传进来的数据不包含主键，则代表是创建数据
-                serializer = create_serializer_class(field.related_model)(data=item_value)
+                item[field.remote_field.name] = instance.id
+                serializer = create_serializer_class(model)(data=item_value)
                 serializer.is_valid(raise_exception=True)
                 obj = serializer.save()
-                setattr(obj, field.remote_field.name, instance)
-                obj.save()
                 if detail:
                     pure_id_list.append(getattr(obj, pk_field_name))
 
     # 如果是更新，则删除掉对应的数据
     if detail and pure_id_list:
-        pure_id_list = [related_model._meta.pk.to_python(item) for item in pure_id_list]
-        relation = meta.get_relation_field_related_name(related_model, field.remote_field.name)
+        pure_id_list = [model._meta.pk.to_python(item) for item in pure_id_list]
+        relation = meta.get_relation_field_related_name(model, field.remote_field.name)
         if relation:
             getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
 
 
-def forward_relation_hand(self, data):
+def forward_relation_hand(model, data):
     """正向的关系字段预处理
 
     例如文章和图片存在多对多，在新建文章时，对于图片，前端有可能会 push 以下数据
@@ -240,37 +254,62 @@ def forward_relation_hand(self, data):
     - 正向的多不多
     """
     # 这里的 data 是原始数据，这里可能会存在递归处理，第一次是从客户端传进来的数据
-    if not (data and isinstance(data, dict)):
+    if not (data and isinstance(data, (dict, list))):
         return
 
-    update_data = {}
-    for key, value in data.items():
-        field = meta.get_relation_field(self.model, key)
-        if not field:
-            continue
+    if isinstance(data, dict):
+        update_data = {}
+        for key, value in data.items():
+            field = meta.get_relation_field(model, key)
+            if not field:
+                continue
 
-        if field.concrete:
-            if field.many_to_many:
-                forward_many_to_many(self, field, value, update_data)
-            else:
-                forward_one_to_many(self, field, value, update_data)
-    data.update(update_data)
-    return data
+            if field.concrete:
+                if field.many_to_many:
+                    forward_many_to_many(field, value, update_data)
+                else:
+                    forward_one_to_many(field, value, update_data)
+        data.update(update_data)
+        return data
+    else:
+        for value in data:
+            forward_relation_hand(model, value)
+        return data
 
 
-def reverse_relation_hand(self, instance, detail=True):
+def reverse_relation_hand(model, data, instance, detail=True):
     """反向关系字段的处理"""
-    request = self.request
-    if not (request.data and isinstance(request.data, dict)):
+    if not (data and isinstance(data, (dict, list))):
         return
 
-    for key, value in request.data.items():
+    for key, value in data.items():
         # 查找关系字段
-        field = meta.get_relation_field(self.model, key, reverse=True)
+        field = meta.get_relation_field(model, key, reverse=True)
         if not field:
             continue
 
         if meta.check_field_is_reverse(field):
             # 这里说明反向字段肯定传了进来，值的校验放在各个处理方法中
             if not field.many_to_many:
-                reverse_one_to_many(self, field, value, instance, detail=detail)
+                reverse_one_to_many(field, value, instance, detail=detail)
+
+
+data = [
+    {
+        "key": {"id": 1, "name": "颜色", "data_type": "string"},
+        "level": 0,
+        "values": [
+            {
+                "cover": {
+                    "name": "wwwwwww-3",
+                    "url": "http://fjadskfasd.com"
+                },
+                "value": {
+                    "id": 1,
+                    "value": "黄色",
+                    "key": 1
+                }
+            }
+        ]
+    }
+]
