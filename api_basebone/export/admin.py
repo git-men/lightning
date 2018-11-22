@@ -1,6 +1,6 @@
 from django.apps import apps
 
-from api_basebone.restful.manage.batch_actions import get_model_batch_actions
+from api_basebone.restful.batch_actions import get_model_batch_actions
 from api_basebone.core.admin import (
     VALID_MANAGE_ATTRS,
     BSM_BATCH_ACTION,

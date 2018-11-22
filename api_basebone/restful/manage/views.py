@@ -13,8 +13,9 @@ from api_basebone.core import admin, exceptions, const
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
 
+from api_basebone.restful import batch_actions
+from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.manage import batch_actions
 from api_basebone.restful.pip_flow import add_login_user_data
 from api_basebone.restful.relations import (
     forward_relation_hand,
@@ -34,14 +35,14 @@ class FormMixin(object):
 
     def get_create_form(self):
         """获取创建数据的验证表单"""
-        return get_form_class(self.model, 'create')
+        return get_form_class(self.model, 'create', end=self.end_slug)
 
     def get_update_form(self):
         """获取更新数据的验证表单"""
-        return get_form_class(self.model, 'update')
+        return get_form_class(self.model, 'update', end=self.end_slug)
 
     def get_partial_update_form(self):
-        return get_form_class(self.model, 'update')
+        return get_form_class(self.model, 'update', end=self.end_slug)
 
     def get_validate_form(self, action):
         """获取验证表单"""
@@ -276,6 +277,8 @@ class CommonManageViewSet(FormMixin,
     permission_classes = (permissions.IsAuthenticated, )
     pagination_class = PageNumberPagination
 
+    end_slug = MANAGE_END_SLUG
+
     def perform_create(self, serializer):
         return serializer.save()
 
@@ -299,68 +302,6 @@ class CommonManageViewSet(FormMixin,
 
         serializer = self.get_serializer(queryset, many=True)
         return success_response(serializer.data)
-
-    def _after_reverse_field_many_to_many(self, field, key, value, instance, detail=True):
-        """处理反向字段的多对多数据
-
-        场景类似上面杉树的注释
-        """
-        related_model = field.related_model
-        pk_field_name = related_model._meta.pk.name
-
-        if not (isinstance(value, list) and value):
-            return
-
-        pure_data, object_data, related_obj_set = [], [], set()
-        for item in value:
-            object_data.append(item) if isinstance(item, dict) else pure_data.append(item)
-
-        if pure_data:
-            queryset = related_model.objects.filter(
-                **{f'{pk_field_name}__in': pure_data}
-            )
-            if len(pure_data) != queryset.count():
-                raise exceptions.BusinessException(
-                    error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                    error_data=f'{key}: {value} 包含不合法的主键数据'
-                )
-            for item in queryset.iterator():
-                related_obj_set.add(item.id)
-
-        # 如果不包含对象数据，则不做任何处理
-        if not object_data:
-            create_list, update_list = [], []
-            for item in object_data:
-                update_list.append(item) if pk_field_name in item else create_list.append(item)
-
-            if create_list:
-                serializer = create_serializer_class(related_model)(data=create_list, many=True)
-                serializer.is_valid(raise_exception=True)
-                create_ids = [related_model.objects.create(**item).id for item in create_list]
-                related_obj_set.update(create_ids)
-
-            if update_list:
-                update_data_map = {item[pk_field_name]: item for item in update_list}
-                filter_params = {
-                    f'{pk_field_name}__in': update_data_map.keys()
-                }
-                queryset = related_model.objects.filter(**filter_params)
-                if queryset.count() != len(update_list):
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=f'{key}: {update_list} 存在不合法的数据'
-                    )
-
-                for instance in queryset.iterator():
-                    data = update_data_map.get(getattr(instance, pk_field_name, None))
-                    serializer = create_serializer_class(related_model)(instance=instance, data=data, partial=True)
-                    serializer.is_valid(raise_exception=True)
-                    serializer.save()
-                related_obj_set.update(update_data_map.keys())
-        related_name = meta.get_relation_field_related_name(related_model, field.remote_field.name)
-        relation = getattr(instance, related_name, None)
-        if relation:
-            relation.set(list(related_obj_set))
 
     def create(self, request, *args, **kwargs):
         """

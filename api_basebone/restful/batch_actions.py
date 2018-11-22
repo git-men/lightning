@@ -9,8 +9,9 @@
 import importlib
 from rest_framework import serializers
 from api_basebone.core import exceptions
-from api_basebone.core.decorators import BSM_BATCH_ACTION
+from api_basebone.core.decorators import BSM_BATCH_ACTION, BSM_CLIENT_BATCH_ACTION
 from api_basebone.utils import module
+from api_basebone.restful.const import CLIENT_END_SLUG, MANAGE_END_SLUG
 
 
 def delete(request, queryset):
@@ -26,7 +27,7 @@ default_action_map = {
 }
 
 
-def get_model_batch_actions(model):
+def get_model_batch_actions(model, end=MANAGE_END_SLUG):
     """获取模型的批量操作动作的映射
 
     默认的动作和用户自定义的动作的结合，用户自定义的动作可以覆盖默认的动作
@@ -36,6 +37,7 @@ def get_model_batch_actions(model):
 
     action_module = module.get_admin_module(model._meta.app_config.name, module.BSM_BATCH_ACTION)
     if action_module:
+        end_map_name = BSM_BATCH_ACTION if end == MANAGE_END_SLUG else BSM_CLIENT_BATCH_ACTION
         model_actions = getattr(model, BSM_BATCH_ACTION, None)
         if model_actions:
             batch_actions.update(model_actions)
@@ -54,7 +56,7 @@ class BatchActionForm(serializers.Serializer):
         - 记录当前批量动作
         """
         view = self.context['view']
-        actions = get_model_batch_actions(view.model)
+        actions = get_model_batch_actions(view.model, end=view.end_slug)
 
         if value not in actions:
             raise exceptions.BusinessException(
