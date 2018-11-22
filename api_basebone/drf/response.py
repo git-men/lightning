@@ -2,7 +2,7 @@
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST
 
-from ..core.exceptions import ERROR_PHRASES
+from api_basebone.core.exceptions import ERROR_PHRASES
 
 
 def success_response(data=None):

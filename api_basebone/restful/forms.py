@@ -1,12 +1,13 @@
 from django.contrib.auth import get_user_model
 
 from rest_framework import serializers
+
 from api_basebone.utils import module
-from .const import MANAGE_END_SLUG, CLIENT_END_SLUG
+from api_basebone.restful.const import MANAGE_END_SLUG, CLIENT_END_SLUG
 
 
 def create_meta_class(model, exclude_fields=None):
-    """构建序列化类的 Meta"""
+    """构建序列化类的 Meta 类"""
     attrs = {
         'model': model,
     }
@@ -28,9 +29,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
 
     class_name = f'{model}ModelSerializer'
     return type(
-        class_name,
-        (serializers.ModelSerializer, ),
-        attrs
+        class_name, (serializers.ModelSerializer, ), attrs
     )
 
 
