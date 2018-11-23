@@ -13,7 +13,7 @@ from api_basebone.core import admin, exceptions, const
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
 
-from api_basebone.restful import batch_actions
+from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
 from api_basebone.restful.pip_flow import add_login_user_data
@@ -134,6 +134,19 @@ class QuerySetMixin:
 class GenericViewMixin:
     """重写 GenericAPIView 中的某些方法"""
 
+    def check_app_model(self):
+        self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
+
+        # 检测应用是否在 INSTALLED_APPS 中
+        if get_app(self.app_label) not in settings.INSTALLED_APPS:
+            raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
+
+        # 检测模型是否合法
+        if self.model_slug not in apps.all_models[self.app_label]:
+            raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
+
+        self.model = apps.all_models[self.app_label][self.model_slug]
+
     def perform_authentication(self, request):
         """
         截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
@@ -146,17 +159,8 @@ class GenericViewMixin:
         - 给数据自动插入用户数据
         """
         result = super().perform_authentication(request)
-        self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
-        # 检测应用是否在 INSTALLED_APPS 中
-        if get_app(self.app_label) not in settings.INSTALLED_APPS:
-            raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
-
-        # 检测模型是否合法
-        if self.model_slug not in apps.all_models[self.app_label]:
-            raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
-
-        self.model = apps.all_models[self.app_label][self.model_slug]
+        self.check_app_model()
 
         meta.load_custom_admin_module()
         self.get_expand_fields()
@@ -415,3 +419,21 @@ class CommonManageViewSet(FormMixin,
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
+
+    @action(detail=False, url_path='export/file')
+    def export_file(self, request, *args, **kwargs):
+        """输出 excel 和 excel 文件
+
+        ```
+        Params:
+            fileformat string csv | excel 形式使用 querystring 的形式
+        ```
+        """
+        csv_file, excel_file = 'csv', 'excel'
+        valid_list = (csv_file, excel_file)
+
+        file_type = self.request.query_params.get('fileformat', csv_file)
+        file_type = file_type if file_type in valid_list else csv_file
+        if file_type == csv_file:
+            return renderers.csv_render(self.model)
+        return renderers.ExcelResponse(self.model)
