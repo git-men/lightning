@@ -228,6 +228,14 @@ def reverse_one_to_many(field, value, instance, detail=True):
                 if detail:
                     pure_id_list.append(getattr(obj, pk_field_name))
 
+            reverse_relation_fields = meta.get_reverse_fields(field.related_model)
+            if reverse_relation_fields:
+                for item in reverse_relation_fields:
+                    if item.name in item_value:
+                        reverse_relation_hand(
+                            item.model, {item.name: item_value[item.name]}, instance=obj
+                        )
+
     # 如果是更新，则删除掉对应的数据
     if detail and pure_id_list:
         pure_id_list = [model._meta.pk.to_python(item) for item in pure_id_list]
