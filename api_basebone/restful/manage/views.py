@@ -1,3 +1,4 @@
+import copy
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -184,12 +185,13 @@ class GenericViewMixin:
         elif self.action in ['retrieve', 'set']:
             self.expand_fields = self.request.data.get(const.EXPAND_FIELDS)
             # 详情的展开字段和列表的展开字段分开处理
-            if not self.expand_fields and self.action == 'retrieve':
+            if self.expand_fields is None and self.action == 'retrieve':
                 # 对于详情的展开，直接读取 admin 中的配置
                 admin_class = self.get_bsm_model_admin()
                 if admin_class:
                     try:
                         detail_expand_fields = getattr(admin_class, admin.BSM_DETAIL_EXPAND_FIELDS, None)
+                        detail_expand_fields = copy.deepcopy(detail_expand_fields)
                         if detail_expand_fields:
                             self.expand_fields = detail_expand_fields
                     except Exception:
