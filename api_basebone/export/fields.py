@@ -164,6 +164,10 @@ def get_model_field_config(model):
                 'required': False,
                 'type': 'bref',
             }
+
+            if field.many_to_many:
+                reverse_config['type'] = 'mref'
+
             meta = item.related_model._meta
             model_verbose_name = meta.verbose_name if meta.verbose_name else meta.model_name
 
