@@ -216,18 +216,20 @@ def reverse_one_to_many(field, value, instance, detail=True):
                         error_data=f'{key}: {value} 指定的主键找不到对应的数据'
                     )
 
+                item_value[field.remote_field.name] = instance.id
                 serializer = create_serializer_class(model)(instance=obj, data=item_value, partial=True)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
             else:
                 # 如果传进来的数据不包含主键，则代表是创建数据
-                item[field.remote_field.name] = instance.id
+                item_value[field.remote_field.name] = instance.id
                 serializer = create_serializer_class(model)(data=item_value)
                 serializer.is_valid(raise_exception=True)
                 obj = serializer.save()
                 if detail:
                     pure_id_list.append(getattr(obj, pk_field_name))
 
+            # 如果存在反向字段数据，则需要处理
             reverse_relation_fields = meta.get_reverse_fields(field.related_model)
             if reverse_relation_fields:
                 for item in reverse_relation_fields:
