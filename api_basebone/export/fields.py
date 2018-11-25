@@ -72,7 +72,8 @@ class FieldConfig:
             'name': field.name,
             'displayName': field.verbose_name,
             'required': not field.blank,
-            'type': data_type
+            'type': data_type,
+            'help': field.help_text
         }
 
         if field.choices:
