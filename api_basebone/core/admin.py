@@ -30,7 +30,7 @@ BSM_FILTER = 'filter'
 BSM_FORM_FIELDS = 'form_fields'
 
 # 表单分组的风格
-BSM_GROUP_STYLE = 'group_style'
+BSM_FORM_LAYOUT = 'form_layout'
 
 # 列表的风格
 BSM_LIST_STYLE = 'list_style'
@@ -53,7 +53,7 @@ VALID_MANAGE_ATTRS = [
     BSM_MODAL_CONFIG,
     BSM_FILTER,
     BSM_FORM_FIELDS,
-    BSM_GROUP_STYLE,
+    BSM_FORM_LAYOUT,
     BSM_LIST_STYLE,
     BSM_INLINE_FORM_FIELDS,
     BSM_DETAIL_EXPAND_FIELDS,
