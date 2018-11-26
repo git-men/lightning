@@ -29,6 +29,7 @@ from api_basebone.restful.serializers import (
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.signals import post_save
 
 
 class FormMixin(object):
@@ -339,6 +340,7 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
+            post_save.send(sender=self.model, instance=instance, create=True)
         except DatabaseError as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_BUSINESS_ERROR,
@@ -374,6 +376,7 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
+            post_save.send(sender=self.model, instance=instance, create=False)
         except DatabaseError as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_BUSINESS_ERROR,
