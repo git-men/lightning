@@ -1,4 +1,6 @@
 import copy
+import logging
+
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -31,6 +33,7 @@ from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
 from api_basebone.signals import post_save
 
+log = logging.getLogger(__file__)
 
 class FormMixin(object):
     """表单处理集合"""
@@ -340,6 +343,7 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
+            log.debug('sending Post Save signal with: model, instance', self.model, instance)
             post_save.send(sender=self.model, instance=instance, create=True)
         except DatabaseError as e:
             raise exceptions.BusinessException(
@@ -376,6 +380,7 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
+            log.debug('sending Post Save (update) signal with: model, instance', self.model, instance)
             post_save.send(sender=self.model, instance=instance, create=False)
         except DatabaseError as e:
             raise exceptions.BusinessException(
