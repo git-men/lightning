@@ -331,7 +331,8 @@ class CommonManageViewSet(FormMixin,
                     serializer.is_valid(raise_exception=True)
 
                     instance = self.perform_create(serializer)
-
+                    log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
+                    post_save.send(sender=self.model, instance=instance, create=True)
                     # 如果有联合查询，单个对象创建后并没有联合查询
                     instance = self.get_queryset().filter(id=instance.id).first()
                     serializer = self.get_serializer(instance)
@@ -343,9 +344,6 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
-            print('sending Post Save signal with: model, instance', self.model, instance)
-            log.debug('sending Post Save signal with: model, instance', self.model, instance)
-            post_save.send(sender=self.model, instance=instance, create=True)
         except DatabaseError as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_BUSINESS_ERROR,
@@ -369,6 +367,8 @@ class CommonManageViewSet(FormMixin,
                     serializer.is_valid(raise_exception=True)
 
                     instance = self.perform_update(serializer)
+                    log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
+                    post_save.send(sender=self.model, instance=instance, create=False)
                     serializer = self.get_serializer(instance)
 
                     if getattr(instance, '_prefetched_objects_cache', None):
@@ -381,9 +381,6 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
-            print('sending Post Save (update) signal with: model, instance', self.model, instance)
-            log.debug('sending Post Save (update) signal with: model, instance', self.model, instance)
-            post_save.send(sender=self.model, instance=instance, create=False)
         except DatabaseError as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_BUSINESS_ERROR,
