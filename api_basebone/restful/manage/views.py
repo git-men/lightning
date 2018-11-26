@@ -343,6 +343,7 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
+            print('sending Post Save signal with: model, instance', self.model, instance)
             log.debug('sending Post Save signal with: model, instance', self.model, instance)
             post_save.send(sender=self.model, instance=instance, create=True)
         except DatabaseError as e:
@@ -380,6 +381,7 @@ class CommonManageViewSet(FormMixin,
                     raise DatabaseError(message)
                 except Exception as e:
                     raise DatabaseError(str(e))
+            print('sending Post Save (update) signal with: model, instance', self.model, instance)
             log.debug('sending Post Save (update) signal with: model, instance', self.model, instance)
             post_save.send(sender=self.model, instance=instance, create=False)
         except DatabaseError as e:
