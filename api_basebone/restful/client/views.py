@@ -62,6 +62,9 @@ class QuerySetMixin:
         - 如果用户是超级用户，则不做任何过滤
         - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
         """
+        # TODO: 先不通过用户过滤
+        return queryset
+
         user = self.request.user
         if user and user.is_staff and user.is_superuser:
             return queryset
@@ -274,7 +277,7 @@ class CommonManageViewSet(FormMixin,
                           GenericViewMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
-    permission_classes = (permissions.IsAuthenticated, )
+    # permission_classes = (permissions.IsAuthenticated, )
     pagination_class = PageNumberPagination
 
     end_slug = CLIENT_END_SLUG
