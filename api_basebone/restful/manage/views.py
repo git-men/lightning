@@ -33,7 +33,7 @@ from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
 from api_basebone.signals import post_save
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
 
 class FormMixin(object):
     """表单处理集合"""
@@ -319,36 +319,26 @@ class CommonManageViewSet(FormMixin,
 
         原因：序列化类有可能嵌套
         """
-        try:
-            with transaction.atomic():
-                try:
-                    forward_relation_hand(self.model, request.data)
+        with transaction.atomic():
+            forward_relation_hand(self.model, request.data)
 
-                    if self.model == get_user_model():
-                        serializer = UserCreateUpdateForm(data=request.data)
-                    else:
-                        serializer = self.get_validate_form(self.action)(data=request.data)
-                    serializer.is_valid(raise_exception=True)
+            if self.model == get_user_model():
+                serializer = UserCreateUpdateForm(data=request.data)
+            else:
+                serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
-                    instance = self.perform_create(serializer)
-                    log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
-                    post_save.send(sender=self.model, instance=instance, create=True)
-                    # 如果有联合查询，单个对象创建后并没有联合查询
-                    instance = self.get_queryset().filter(id=instance.id).first()
-                    serializer = self.get_serializer(instance)
+            instance = self.perform_create(serializer)
+            # 如果有联合查询，单个对象创建后并没有联合查询
+            instance = self.get_queryset().filter(id=instance.id).first()
+            serializer = self.get_serializer(instance)
 
-                    reverse_relation_hand(self.model, request.data, instance, detail=False)
-                    return success_response(serializer.data)
-                except exceptions.BusinessException as e:
-                    message = e.error_data if e.error_data else e.error_message
-                    raise DatabaseError(message)
-                except Exception as e:
-                    raise DatabaseError(str(e))
-        except DatabaseError as e:
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                error_data=str(e)
-            )
+            reverse_relation_hand(self.model, request.data, instance, detail=False)
+        
+        with transaction.atomic():
+            log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
+            post_save.send(sender=self.model, instance=instance, create=True)
+        return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
