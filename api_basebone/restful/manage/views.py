@@ -352,40 +352,31 @@ class CommonManageViewSet(FormMixin,
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-        try:
-            with transaction.atomic():
-                try:
-                    forward_relation_hand(self.model, request.data)
+        
+        with transaction.atomic():
+            forward_relation_hand(self.model, request.data)
 
-                    partial = kwargs.pop('partial', False)
-                    instance = self.get_object()
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
 
-                    if self.model == get_user_model():
-                        serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
-                    else:
-                        serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
-                    serializer.is_valid(raise_exception=True)
+            if self.model == get_user_model():
+                serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
+            else:
+                serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
 
-                    instance = self.perform_update(serializer)
-                    log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
-                    post_save.send(sender=self.model, instance=instance, create=False)
-                    serializer = self.get_serializer(instance)
+            instance = self.perform_update(serializer)
+            serializer = self.get_serializer(instance)
 
-                    if getattr(instance, '_prefetched_objects_cache', None):
-                        instance._prefetched_objects_cache = {}
+            if getattr(instance, '_prefetched_objects_cache', None):
+                instance._prefetched_objects_cache = {}
 
-                    reverse_relation_hand(self.model, request.data, instance)
-                    return success_response(serializer.data)
-                except exceptions.BusinessException as e:
-                    message = e.error_data if e.error_data else e.error_message
-                    raise DatabaseError(message)
-                except Exception as e:
-                    raise DatabaseError(str(e))
-        except DatabaseError as e:
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                error_data=str(e)
-            )
+            reverse_relation_hand(self.model, request.data, instance)
+        
+        with transaction.atomic():
+            log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
+            post_save.send(sender=self.model, instance=instance, create=False)
+        return success_response(serializer.data)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
