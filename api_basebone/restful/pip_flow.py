@@ -18,6 +18,9 @@ def add_login_user_data(view, data):
     if view.request.method.upper() in ['GET', 'OPTIONS', 'DELETE']:
         return
 
+    if view.action not in ['create', 'update', 'partial_update']:
+        return
+
     if not view.request.data:
         return
 
