@@ -43,3 +43,4 @@ text-unidecode==1.2       # via faker
 uritemplate==3.0.0        # via coreapi
 urllib3==1.23             # via requests
 werkzeug==0.14.1
+openpyxl==2.5.11
