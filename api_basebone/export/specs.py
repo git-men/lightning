@@ -72,6 +72,10 @@ FIELDS = {
         'name': 'float',
         'displayName': '浮点型',
     },
+    'Decimal': {
+        'name': 'decimal',
+        'displanName': '小数',
+    },
     'Bool': {
         'name': 'bool',
         'displayName': '布尔型',

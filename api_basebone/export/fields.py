@@ -22,6 +22,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'EmailField': 'String',
     'DateTimeField': 'DateTime',
     'FloatField': 'Float',
+    'DecimalField': 'Decimal',
     'GenericIPAddressField': 'String',
     'IntegerField': 'Integer',
     'PositiveIntegerField': 'Integer',
@@ -99,6 +100,15 @@ class FieldConfig:
         """字符型字段的配置获取"""
         base = self._get_common_field_params(field, data_type)
         base['maxLength'] = field.max_length
+        base.update(self.reset_field_config(field, data_type))
+        return base
+    
+    def decimal_params(self, field, data_type):
+        """小数类型的配置获取
+        """
+        base = self._get_common_field_params(field, data_type)
+        base['precision'] = field.decimal_places
+        base['maxDigits'] = field.max_digits
         base.update(self.reset_field_config(field, data_type))
         return base
 
