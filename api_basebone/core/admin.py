@@ -17,7 +17,7 @@ BSM_DISPLAY = 'display'
 BSM_INLINE_ACTIONS = 'inline_actions'
 
 # 批量操作
-BSM_BATCH_ACTION = 'action'
+BSM_BATCH_ACTION = 'actions'
 
 BSM_MODAL_FROM = 'modal_form'
 
