@@ -18,6 +18,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'AutoField': 'Integer',
     'BooleanField': 'Bool',
     'CharField': 'String',
+    'SlugField': 'String',
     'DateField': 'Date',
     'EmailField': 'String',
     'DateTimeField': 'DateTime',
