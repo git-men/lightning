@@ -1,4 +1,4 @@
 from django.dispatch import Signal
 
-post_save = Signal(providing_args=['instance', 'create'])
+post_bsm_create = Signal(providing_args=['instance', 'create'])
 

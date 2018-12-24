@@ -1,3 +1,5 @@
+import logging
+
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -28,6 +30,9 @@ from api_basebone.restful.serializers import (
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.signals import post_bsm_create
+
+log = logging.getLogger(__name__)
 
 
 class FormMixin(object):
@@ -148,6 +153,7 @@ class GenericViewMixin:
         - 处理树形数据
         - 给数据自动插入用户数据
         """
+        print(request.user)
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
@@ -312,70 +318,56 @@ class CommonManageViewSet(FormMixin,
 
         原因：序列化类有可能嵌套
         """
-        try:
-            with transaction.atomic():
-                try:
-                    forward_relation_hand(self.model, request.data)
+        print('creating ...')
+        with transaction.atomic():
+            forward_relation_hand(self.model, request.data)
 
-                    if self.model == get_user_model():
-                        serializer = UserCreateUpdateForm(data=request.data)
-                    else:
-                        serializer = self.get_validate_form(self.action)(data=request.data)
-                    serializer.is_valid(raise_exception=True)
+            if self.model == get_user_model():
+                serializer = UserCreateUpdateForm(data=request.data)
+            else:
+                serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
-                    instance = self.perform_create(serializer)
-
-                    # 如果有联合查询，单个对象创建后并没有联合查询
-                    instance = self.get_queryset().filter(id=instance.id).first()
-                    serializer = self.get_serializer(instance)
-
-                    reverse_relation_hand(self.model, request.data, instance, detail=False)
-                    return success_response(serializer.data)
-                except exceptions.BusinessException as e:
-                    message = e.error_data if e.error_data else e.error_message
-                    raise DatabaseError(message)
-                except Exception as e:
-                    raise DatabaseError(str(e))
-        except DatabaseError as e:
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                error_data=str(e)
-            )
+            instance = self.perform_create(serializer)
+            from baseshop.models import Order
+            if isinstance(instance, Order):
+                print(f'instance after perform create: {instance.items.all()}')
+        with transaction.atomic():
+            log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
+            post_bsm_create.send(sender=self.model, instance=instance, create=True)
+        # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
+        
+        instance = self.get_queryset().filter(id=instance.id).first()
+        serializer = self.get_serializer(instance)
+        reverse_relation_hand(self.model, request.data, instance, detail=False)
+        return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-        try:
-            with transaction.atomic():
-                try:
-                    forward_relation_hand(self.model, request.data)
+        with transaction.atomic():
+            forward_relation_hand(self.model, request.data)
 
-                    partial = kwargs.pop('partial', False)
-                    instance = self.get_object()
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
 
-                    if self.model == get_user_model():
-                        serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
-                    else:
-                        serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
-                    serializer.is_valid(raise_exception=True)
+            if self.model == get_user_model():
+                serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
+            else:
+                serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
 
-                    instance = self.perform_update(serializer)
-                    serializer = self.get_serializer(instance)
+            instance = self.perform_update(serializer)
+            
+        with transaction.atomic():
+            log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
+            post_bsm_create.send(sender=self.model, instance=instance, create=False)
 
-                    if getattr(instance, '_prefetched_objects_cache', None):
-                        instance._prefetched_objects_cache = {}
+        serializer = self.get_serializer(instance)
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
 
-                    reverse_relation_hand(self.model, request.data, instance)
-                    return success_response(serializer.data)
-                except exceptions.BusinessException as e:
-                    message = e.error_data if e.error_data else e.error_message
-                    raise DatabaseError(message)
-                except Exception as e:
-                    raise DatabaseError(str(e))
-        except DatabaseError as e:
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                error_data=str(e)
-            )
+        reverse_relation_hand(self.model, request.data, instance)
+        return success_response(serializer.data)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""

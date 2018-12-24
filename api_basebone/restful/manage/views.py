@@ -31,7 +31,7 @@ from api_basebone.restful.serializers import (
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
-from api_basebone.signals import post_save
+from api_basebone.signals import post_bsm_create
 
 log = logging.getLogger(__name__)
 
@@ -337,7 +337,7 @@ class CommonManageViewSet(FormMixin,
         
         with transaction.atomic():
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
-            post_save.send(sender=self.model, instance=instance, create=True)
+            post_bsm_create.send(sender=self.model, instance=instance, create=True)
         return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -365,7 +365,7 @@ class CommonManageViewSet(FormMixin,
         
         with transaction.atomic():
             log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
-            post_save.send(sender=self.model, instance=instance, create=False)
+            post_bsm_create.send(sender=self.model, instance=instance, create=False)
         return success_response(serializer.data)
 
     def partial_update(self, request, *args, **kwargs):
