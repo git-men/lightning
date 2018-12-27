@@ -332,14 +332,16 @@ class CommonManageViewSet(FormMixin,
             from baseshop.models import Order
             if isinstance(instance, Order):
                 print(f'instance after perform create: {instance.items.all()}')
+
+        instance = self.get_queryset().filter(id=instance.id).first()
+        reverse_relation_hand(self.model, request.data, instance, detail=False)
         with transaction.atomic():
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         
-        instance = self.get_queryset().filter(id=instance.id).first()
+        # instance = self.get_queryset().filter(id=instance.id).first()
         serializer = self.get_serializer(instance)
-        reverse_relation_hand(self.model, request.data, instance, detail=False)
         return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
