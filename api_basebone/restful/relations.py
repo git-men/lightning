@@ -244,6 +244,13 @@ def reverse_one_to_many(field, value, instance, detail=True):
         relation = meta.get_relation_field_related_name(model, field.remote_field.name)
         if relation:
             getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
+    elif pure_id_list:
+        # 如果是创建，则需要创建对应的数据
+        pure_id_list = [model._meta.pk.to_python(item) for item in pure_id_list]
+        relation = meta.get_relation_field_related_name(model, field.remote_field.name)
+        getattr(instance, relation[0]).add(
+            *model.objects.filter(**{f'{pk_field_name}__in': pure_id_list})
+        )
 
 
 def forward_relation_hand(model, data):

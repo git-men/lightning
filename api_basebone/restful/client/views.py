@@ -334,12 +334,13 @@ class CommonManageViewSet(FormMixin,
                 print(f'instance after perform create: {instance.items.all()}')
 
         instance = self.get_queryset().filter(id=instance.id).first()
+
         reverse_relation_hand(self.model, request.data, instance, detail=False)
         with transaction.atomic():
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
-        
+
         # instance = self.get_queryset().filter(id=instance.id).first()
         serializer = self.get_serializer(instance)
         return success_response(serializer.data)
@@ -359,7 +360,7 @@ class CommonManageViewSet(FormMixin,
             serializer.is_valid(raise_exception=True)
 
             instance = self.perform_update(serializer)
-            
+
         with transaction.atomic():
             log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
