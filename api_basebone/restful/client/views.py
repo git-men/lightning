@@ -377,7 +377,7 @@ class CommonManageViewSet(FormMixin,
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
 
-    @action(method=['put'], detail=True, url_patch='patch')
+    @action(methods=['put'], detail=True, url_path='patch')
     def custom_patch(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
