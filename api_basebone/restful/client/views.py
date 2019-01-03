@@ -377,6 +377,11 @@ class CommonManageViewSet(FormMixin,
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
 
+    @action(method=['put'], detail=True, url_patch='patch')
+    def custom_patch(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         """删除数据"""
         instance = self.get_object()
