@@ -7,3 +7,9 @@ router = SimpleRouter(custom_base_name='common-client')
 router.register('', ClientViewSet)
 
 urlpatterns = router.urls
+#  += [
+#     path(
+#         'basebone/client/<str:app>__<str:model>/func/<str:func_name>/',
+#         ''
+#     ),
+# ]

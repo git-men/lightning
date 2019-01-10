@@ -7,6 +7,7 @@ from django.db import DatabaseError, transaction
 
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.app.account.forms import UserCreateUpdateForm
 
@@ -27,6 +28,7 @@ from api_basebone.restful.serializers import (
     create_serializer_class,
     multiple_create_serializer_class,
 )
+from api_basebone.restful.funcs import find_func
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
@@ -417,4 +419,25 @@ class CommonManageViewSet(FormMixin,
             data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
         serializer.handle()
+        return success_response()
+
+    @action(methods=['POST'], detail=False, url_path='func')
+    def func(self, request, app, model, **kwargs):
+        """云函数, 由客户端直接调用的服务函数
+        """
+        
+        data = request.data
+        func_name = data.get('func_name', None)
+        params = data.get('params', {})
+        func, options = find_func(app, model, func_name)
+        if not func:
+            raise exceptions.BusinessException(
+                error_code=exceptions.FUNCTION_NOT_FOUNT,
+                error_data=f'no such func: {func_name} found')
+        if options.get('login_required', False):
+            if not request.user.is_authenticated:
+                raise PermissionDenied()
+        
+        result = func(request.user, **params)
+        # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
         return success_response()
