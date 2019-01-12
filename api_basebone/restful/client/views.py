@@ -1,9 +1,12 @@
+import json
 import logging
+import requests
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, transaction
+from django.http import HttpResponse
 
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
@@ -421,14 +424,14 @@ class CommonManageViewSet(FormMixin,
         serializer.handle()
         return success_response()
 
-    @action(methods=['POST'], detail=False, url_path='func')
+    @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, **kwargs):
         """云函数, 由客户端直接调用的服务函数
         """
-        
+
         data = request.data
-        func_name = data.get('func_name', None)
-        params = data.get('params', {})
+        func_name = data.get('func_name', None) or request.GET.get('func_name', None)
+        params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
         func, options = find_func(app, model, func_name)
         if not func:
             raise exceptions.BusinessException(
@@ -437,7 +440,9 @@ class CommonManageViewSet(FormMixin,
         if options.get('login_required', False):
             if not request.user.is_authenticated:
                 raise PermissionDenied()
-        
+
         result = func(request.user, **params)
         # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
+        if isinstance(result, requests.Response):
+            return HttpResponse(result, result.headers.get('Content-Type', None))
         return success_response()
