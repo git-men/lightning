@@ -14,7 +14,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.app.account.forms import UserCreateUpdateForm
 
-from api_basebone.core import admin, exceptions, const
+from api_basebone.core import admin, exceptions, const, gmeta
 
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
@@ -34,6 +34,7 @@ from api_basebone.restful.serializers import (
 from api_basebone.restful.funcs import find_func
 
 from api_basebone.utils import meta, get_app
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.utils.operators import build_filter_conditions
 from api_basebone.signals import post_bsm_create
 
@@ -75,9 +76,6 @@ class QuerySetMixin:
         - 如果用户是超级用户，则不做任何过滤
         - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
         """
-        # TODO: 先不通过用户过滤
-        return queryset
-
         user = self.request.user
         if user and user.is_staff and user.is_superuser:
             return queryset
@@ -85,18 +83,11 @@ class QuerySetMixin:
         # 检测模型中是否有字段引用了用户模型
         has_user_field = meta.get_related_model_field(self.model, get_user_model())
         if has_user_field:
-            # 如果有，则读取 BSM Admin 中的配置
-            admin_class = self.get_bsm_model_admin()
-
-            if admin_class:
-                # 检测 admin 配置中是否指定了 auth_filter_field 属性
-                try:
-                    field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
-                    filter_by_login_user = getattr(admin_class, admin.BSM_FILTER_BY_LOGIN_USER, True)
-                    if field_name:
-                        return queryset.filter(**{field_name: user})
-                except Exception:
-                    pass
+            # 如果有，则读取模型中 GMeta 中的配置
+            # FIXME: 注意，这里和管理端的处理逻辑暂时是不同的
+            user_field_name = get_gmeta_config_by_key(self.model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+            if user_field_name:
+                return queryset.filter(**{user_field_name: user})
         return queryset
 
     def get_queryset_by_order_by(self, queryset):
@@ -326,7 +317,6 @@ class CommonManageViewSet(FormMixin,
 
         原因：序列化类有可能嵌套
         """
-        print('creating ...')
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
 

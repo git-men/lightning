@@ -1,8 +1,10 @@
 
 funcs = {}
 
+
 def register_func(app, model, func_name, func, options):
     funcs[f'{app}/{model}/@{func_name}'] = (func, options)
+
 
 def bsm_func(name, model, login_required=True):
     # 做注册工作，把下层的方法注册到funcs里面去。
@@ -17,6 +19,7 @@ def bsm_func(name, model, login_required=True):
             })
         return function
     return _decorator
+
 
 def find_func(app, model, func_name):
     func, options = funcs.get(f'{app}/{model}/@{func_name}', (None, None))

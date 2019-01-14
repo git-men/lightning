@@ -35,6 +35,7 @@ from api_basebone.signals import post_bsm_create
 
 log = logging.getLogger(__name__)
 
+
 class FormMixin(object):
     """表单处理集合"""
 
@@ -334,7 +335,7 @@ class CommonManageViewSet(FormMixin,
             serializer = self.get_serializer(instance)
 
             reverse_relation_hand(self.model, request.data, instance, detail=False)
-        
+
         with transaction.atomic():
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
@@ -342,7 +343,7 @@ class CommonManageViewSet(FormMixin,
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-        
+
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
 
@@ -362,7 +363,7 @@ class CommonManageViewSet(FormMixin,
                 instance._prefetched_objects_cache = {}
 
             reverse_relation_hand(self.model, request.data, instance)
-        
+
         with transaction.atomic():
             log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=False)

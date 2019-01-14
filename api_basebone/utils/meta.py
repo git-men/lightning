@@ -214,3 +214,21 @@ def get_expand_fields_by_level(model, level):
         item_expands = expand_fields_to_list({key: value})
         result += item_expands
     return result
+
+
+def get_model_gmeta_class(model):
+    """
+    获取模型的 GMeta 类
+    """
+    return getattr(model, 'GMeta')
+
+
+def get_model_gmeta_config(model, config_key):
+    """
+    获取模型的 GMeta 类中指定键的配置
+    """
+    gmeta_class = get_model_gmeta_class(model)
+    if not gmeta_class:
+        return
+
+    return getattr(gmeta_class, config_key)
