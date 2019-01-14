@@ -8,6 +8,7 @@ from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
 
 from api_basebone.core import const
+from api_basebone.core import gmeta
 from api_basebone.utils import meta
 
 
@@ -19,7 +20,7 @@ def get_model_exclude_fields(model):
     """
     gmeta_class = getattr(model, 'GMeta', None)
     if gmeta_class:
-        exclude = getattr(gmeta_class, const.GMETA_SERIALIZER_EXCLUDE_FIELDS, None)
+        exclude = getattr(gmeta_class, gmeta.GMETA_SERIALIZER_EXCLUDE_FIELDS, None)
         if exclude and isinstance(exclude, (list, tuple)):
             fields = [item.name for item in model._meta.get_fields()]
             return [item for item in exclude if item in fields]

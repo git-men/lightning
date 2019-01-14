@@ -4,6 +4,7 @@ from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core import const
+from api_basebone.core import gmeta
 from api_basebone.utils.meta import (
     get_concrete_fields, get_export_apps, get_reverse_fields,
     get_field_by_reverse_field,
@@ -57,13 +58,13 @@ class FieldConfig:
 
     def reset_field_config(self, field, data_type=None):
         """根据 Gmeta 中声明的字段的配置进行重置"""
-        field_config = get_attr_in_gmeta_class(field.model, const.GMETA_FIELD_CONFIG, {}).get(field.name, {})
+        field_config = get_attr_in_gmeta_class(field.model, gmeta.GMETA_FIELD_CONFIG, {}).get(field.name, {})
         if not field_config:
             return field_config
 
         # 做 django 中的写法和输出的配置的转换
         result = {
-            const.GMETA_FIELD_CONFIG_MAP[key] if key in const.GMETA_FIELD_CONFIG_MAP else key: value
+            gmeta.GMETA_FIELD_CONFIG_MAP[key] if key in gmeta.GMETA_FIELD_CONFIG_MAP else key: value
             for key, value in field_config.items()
         }
         return result
@@ -142,7 +143,7 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
-    title_field = get_attr_in_gmeta_class(model, const.GMETA_TITLE_FIELD, 'id')
+    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, 'id')
 
     config = []
     for item in fields:
