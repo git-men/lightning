@@ -141,6 +141,13 @@ class QuerySetMixin:
 class GenericViewMixin:
     """重写 GenericAPIView 中的某些方法"""
 
+    def check_permissions(self, request):
+        """校验权限"""
+        action_skip = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
+        if action_skip and self.action in action_skip:
+            return True
+        super().check_permissions(request)
+
     def perform_authentication(self, request):
         """
         截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
@@ -152,7 +159,6 @@ class GenericViewMixin:
         - 处理树形数据
         - 给数据自动插入用户数据
         """
-        print(request.user)
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
@@ -282,7 +288,7 @@ class CommonManageViewSet(FormMixin,
                           GenericViewMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
-    # permission_classes = (permissions.IsAuthenticated, )
+    permission_classes = (permissions.IsAuthenticated, )
     pagination_class = PageNumberPagination
 
     end_slug = CLIENT_END_SLUG

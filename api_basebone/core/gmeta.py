@@ -38,3 +38,10 @@ GMETA_FIELD_CONFIG_MAP = {
 - 在获取数据时，根据指定的字段，根据当前用户，筛选对应的数据
 """
 GMETA_AUTO_ADD_CURRENT_USER = 'auto_add_current_user'
+
+"""
+客户端接口不需要权限的设置
+
+数据结构为元组，其中元素为客户单视图中的视图方法，例如 create, update 等等这些
+"""
+GMETA_CLIENT_API_PERMISSION_SKIP = 'client_api_permission_skip'
