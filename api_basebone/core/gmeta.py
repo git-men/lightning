@@ -34,6 +34,8 @@ GMETA_FIELD_CONFIG_MAP = {
 """
 创建数据时，添加用户时，指定的用户的字段，作用有以下两个方面
 
+数据类型：str
+
 - 在创建数据时，根据指定的字段，自动插入用户的数据
 - 在获取数据时，根据指定的字段，根据当前用户，筛选对应的数据
 """
@@ -42,6 +44,10 @@ GMETA_AUTO_ADD_CURRENT_USER = 'auto_add_current_user'
 """
 客户端接口不需要权限的设置
 
-数据结构为元组，其中元素为客户单视图中的视图方法，例如 create, update 等等这些
+数据类型：tuple，其中元素为客户单视图中的视图方法，例如 create, update 等等这些
+
+例如客户端首页的商品是不需要权限就可以浏览的，此时配置如下：
+
+client_api_permission_skip = ('list', 'set', 'retrieve')
 """
 GMETA_CLIENT_API_PERMISSION_SKIP = 'client_api_permission_skip'
