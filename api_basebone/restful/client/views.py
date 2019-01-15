@@ -194,6 +194,7 @@ class GenericViewMixin:
         get 方法使用 query string，这里需要解析
         post 方法直接放到 body 中
         """
+
         self.expand_fields = None
         if self.action in ['list']:
             fields = self.request.query_params.get(const.EXPAND_FIELDS)
@@ -211,7 +212,7 @@ class GenericViewMixin:
                             self.expand_fields = detail_expand_fields
                     except Exception:
                         pass
-        elif self.action in ['create', 'update', 'partial_update']:
+        elif self.action in ['create', 'update', 'custom_patch', 'partial_update']:
             self.expand_fields = self.request.data.get('__expand_fields')
 
     def _get_data_with_tree(self, request):

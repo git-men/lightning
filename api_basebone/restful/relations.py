@@ -242,7 +242,9 @@ def reverse_one_to_many(field, value, instance, detail=True):
     if detail and pure_id_list:
         pure_id_list = [model._meta.pk.to_python(item) for item in pure_id_list]
         relation = meta.get_relation_field_related_name(model, field.remote_field.name)
+
         if relation:
+            model.objects.filter(id__in=pure_id_list).update(**{relation[1].name: instance})
             getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
     elif pure_id_list:
         # 如果是创建，则需要创建对应的数据
