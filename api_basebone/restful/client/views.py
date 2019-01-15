@@ -204,6 +204,8 @@ class GenericViewMixin:
                             self.expand_fields = detail_expand_fields
                     except Exception:
                         pass
+        elif self.action in ['create', 'update', 'partial_update']:
+            self.expand_fields = self.request.data.get('__expand_fields')
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
@@ -345,8 +347,7 @@ class CommonManageViewSet(FormMixin,
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
 
-        # instance = self.get_queryset().filter(id=instance.id).first()
-        serializer = self.get_serializer(instance)
+        serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
         return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -369,11 +370,9 @@ class CommonManageViewSet(FormMixin,
             log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
 
-        serializer = self.get_serializer(instance)
-        if getattr(instance, '_prefetched_objects_cache', None):
-            instance._prefetched_objects_cache = {}
-
         reverse_relation_hand(self.model, request.data, instance)
+
+        serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
         return success_response(serializer.data)
 
     def partial_update(self, request, *args, **kwargs):
@@ -428,6 +427,7 @@ class CommonManageViewSet(FormMixin,
         data = request.data
         func_name = data.get('func_name', None) or request.GET.get('func_name', None)
         params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
+
         func, options = find_func(app, model, func_name)
         if not func:
             raise exceptions.BusinessException(
