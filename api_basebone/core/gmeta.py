@@ -51,3 +51,15 @@ GMETA_AUTO_ADD_CURRENT_USER = 'auto_add_current_user'
 client_api_permission_skip = ('list', 'set', 'retrieve')
 """
 GMETA_CLIENT_API_PERMISSION_SKIP = 'client_api_permission_skip'
+
+
+"""
+客户端接口认证的设置
+
+数据类型：tuple 其中元素为客户视图中的视图方法，例如 create, update 等等这些
+
+例如客户端有些模型的删除接口禁止访问，此时配置如下
+
+client_api_no_authentication = ('destroy', )
+"""
+GMETA_CLIENT_API_NO_AUTHENTICATION = 'client_api_no_authentication'

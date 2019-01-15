@@ -144,7 +144,7 @@ class GenericViewMixin:
     def check_permissions(self, request):
         """校验权限"""
         action_skip = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
-        if action_skip and self.action in action_skip:
+        if isinstance(action_skip, tuple) and self.action in action_skip:
             return True
         super().check_permissions(request)
 
@@ -159,6 +159,7 @@ class GenericViewMixin:
         - 处理树形数据
         - 给数据自动插入用户数据
         """
+
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
@@ -171,6 +172,12 @@ class GenericViewMixin:
             raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
 
         self.model = apps.all_models[self.app_label][self.model_slug]
+
+        # 检测方法是否允许访问
+        no_authentication = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_NO_AUTHENTICATION)
+        if isinstance(no_authentication, tuple) and self.action in no_authentication:
+            raise exceptions.BusinessException(
+                error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
 
         meta.load_custom_admin_module()
         self.get_expand_fields()
