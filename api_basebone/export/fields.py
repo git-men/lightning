@@ -104,7 +104,7 @@ class FieldConfig:
         base['maxLength'] = field.max_length
         base.update(self.reset_field_config(field, data_type))
         return base
-    
+
     def decimal_params(self, field, data_type):
         """小数类型的配置获取
         """

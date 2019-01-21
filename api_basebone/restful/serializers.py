@@ -76,6 +76,10 @@ class BaseModelSerializerMixin:
                 ret[field_name] = field.to_representation(data)
             else:
                 ret[field.field_name] = field.to_representation(attribute)
+
+        for key in dir(model):
+            if key != 'pk' and isinstance(getattr(model, key, None), property):
+                ret[key] = getattr(instance, key, None)
         return ret
 
 
