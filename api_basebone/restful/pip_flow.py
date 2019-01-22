@@ -5,8 +5,9 @@
 """
 from django.contrib.auth import get_user_model
 
-from api_basebone.core import admin
+from api_basebone.core import admin, gmeta
 from api_basebone.utils import meta
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 
 def add_login_user_data(view, data):
@@ -34,21 +35,12 @@ def add_login_user_data(view, data):
     # 检测模型中是否有字段引用了用户模型
     has_user_field = meta.get_related_model_field(model, get_user_model())
     if has_user_field:
-        # 如果有，则读取 BSM Admin 中的配置
-        admin_class = meta.get_bsm_model_admin(model)
-
-        if admin_class:
-            # 检测 admin 配置中是否指定了 auth_filter_field 属性
-            try:
-                field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
-                if field_name:
-                    auth_user_field = field_name
-                    # 如果用户数据中没有传递用户的数据，则进行插入
-                    if field_name not in data:
-                        data[field_name] = user.id
-            except Exception as e:
-                raise e
-                print(e)
+        field_name = get_gmeta_config_by_key(model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+        if field_name:
+            auth_user_field = field_name
+            # 如果用户数据中没有传递用户的数据，则进行插入
+            if field_name not in data:
+                data[field_name] = user.id
 
     relation_fields = meta.get_all_relation_fields(model)
     if relation_fields:
@@ -64,23 +56,17 @@ def add_login_user_data(view, data):
                 if not value or not isinstance(value, list):
                     continue
 
-                has_user_field = meta.get_related_model_field(item.related_model, get_user_model())
+                has_user_field = meta.get_related_model_field(
+                    item.related_model, get_user_model())
                 if has_user_field:
-                    # 如果有，则读取 BSM Admin 中的配置
-                    admin_class = meta.get_bsm_model_admin(item.related_model)
-                    if admin_class:
+                    field_name = get_gmeta_config_by_key(
+                        item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                    if field_name:
                         for reverse_item in value:
                             if isinstance(reverse_item, dict):
-                                # 检测 admin 配置中是否指定了 auth_filter_field 属性
-                                try:
-                                    field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
-                                    if field_name:
-                                        # 如果用户数据中没有传递用户的数据，则进行插入
-                                        if field_name not in reverse_item:
-                                            reverse_item[field_name] = user.id
-                                except Exception as e:
-                                    raise e
-                                    print(e)
+                                # 如果用户数据中没有传递用户的数据，则进行插入
+                                if field_name not in reverse_item:
+                                    reverse_item[field_name] = user.id
             else:
                 # 这里说明是正向字段
                 if item.many_to_many:
@@ -88,40 +74,26 @@ def add_login_user_data(view, data):
                     if not value or not isinstance(value, list):
                         continue
 
-                    has_user_field = meta.get_related_model_field(item.related_model, get_user_model())
+                    has_user_field = meta.get_related_model_field(
+                        item.related_model, get_user_model())
                     if has_user_field:
-                        # 如果有，则读取 BSM Admin 中的配置
-                        admin_class = meta.get_bsm_model_admin(item.related_model)
-                        if admin_class:
+                        field_name = get_gmeta_config_by_key(item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                        if field_name:
                             for child_item in value:
                                 if isinstance(child_item, dict):
-                                    # 检测 admin 配置中是否指定了 auth_filter_field 属性
-                                    try:
-                                        field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
-                                        if field_name:
-                                            print(value, 'this is add user login data', child_item)
-                                            # 如果用户数据中没有传递用户的数据，则进行插入
-                                            if field_name not in child_item:
-                                                child_item[field_name] = user.id
-                                    except Exception as e:
-                                        raise e
-                                        print(e)
+                                    # 如果用户数据中没有传递用户的数据，则进行插入
+                                    if field_name not in child_item:
+                                        child_item[field_name] = user.id
                 else:
                     # 使用字典数据结构
                     if isinstance(value, dict):
-                        has_user_field = meta.get_related_model_field(item.related_model, get_user_model())
+                        has_user_field = meta.get_related_model_field(
+                            item.related_model, get_user_model())
                         if has_user_field:
-                            # 如果有，则读取 BSM Admin 中的配置
-                            admin_class = meta.get_bsm_model_admin(item.related_model)
-                            if admin_class:
-                                # 检测 admin 配置中是否指定了 auth_filter_field 属性
-                                try:
-                                    field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
-                                    if field_name:
-                                        # 如果用户数据中没有传递用户的数据，则进行插入
-                                        if field_name not in value:
-                                            value[field_name] = user
-                                except Exception:
-                                    raise e
-                                    pass
+                            field_name = get_gmeta_config_by_key(
+                                item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                            if field_name:
+                                # 如果用户数据中没有传递用户的数据，则进行插入
+                                if field_name not in value:
+                                    value[field_name] = user
     return data
