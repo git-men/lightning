@@ -40,6 +40,14 @@ class BaseModelSerializerMixin:
     class Meta:
         fields = '__all__'
 
+    def _to_representation_from_property(self, model, instance):
+        """
+        获取模型中 property 装饰器装饰的属性值
+        """
+        for key in dir(model):
+            if key != 'pk' and isinstance(getattr(model, key, None), property):
+                ret[key] = getattr(instance, key, None)
+
     def to_representation(self, instance):
         """
         Object instance -> Dict of primitive datatypes.
@@ -77,9 +85,6 @@ class BaseModelSerializerMixin:
             else:
                 ret[field.field_name] = field.to_representation(attribute)
 
-        for key in dir(model):
-            if key != 'pk' and isinstance(getattr(model, key, None), property):
-                ret[key] = getattr(instance, key, None)
         return ret
 
 
