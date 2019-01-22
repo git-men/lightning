@@ -343,9 +343,6 @@ class CommonManageViewSet(FormMixin,
             serializer.is_valid(raise_exception=True)
 
             instance = self.perform_create(serializer)
-            from baseshop.models import Order
-            if isinstance(instance, Order):
-                print(f'instance after perform create: {instance.items.all()}')
 
         reverse_relation_hand(self.model, request.data, instance, detail=False)
         instance = self.get_queryset().get(id=instance.id)
