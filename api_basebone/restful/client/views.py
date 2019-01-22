@@ -347,9 +347,9 @@ class CommonManageViewSet(FormMixin,
             if isinstance(instance, Order):
                 print(f'instance after perform create: {instance.items.all()}')
 
-        instance = self.get_queryset().filter(id=instance.id).first()
-
         reverse_relation_hand(self.model, request.data, instance, detail=False)
+        instance = self.get_queryset().get(id=instance.id)
+
         with transaction.atomic():
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
@@ -371,14 +371,14 @@ class CommonManageViewSet(FormMixin,
             else:
                 serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
-
             instance = self.perform_update(serializer)
+
+        reverse_relation_hand(self.model, request.data, instance)
+        instance = self.get_queryset().get(id=instance.id)
 
         with transaction.atomic():
             log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
-
-        reverse_relation_hand(self.model, request.data, instance)
 
         serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
         return success_response(serializer.data)
