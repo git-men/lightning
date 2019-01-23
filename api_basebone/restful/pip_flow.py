@@ -5,32 +5,16 @@
 """
 from django.contrib.auth import get_user_model
 
-from api_basebone.core import admin, gmeta
+from api_basebone.core import gmeta
 from api_basebone.utils import meta
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 
-def add_login_user_data(view, data):
-    """
-    给数据添加上用户数据
-
-    对于字段，这里分：正向的关系字段，反向的关系字段
-    """
-    if view.request.method.upper() in ['GET', 'OPTIONS', 'DELETE']:
-        return
-
-    if view.action not in ['create', 'update', 'partial_update']:
-        return
-
-    if not view.request.data:
-        return
-
-    model_name, model = view.model_slug, view.model
+def insert_user_to_data(model, user, data):
+    """插入用户到数据中"""
 
     # 第一部分，先检测模型中的字段是否有引用用户模型，如果有，则注入用户数据
     auth_user_field = None
-
-    user = get_user_model().objects.get(id=view.request.user.id)
 
     # 检测模型中是否有字段引用了用户模型
     has_user_field = meta.get_related_model_field(model, get_user_model())
@@ -77,7 +61,8 @@ def add_login_user_data(view, data):
                     has_user_field = meta.get_related_model_field(
                         item.related_model, get_user_model())
                     if has_user_field:
-                        field_name = get_gmeta_config_by_key(item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                        field_name = get_gmeta_config_by_key(
+                            item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
                         if field_name:
                             for child_item in value:
                                 if isinstance(child_item, dict):
@@ -96,4 +81,22 @@ def add_login_user_data(view, data):
                                 # 如果用户数据中没有传递用户的数据，则进行插入
                                 if field_name not in value:
                                     value[field_name] = user
-    return data
+
+
+def add_login_user_data(view, data):
+    """
+    给数据添加上用户数据
+
+    对于字段，这里分：正向的关系字段，反向的关系字段
+    """
+    if view.request.method.upper() in ['GET', 'OPTIONS', 'DELETE']:
+        return
+
+    if view.action not in ['create', 'update', 'partial_update']:
+        return
+
+    if not view.request.data:
+        return
+
+    user = get_user_model().objects.get(id=view.request.user.id)
+    return insert_user_to_data(view.model, user, data)
