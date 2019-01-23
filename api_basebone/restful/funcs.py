@@ -6,7 +6,7 @@ def register_func(app, model, func_name, func, options):
     funcs[f'{app}/{model}/@{func_name}'] = (func, options)
 
 
-def bsm_func(name, model, login_required=True):
+def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False):
     # 做注册工作，把下层的方法注册到funcs里面去。
     def _decorator(function):
         app = model._meta.app_label
@@ -15,6 +15,8 @@ def bsm_func(name, model, login_required=True):
         register_func(
             app, model_name, func_name, function, {
                 'login_required': login_required,
+                'staff_required': staff_required,
+                'superuser_required': superuser_required,
                 'permissions': []
             })
         return function

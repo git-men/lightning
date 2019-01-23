@@ -1,13 +1,17 @@
 import copy
 import logging
+import json
+import requests
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, transaction
+from django.http import HttpResponse
 
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.app.account.forms import UserCreateUpdateForm
 
@@ -28,6 +32,8 @@ from api_basebone.restful.serializers import (
     create_serializer_class,
     multiple_create_serializer_class,
 )
+
+from api_basebone.restful.funcs import find_func
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
@@ -428,3 +434,36 @@ class CommonManageViewSet(FormMixin,
         if file_type == csv_file:
             return renderers.csv_render(self.model)
         return renderers.ExcelResponse(self.model)
+
+
+    @action(methods=['POST', 'GET'], detail=False, url_path='func')
+    def func(self, request, app, model, **kwargs):
+        """云函数, 由客户端直接调用的服务函数
+        """
+
+        data = request.data
+        func_name = data.get('func_name', None) or request.GET.get('func_name', None)
+        params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
+
+        func, options = find_func(app, model, func_name)
+        if not func:
+            raise exceptions.BusinessException(
+                error_code=exceptions.FUNCTION_NOT_FOUNT,
+                error_data=f'no such func: {func_name} found')
+        if options.get('login_required', False):
+            if not request.user.is_authenticated:
+                raise PermissionDenied()
+        if options.get('staff_required', False):
+            if not request.user.is_staff:
+                raise PermissionDenied()
+        if options.get('superuser_required', False):
+            if not request.user.is_superuser:
+                raise PermissionDenied()
+
+        result = func(request.user, **params)
+        # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
+        if isinstance(result, requests.Response):
+            return HttpResponse(result, result.headers.get('Content-Type', None))
+        if isinstance(result, list):
+            return success_response(result)
+        return success_response()
