@@ -6,12 +6,11 @@
 例如批量动作可以批量删除，批量更新，批量创建，甚至是批量中可以支持多种动作的混合
 """
 
-import importlib
 from rest_framework import serializers
 from api_basebone.core import exceptions
 from api_basebone.core.decorators import BSM_BATCH_ACTION, BSM_CLIENT_BATCH_ACTION
 from api_basebone.utils import module
-from api_basebone.restful.const import CLIENT_END_SLUG, MANAGE_END_SLUG
+from api_basebone.restful.const import MANAGE_END_SLUG
 
 
 def delete(request, queryset):
@@ -36,9 +35,10 @@ def get_model_batch_actions(model, end=MANAGE_END_SLUG):
     batch_actions.update(default_action_map)
 
     action_module = module.get_admin_module(model._meta.app_config.name, module.BSM_BATCH_ACTION)
+
     if action_module:
         end_map_name = BSM_BATCH_ACTION if end == MANAGE_END_SLUG else BSM_CLIENT_BATCH_ACTION
-        model_actions = getattr(model, BSM_BATCH_ACTION, None)
+        model_actions = getattr(model, end_map_name, None)
         if model_actions:
             batch_actions.update(model_actions)
     return batch_actions

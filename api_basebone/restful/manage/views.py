@@ -6,7 +6,7 @@ import requests
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import DatabaseError, transaction
+from django.db import transaction
 from django.http import HttpResponse
 
 from rest_framework import permissions, viewsets

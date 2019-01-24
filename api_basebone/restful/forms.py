@@ -1,5 +1,3 @@
-from django.contrib.auth import get_user_model
-
 from rest_framework import serializers
 
 from api_basebone.utils import module
@@ -12,7 +10,7 @@ def create_meta_class(model, exclude_fields=None):
         'model': model,
     }
 
-    if exclude_fields is not None and isinstance(exclude, (list, tuple)):
+    if exclude_fields is not None and isinstance(exclude_fields, (list, tuple)):
         attrs['exclude'] = exclude_fields
     else:
         attrs['fields'] = '__all__'
