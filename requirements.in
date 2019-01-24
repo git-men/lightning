@@ -1,4 +1,5 @@
 arrow==0.12.1
+celery==4.2.1
 Django==2.1.2
 django-cors-headers==2.4.0
 django-extensions==2.1.3

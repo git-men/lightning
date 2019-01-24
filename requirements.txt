@@ -13,6 +13,7 @@ arrow==0.12.1
 certifi==2018.8.24        # via requests
 chardet==3.0.4            # via requests
 click==7.0                # via pip-tools
+celery==4.2.1
 coreapi==2.3.3            # via django-rest-swagger, openapi-codec
 coreschema==0.0.4         # via coreapi
 crcmod==1.7               # via oss2
