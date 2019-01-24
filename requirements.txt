@@ -17,6 +17,8 @@ coreapi==2.3.3            # via django-rest-swagger, openapi-codec
 coreschema==0.0.4         # via coreapi
 crcmod==1.7               # via oss2
 django-cors-headers==2.4.0
+django-celery-beat==1.4.0
+django-celery-results==1.0.4
 django-environ==0.4.5
 django-extensions==2.1.3
 django-rest-swagger==2.2.0
