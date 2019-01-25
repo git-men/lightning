@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, Mapping
 
 from django.db import models
 
