@@ -1,19 +1,15 @@
 import arrow
 import base64
-import binascii
 import datetime
-import hashlib
 import hmac
 import json
 import logging
 import oss2
-import requests
-import random
-import time
 
 from hashlib import sha1
-
 from django.conf import settings
+
+logger = logging.getLogger('django')
 
 
 class AliYunOSS:
