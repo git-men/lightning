@@ -121,7 +121,7 @@ def add_login_user_data(view, data):
                                         # 如果用户数据中没有传递用户的数据，则进行插入
                                         if field_name not in value:
                                             value[field_name] = user
-                                except Exception:
-                                    raise e
+                                except Exception as error:
+                                    raise error
                                     pass
     return data
