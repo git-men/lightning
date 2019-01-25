@@ -1,5 +1,4 @@
 from django.utils.encoding import force_text
-from rest_framework.exceptions import ValidationError
 
 PARAMETER_FORMAT_ERROR = '10000'
 SERVER_IS_BUSY = '10001'

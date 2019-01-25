@@ -1,5 +1,4 @@
-import imaplib
-from collections import OrderedDict, Mapping
+from collections import OrderedDict
 
 from django.db import models
 
@@ -7,7 +6,6 @@ from rest_framework import serializers
 from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
 
-from api_basebone.core import const
 from api_basebone.core import gmeta
 from api_basebone.utils import meta
 
@@ -80,7 +78,7 @@ class BaseModelSerializerMixin:
                 data = attribute.all()
 
                 # 检测字段是否是反向字段的 related_name, 如果是，转换为反向字段的名称
-                field_name = reverse_field_map[field.field_name] if field.field_name in reverse_field_map else field.field_name 
+                field_name = reverse_field_map[field.field_name] if field.field_name in reverse_field_map else field.field_name
                 ret[field_name] = field.to_representation(data)
             else:
                 ret[field.field_name] = field.to_representation(attribute)

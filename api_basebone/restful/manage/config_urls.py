@@ -2,8 +2,6 @@
 输出配置的路由
 """
 
-from django.urls import path, include
-
 from api_basebone.drf.routers import BaseBoneSimpleRouter as SimpleRouter
 from api_basebone.restful.manage.config_views import ConfigViewSet
 

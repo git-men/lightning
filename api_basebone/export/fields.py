@@ -3,7 +3,6 @@ import inspect
 from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
 
-from api_basebone.core import const
 from api_basebone.core import gmeta
 from api_basebone.utils.meta import (
     get_concrete_fields, get_export_apps, get_reverse_fields,

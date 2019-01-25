@@ -435,7 +435,6 @@ class CommonManageViewSet(FormMixin,
             return renderers.csv_render(self.model)
         return renderers.ExcelResponse(self.model)
 
-
     @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, **kwargs):
         """云函数, 由客户端直接调用的服务函数
