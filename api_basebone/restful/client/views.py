@@ -184,6 +184,7 @@ class GenericViewMixin:
         self._get_data_with_tree(request)
 
         add_login_user_data(self, request.data)
+
         return result
 
     def get_expand_fields(self):
@@ -281,14 +282,15 @@ class GenericViewMixin:
         # FIXME: 这里设置了一个默认值，是为了避免 swagger 报错
         model = getattr(self, 'model', get_user_model())
         tree_data = getattr(self, 'tree_data', None)
+        exclude_fields = self.request.data.get('exclude_fields')
 
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            return create_serializer_class(model, tree_structure=tree_data)
+            return create_serializer_class(model, exclude_fields=exclude_fields, tree_structure=tree_data)
 
         # 如果有展开字段，则创建嵌套的序列化类
         serializer_class = multiple_create_serializer_class(
-            model, expand_fields, tree_structure=tree_data
+            model, expand_fields, exclude_fields=exclude_fields, tree_structure=tree_data
         )
         return serializer_class
 

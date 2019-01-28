@@ -10,18 +10,24 @@ from api_basebone.core import gmeta
 from api_basebone.utils import meta
 
 
-def get_model_exclude_fields(model):
+def get_model_exclude_fields(model, exclude_fields):
     """获取模型序列化输出时的排除字段
 
     Params:
         model class django 模型类
     """
+    field_list = []
     gmeta_class = getattr(model, 'GMeta', None)
     if gmeta_class:
         exclude = getattr(gmeta_class, gmeta.GMETA_SERIALIZER_EXCLUDE_FIELDS, None)
         if exclude and isinstance(exclude, (list, tuple)):
             fields = [item.name for item in model._meta.get_fields()]
-            return [item for item in exclude if item in fields]
+            field_list = [item for item in exclude if item in fields]
+    key = f'{model._meta.app_label}__{model._meta.model_name}'
+    if isinstance(exclude_fields, dict) and exclude_fields:
+        if key in exclude_fields and isinstance(exclude_fields[key], list):
+            field_list += exclude_fields[key]
+    return field_list
 
 
 class RecursiveSerializer(serializers.Serializer):
@@ -86,7 +92,7 @@ class BaseModelSerializerMixin:
         return ret
 
 
-def create_meta_class(model, exclude_fields=None):
+def create_meta_class(model, exclude_fields=None, **kwargs):
     """构建序列化类的 Meta
 
     Params:
@@ -97,9 +103,9 @@ def create_meta_class(model, exclude_fields=None):
         'model': model,
     }
 
-    exclude_fields = get_model_exclude_fields(model)
-    if exclude_fields is not None:
-        attrs['exclude'] = exclude_fields
+    exclude_field_list = get_model_exclude_fields(model, exclude_fields)
+    if exclude_field_list is not None and exclude_field_list:
+        attrs['exclude'] = exclude_field_list
     else:
         attrs['fields'] = '__all__'
 
@@ -114,7 +120,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
     """
 
     attrs = {
-        'Meta': create_meta_class(model, exclude_fields=None)
+        'Meta': create_meta_class(model, exclude_fields=exclude_fields)
     }
     attrs.update(kwargs)
 
@@ -208,7 +214,7 @@ def sort_expand_fields(fields):
     return result
 
 
-def create_nested_serializer_class(model, field_list):
+def create_nested_serializer_class(model, field_list, exclude_fields=None, **kwargs):
     """构建嵌套序列化类
 
     此方法仅仅为 multiple_create_serializer_class 方法服务
@@ -223,13 +229,17 @@ def create_nested_serializer_class(model, field_list):
             many = False if field.one_to_one else True
 
         if not value:
-            attrs[key] = create_serializer_class(field.related_model)(many=many)
+            attrs[key] = create_serializer_class(
+                field.related_model, exclude_fields=exclude_fields
+            )(many=many)
         else:
-            attrs[key] = create_nested_serializer_class(field.related_model, value)(many=many)
-    return create_serializer_class(model, **attrs)
+            attrs[key] = create_nested_serializer_class(
+                field.related_model, value, exclude_fields=exclude_fields
+            )(many=many)
+    return create_serializer_class(model, exclude_fields=exclude_fields, **attrs)
 
 
-def multiple_create_serializer_class(model, expand_fields, tree_structure=None):
+def multiple_create_serializer_class(model, expand_fields, tree_structure=None, exclude_fields=None):
     """多重创建序列化类"""
     attrs = {}
 
@@ -241,7 +251,12 @@ def multiple_create_serializer_class(model, expand_fields, tree_structure=None):
         if meta.check_field_is_reverse(field):
             many = False if field.one_to_one else True
 
-        attrs[key] = create_nested_serializer_class(field.related_model, value)(many=many)
+        attrs[key] = create_nested_serializer_class(
+            field.related_model, value, exclude_fields=exclude_fields
+        )(many=many)
     return create_serializer_class(
-        model, exclude_fields=None, tree_structure=tree_structure, **attrs
+        model,
+        exclude_fields=exclude_fields,
+        tree_structure=tree_structure,
+        **attrs
     )
