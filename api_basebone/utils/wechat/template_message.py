@@ -6,6 +6,7 @@ from wechatpy.session.redisstorage import RedisStorage
 
 from .form_id import FormID
 from ..redis import redis_client
+from api_basebone.utils.wechat import wxa
 
 logger = logging.getLogger('django')
 
@@ -30,8 +31,6 @@ def weapp_send_template_message(app_id, user_id, touser, template_id,
         errcode: 0,
         errmsg: "ok"
     """
-    if app_id not in settings.WECHAT_APP_MAP:
-        return
 
     data = data if (data and isinstance(data, dict)) else {}
     formid_instance = FormID.lpop(user_id)
@@ -41,10 +40,8 @@ def weapp_send_template_message(app_id, user_id, touser, template_id,
 
     try:
         form_id = formid_instance.form_id
-        app_secret = settings.WECHAT_APP_MAP[app_id]['app_secret']
-        client = WeChatClient(app_id, app_secret, session=RedisStorage(redis_conn))
 
-        return client.wxa.send_template_message(
+        return wxa(app_id).send_template_message(
             touser, template_id, data, form_id,
             page=page, color=color, emphasis_keyword=emphasis_keyword)
     except Exception as e:
