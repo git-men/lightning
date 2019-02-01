@@ -20,3 +20,13 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """获取 admin 配置"""
         data = get_app_admin_config()
         return success_response(data)
+
+    @action(detail=False, url_path='all')
+    def get_all(self, request, *args, **kargs):
+        """获取所有的客户端配置，包括schema, admin
+        """
+        data = {
+            'schemas': get_app_field_schema(),
+            'admins': get_app_admin_config()
+        }
+        return success_response(data)
