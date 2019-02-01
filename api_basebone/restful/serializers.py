@@ -5,9 +5,28 @@ from django.db import models
 from rest_framework import serializers
 from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
+from rest_framework import fields
 
 from api_basebone.core import gmeta
 from api_basebone.utils import meta
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
+
+from api_basebone.export.specs import FieldType
+
+
+FieldTypeSerializerMap = {
+    FieldType.STRING: fields.CharField,
+    FieldType.INTEGER: fields.IntegerField,
+    FieldType.BOOL: fields.BooleanField,
+    FieldType.TEXT: fields.CharField,
+    FieldType.RICHTEXT: fields.CharField,
+    FieldType.FLOAT: fields.FloatField,
+    FieldType.DECIMAL: fields.DecimalField,
+    FieldType.IMAGE: fields.CharField,
+    FieldType.DATE: fields.DateField,
+    FieldType.TIME: fields.TimeField,
+    FieldType.DATETIME: fields.DateTimeField
+}
 
 
 def get_model_exclude_fields(model, exclude_fields):
@@ -127,6 +146,14 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
     # 动态构建树形结构的字段
     if tree_structure:
         attrs[tree_structure[1]] = RecursiveSerializer(many=True)
+
+    # 构建计算属性字段
+    computed_fields = get_gmeta_config_by_key(model, gmeta.GMETA_COMPUTED_FIELDS)
+    if computed_fields:
+        for field in computed_fields:
+            name = field['name']
+            field_type = field['type']
+            attrs[name] = FieldTypeSerializerMap[field_type](read_only=True)
 
     class_name = f'{model}ModelSerializer'
     return type(

@@ -339,7 +339,6 @@ class CommonManageViewSet(FormMixin,
             # 如果有联合查询，单个对象创建后并没有联合查询
             instance = self.get_queryset().filter(id=instance.id).first()
             serializer = self.get_serializer(instance)
-
             reverse_relation_hand(self.model, request.data, instance, detail=False)
 
         with transaction.atomic():

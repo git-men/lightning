@@ -191,6 +191,20 @@ def get_model_field_config(model):
             )
             config.append(reverse_config)
 
+    # 添加只读属性
+    computed_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_COMPUTED_FIELDS, [])
+    for field in computed_fields:
+        attrs = {
+            'name': field['name'],
+            'type': field['type'],
+            'required': False,
+            'readonly': True,
+            'displayName': field.get('display_name', field['name'])
+        }
+        if 'choices' in field:
+            attrs['choices'] = field['choices']
+        config.append(attrs)
+
     return {
         key: {
             'name': key,

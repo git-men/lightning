@@ -63,3 +63,10 @@ GMETA_CLIENT_API_PERMISSION_SKIP = 'client_api_permission_skip'
 client_api_no_authentication = ('destroy', )
 """
 GMETA_CLIENT_API_NO_AUTHENTICATION = 'client_api_no_authentication'
+
+"""计算属性，即@property函数，只允许读，不允许写，配置方式：
+computed_fields = (
+    {'func_name', 'type', 'displayName', 'choices'},
+)
+"""
+GMETA_COMPUTED_FIELDS = 'computed_fields'

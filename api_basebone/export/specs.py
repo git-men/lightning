@@ -4,6 +4,23 @@
 这是一份参考协议声明，即后端根据这份协议生成出对应的配置
 """
 
+class FieldType:
+    STRING = 'string'
+    TEXT = 'text'
+    RICHTEXT = 'richtext'
+    BOOL = 'bool'
+    INTEGER = 'integer'
+    FLOAT = 'float'
+    DECIMAL = 'decimal'
+    DATE = 'date'
+    DATETIME = 'datetime'
+    TIME = 'time'
+    IMAGE = 'image'
+    FILE = 'file'
+    REF = 'ref'
+    MREF = 'mref'
+
+
 common_attribute = [
     {
         'name': 'required',
@@ -41,6 +58,12 @@ common_attribute = [
         'type': 'bool',
         'required': False,
     },
+    {
+        'name': 'readonly',
+        'type': 'bool',
+        'required': False,
+        'default': False
+    }
 ]
 
 # 定义字段类型，每个字段类型有其自身的参数及意义。
