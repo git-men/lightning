@@ -274,15 +274,14 @@ class GenericViewMixin:
         # FIXME: 这里设置了一个默认值，是为了避免 swagger 报错
         model = getattr(self, 'model', get_user_model())
         tree_data = getattr(self, 'tree_data', None)
-
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            return create_serializer_class(model, tree_structure=tree_data)
-
-        # 如果有展开字段，则创建嵌套的序列化类
-        serializer_class = multiple_create_serializer_class(
-            model, expand_fields, tree_structure=tree_data
-        )
+            serializer_class = create_serializer_class(model, tree_structure=tree_data)
+        else:
+            # 如果有展开字段，则创建嵌套的序列化类
+            serializer_class = multiple_create_serializer_class(
+                model, expand_fields, tree_structure=tree_data
+            )
         return serializer_class
 
 
@@ -328,7 +327,6 @@ class CommonManageViewSet(FormMixin,
         """
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
-
             if self.model == get_user_model():
                 serializer = UserCreateUpdateForm(data=request.data)
             else:
@@ -354,7 +352,6 @@ class CommonManageViewSet(FormMixin,
 
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
-
             if self.model == get_user_model():
                 serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
             else:

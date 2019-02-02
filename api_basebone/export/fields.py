@@ -38,6 +38,29 @@ DJANGO_FIELD_TYPE_MAP = {
     'BoneImageUrlField': 'Image',
 }
 
+VALIDATOR_MAP = {
+    'django.core.validators.RegexValidator': 'regex',
+    'django.core.validators.EmailValidator': 'email',
+    'django.core.validators.URLValidator': 'url',
+    'django.core.validators.validate_email': 'email',
+    'django.core.validators.validate_slug': 'slug',
+    'django.core.validators.validate_unicode_slug': 'unicode_slug',
+    'django.core.validators.validate_ipv4_address': 'ip',
+    'django.core.validators.validate_ipv6_address': 'ip',
+    'django.core.validators.validate_ipv46_address': 'ip',
+    'django.core.validators.validate_comma_separated_integer_list': '',  # 未支持
+    'django.core.validators.int_list_validator': '', # 未支持
+    'django.core.validators.MaxValueValidator': 'max_value',
+    'django.core.validators.MinValueValidator': 'min_value',
+    # 以下几个属性，与Model中定义的属性重复了，暂隐藏
+    # 'django.core.validators.MaxLengthValidator': 'max_length',
+    # 'django.core.validators.MinLengthValidator': 'min_length',
+    # 'django.core.validators.DecimalValidator': 'decimal',
+    'django.core.validators.FileExtensionValidator': '', # 未支持
+    'django.core.validators.validate_image_file_extension': '', # 未支持
+    'django.core.validators.ProhibitNullCharactersValidator': '', # 未支持
+}
+
 
 def get_attr_in_gmeta_class(model, config_name, default_value=None):
     """获取指定模型 GMeta 类中指定的属性
@@ -69,6 +92,43 @@ class FieldConfig:
         }
         return result
 
+    def validator_config(self, field):
+        """获取字段的校验规则
+        """
+        if not getattr(field, 'validators', None):
+            return []
+        validators = []
+        for validator in field.validators:
+            if type(validator).__name__ == 'function':
+                key = '.'.join([validator.__module__, validator.__name__])
+            else:
+                target = validator.__class__
+                key = '.'.join([target.__module__, target.__name__])
+            if key not in VALIDATOR_MAP or not VALIDATOR_MAP[key]:
+                continue
+            attrs = {}
+            rule_name = VALIDATOR_MAP[key]
+            attrs['name'] = rule_name
+
+            # 个别校验器需要带上一些参数
+            if rule_name in ['min_value', 'max_value', 'max_length', 'min_length']:
+                attrs['params'] = {'value': validator.limit_value}
+
+            if rule_name == 'regex':
+                attrs['params'] = {
+                    'regex': validator.regex.pattern,
+                    'inverse_match': validator.inverse_match,
+                    'flags': validator.flags
+                }
+
+            if rule_name == 'decimal':
+                attrs['max_digits'] = validator.max_digits
+                attrs['decimal_places'] = validator.decimal_places
+
+            validators.append(attrs)
+        return validators
+
+
     def _get_common_field_params(self, field, data_type):
         """获取字段的通用的配置"""
         config = {
@@ -84,6 +144,10 @@ class FieldConfig:
 
         if not field.editable:
             config['editable'] = field.editable
+        
+        validator_config = self.validator_config(field)
+        if validator_config:
+            config['validators'] = validator_config
 
         if field.default is not NOT_PROVIDED:
             if inspect.isclass(field.default):
@@ -204,15 +268,20 @@ def get_model_field_config(model):
         if 'choices' in field:
             attrs['choices'] = field['choices']
         config.append(attrs)
-
-    return {
-        key: {
-            'name': key,
-            'displayName': model._meta.verbose_name,
-            'titleField': title_field,
-            'fields': config
-        }
+    
+    ret = {
+        'name': key,
+        'displayName': model._meta.verbose_name,
+        'titleField': title_field,
+        'fields': config
     }
+    
+    # 添加全局校验规则
+    validators = get_attr_in_gmeta_class(model, gmeta.GMETA_OBJECT_VALIDATORS)
+    if validators:
+        ret['validators'] = validators
+
+    return {key: ret}
 
 
 def get_app_field_schema():

@@ -155,7 +155,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, **k
             field_type = field['type']
             attrs[name] = FieldTypeSerializerMap[field_type](read_only=True)
 
-    class_name = f'{model}ModelSerializer'
+    class_name = f'{model.__name__}ModelSerializer'
     return type(
         class_name,
         (BaseModelSerializerMixin, serializers.ModelSerializer, ),

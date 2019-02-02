@@ -70,3 +70,5 @@ computed_fields = (
 )
 """
 GMETA_COMPUTED_FIELDS = 'computed_fields'
+
+GMETA_OBJECT_VALIDATORS = 'validators'

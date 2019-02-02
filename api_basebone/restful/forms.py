@@ -1,7 +1,80 @@
 from rest_framework import serializers
 
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
+from api_basebone.core import gmeta
 from api_basebone.utils import module
 from api_basebone.restful.const import MANAGE_END_SLUG, CLIENT_END_SLUG
+
+
+compare_funcs = {
+    '=': lambda a, b: a == b,
+    '==': lambda a, b: a == b,
+    '===': lambda a, b: a == b,
+    '>': lambda a, b: a > b,
+    '<': lambda a, b: a < b,
+    'in': lambda a, b: a in b,
+    'include': lambda a, b: b in a
+}
+
+
+def validate_condition_required(data, required_fields=[], condition_field=None, operator=None, value=None):
+    """条件性必填校验，如type字段值为0时，price字段才必填。
+    """
+    # 首先判断条件是否成立
+    if not (condition_field and operator and value and condition_field in data):
+        return
+    test_value = data[condition_field]
+    func = compare_funcs.get(operator, None)
+    if not func:
+        return
+    if not func(test_value, value):
+        return  # 不符合条件，不用校验
+
+    # 如果条件成立，则保证required_fields里面的字段都有值
+    messages = []
+    for field in required_fields:
+        if field in data and data[field]:
+            continue
+        messages.append((field, f'{field}是必填的'))
+
+    if messages:
+        raise serializers.ValidationError(dict(messages))
+
+
+def validate_condition_compare(operator):
+    def _validate_condition_compare(data, field=None, condition_field=None):
+        """表单范围的大小比较
+        """
+        if not (field and condition_field and data.get(field, None) and data.get(condition_field, None)):
+            return
+        test_value = data[field]
+        condition_value = data[condition_field]
+        if operator == 'lt' and test_value >= condition_value:
+            raise serializers.ValidationError({field: f'{field}的值必须小于{condition_field}的值'})
+        
+        if operator == 'gt' and test_value <= condition_value:
+            raise serializers.ValidationError({field: f'{field}的值必须大于{condition_field}的值'})
+    return _validate_condition_compare
+
+
+CONDICTION_VALIDATORS = {
+    'condition_required': validate_condition_required,
+    'condition_less': validate_condition_compare('lt'),
+    'condition_great': validate_condition_compare('gt')
+}
+
+def get_validate(validators):
+
+    def validate(self, data):
+        """ModelSerializer 里的Vaidate方法
+        """
+        # data = super().validate(data)
+        for validator in validators:
+            if CONDICTION_VALIDATORS[validator['type']]:
+                params = dict([(key, value) for key, value in validator.items() if key != 'type'])
+                CONDICTION_VALIDATORS[validator['type']](data, **params)
+        return data
+    return validate
 
 
 def create_meta_class(model, exclude_fields=None):
@@ -26,6 +99,12 @@ def create_form_class(model, exclude_fields=None, **kwargs):
     attrs.update(kwargs)
 
     class_name = f'{model}ModelSerializer'
+
+    # 创建表单级的校验方法
+    validators = get_gmeta_config_by_key(model, gmeta.GMETA_OBJECT_VALIDATORS)
+    if validators:
+        attrs['validate'] = get_validate(validators)
+        # MethodType(get_validate(validators), cls)
     return type(
         class_name, (serializers.ModelSerializer, ), attrs
     )
