@@ -173,11 +173,21 @@ class GenericViewMixin:
 
         self.model = apps.all_models[self.app_label][self.model_slug]
 
+        # # 检测方法是否允许访问
+        # no_authentication = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_NO_AUTHENTICATION)
+        # if isinstance(no_authentication, tuple) and self.action in no_authentication:
+        #     raise exceptions.BusinessException(
+        #         error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
+
         # 检测方法是否允许访问
-        no_authentication = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_NO_AUTHENTICATION)
-        if isinstance(no_authentication, tuple) and self.action in no_authentication:
+        api_authencicate_methods = get_gmeta_config_by_key(
+            self.model, gmeta.GMETA_CLIENT_API_AUTHENTICATE_METHODS)
+        if not isinstance(api_authencicate_methods, (tuple, list)):
             raise exceptions.BusinessException(
                 error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
+        elif self.action not in api_authencicate_methods:
+                raise exceptions.BusinessException(
+                    error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
 
         meta.load_custom_admin_module()
         self.get_expand_fields()
