@@ -108,18 +108,18 @@ class FieldConfig:
                 continue
             attrs = {}
             rule_name = VALIDATOR_MAP[key]
-            attrs['name'] = rule_name
+            attrs['type'] = rule_name
 
             # 个别校验器需要带上一些参数
             if rule_name in ['min_value', 'max_value', 'max_length', 'min_length']:
-                attrs['params'] = {'value': validator.limit_value}
+                attrs.update({'value': validator.limit_value})
 
             if rule_name == 'regex':
-                attrs['params'] = {
+                attrs.update({
                     'regex': validator.regex.pattern,
                     'inverse_match': validator.inverse_match,
                     'flags': validator.flags
-                }
+                })
 
             if rule_name == 'decimal':
                 attrs['max_digits'] = validator.max_digits

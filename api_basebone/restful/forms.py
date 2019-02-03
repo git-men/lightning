@@ -17,7 +17,7 @@ compare_funcs = {
 }
 
 
-def validate_condition_required(data, required_fields=[], condition_field=None, operator=None, value=None):
+def validate_condition_required(data, field=[], condition_field=None, operator=None, value=None):
     """条件性必填校验，如type字段值为0时，price字段才必填。
     """
     # 首先判断条件是否成立
@@ -31,11 +31,13 @@ def validate_condition_required(data, required_fields=[], condition_field=None, 
         return  # 不符合条件，不用校验
 
     # 如果条件成立，则保证required_fields里面的字段都有值
+    if not isinstance(field, list):
+        field = [field]
     messages = []
-    for field in required_fields:
-        if field in data and data[field]:
+    for fd in field:
+        if fd in data and data[fd]:
             continue
-        messages.append((field, f'{field}是必填的'))
+        messages.append((fd, f'{fd}是必填的'))
 
     if messages:
         raise serializers.ValidationError(dict(messages))
