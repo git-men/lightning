@@ -64,6 +64,17 @@ client_api_no_authentication = ('destroy', )
 """
 GMETA_CLIENT_API_NO_AUTHENTICATION = 'client_api_no_authentication'
 
+"""
+客户端接口允许调用的方法，默认使用白名单模式
+
+数据类型：tuple 其中元素为客户视图中的视图方法，例如 create, update 等等这些
+
+例如客户端有些模型只允许创建和更新接口，此时配置如下
+
+client_api_authenticate_methods = ('create', 'update')
+"""
+GMETA_CLIENT_API_AUTHENTICATE_METHODS = 'client_api_authenticate_methods'
+
 """计算属性，即@property函数，只允许读，不允许写，配置方式：
 computed_fields = (
     {'func_name', 'type', 'displayName', 'choices'},
