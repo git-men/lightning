@@ -273,13 +273,18 @@ class GenericViewMixin:
 
         - 如果是展开字段，这里做好是否关联查询
         """
+        managers = get_gmeta_config_by_key(self.model, gmeta.GMETA_MANAGERS)
+        if managers and 'client_api' in managers:
+            objects = getattr(self.model, managers['client_api'], self.model.objects)
+        else:
+            objects = self.model.objects
         expand_fields = self.expand_fields
         if not expand_fields:
-            return self._get_queryset(self.model.objects.all())
+            return self._get_queryset(objects.all())
 
         expand_fields = self.translate_expand_fields(expand_fields)
         field_list = [item.replace('.', '__') for item in expand_fields]
-        return self._get_queryset(self.model.objects.all().prefetch_related(*field_list))
+        return self._get_queryset(objects.all().prefetch_related(*field_list))
 
     def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类

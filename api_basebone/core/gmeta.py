@@ -83,3 +83,12 @@ computed_fields = (
 GMETA_COMPUTED_FIELDS = 'computed_fields'
 
 GMETA_OBJECT_VALIDATORS = 'validators'
+
+"""
+managers, 对应不同场景下，有不同的queryset,结构如下：
+managers = {
+    'client_api': xxxx,
+    'manager_api': yyyy,
+}
+"""
+GMETA_MANAGERS = 'managers'
