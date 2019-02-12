@@ -7,26 +7,49 @@ from api_basebone.utils import meta
 from api_basebone.utils.format import underline_to_camel
 
 
-def admin_model_config(model):
-    """获取指定模型对应的 admin 的配置"""
-    config, module = {}, meta.get_bsm_model_admin(model)
-    if not module:
-        return
+class BSMAdminConfig:
+    """BSM admin 输出"""
 
-    for item in dir(module):
-        if item in VALID_MANAGE_ATTRS:
-            config[underline_to_camel(item)] = getattr(module, item, None)
+    def validate_filter(self, key, value):
+        """校验过滤筛选器"""
+        pass
 
-    model_actions = get_model_batch_actions(model)
-    if model_actions:
-        config[BSM_BATCH_ACTION] = [
-            [key, getattr(value, 'short_description', key)]
-            for key, value in model_actions.items()
-        ]
+    def validate_display(self, key, value):
+        """校验展示字段"""
+        pass
 
-    return {
-        f'{model._meta.app_label}__{model._meta.model_name}': config
-    }
+    def validate_form_fields(self, key, value):
+        """校验表单字段"""
+        pass
+
+    def validate(self, key, value):
+        """校验 BSM Admin 配置项"""
+        pass
+
+    def admin_model_config(self, model):
+        """获取指定模型对应的 admin 的配置"""
+
+        config, bsm_admin = {}, meta.get_bsm_model_admin(model)
+        if not bsm_admin:
+            return
+
+        for item in dir(bsm_admin):
+            if item in VALID_MANAGE_ATTRS:
+                config[underline_to_camel(item)] = getattr(bsm_admin, item, None)
+
+        model_actions = get_model_batch_actions(model)
+        if model_actions:
+            config[BSM_BATCH_ACTION] = [
+                [key, getattr(value, 'short_description', key)]
+                for key, value in model_actions.items()
+            ]
+
+        return {
+            f'{model._meta.app_label}__{model._meta.model_name}': config
+        }
+
+
+bsm_admin_config = BSMAdminConfig()
 
 
 def get_app_admin_config():
@@ -40,7 +63,7 @@ def get_app_admin_config():
     for item in export_apps:
         app = apps.get_app_config(item)
         for model in app.get_models():
-            model_admin_config = admin_model_config(model)
-            if model_admin_config:
-                config.update(model_admin_config)
+            config_data = bsm_admin_config.admin_model_config(model)
+            if config_data:
+                config.update(config_data)
     return config

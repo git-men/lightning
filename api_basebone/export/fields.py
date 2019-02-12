@@ -128,7 +128,6 @@ class FieldConfig:
             validators.append(attrs)
         return validators
 
-
     def _get_common_field_params(self, field, data_type):
         """获取字段的通用的配置"""
         config = {
@@ -144,7 +143,7 @@ class FieldConfig:
 
         if not field.editable:
             config['editable'] = field.editable
-        
+
         validator_config = self.validator_config(field)
         if validator_config:
             config['validators'] = validator_config
@@ -268,14 +267,14 @@ def get_model_field_config(model):
         if 'choices' in field:
             attrs['choices'] = field['choices']
         config.append(attrs)
-    
+
     ret = {
         'name': key,
         'displayName': model._meta.verbose_name,
         'titleField': title_field,
         'fields': config
     }
-    
+
     # 添加全局校验规则
     validators = get_attr_in_gmeta_class(model, gmeta.GMETA_OBJECT_VALIDATORS)
     if validators:
