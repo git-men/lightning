@@ -89,7 +89,7 @@ class QuerySetMixin:
                 try:
                     field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
                     filter_by_login_user = getattr(admin_class, admin.BSM_FILTER_BY_LOGIN_USER, True)
-                    if field_name:
+                    if field_name and filter_by_login_user:
                         return queryset.filter(**{field_name: user})
                 except Exception:
                     pass
