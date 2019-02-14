@@ -88,7 +88,8 @@ class QuerySetMixin:
                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                 try:
                     field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
-                    filter_by_login_user = getattr(admin_class, admin.BSM_FILTER_BY_LOGIN_USER, True)
+                    filter_by_login_user = getattr(admin_class, admin.BSM_FILTER_BY_LOGIN_USER, False)
+
                     if field_name and filter_by_login_user:
                         return queryset.filter(**{field_name: user})
                 except Exception:
