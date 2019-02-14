@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model, logout, models
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
@@ -24,7 +24,10 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
         如果用户已登录，则直接返回此登录用户的数据结构
         """
         serializer = self.get_serializer(request.user)
-        return success_response(serializer.data)
+        result = {}
+        result.update(serializer.data)
+        result['permissions'] = request.user.get_all_permissions()
+        return success_response(result)
 
     @action(methods=['post'], detail=False)
     def logout(self, request, *args, **kwargs):
@@ -52,3 +55,10 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
         instance = serializer.save()
         serializer = self.get_serializer(instance)
         return success_response(serializer.data)
+
+
+    @action(methods=['get'], detail=False)
+    def permissions(self, request, *args, **kwargs):
+        """获取当前用户的权限
+        """
+        return success_response(request.user.get_all_permissions())
