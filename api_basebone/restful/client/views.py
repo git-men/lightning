@@ -135,7 +135,7 @@ class QuerySetMixin:
         methods = ['filter_user', 'filter_conditions', 'order_by', 'with_tree']
         for item in methods:
             queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
-        return queryset
+        return queryset.distinct()
 
 
 class GenericViewMixin:
