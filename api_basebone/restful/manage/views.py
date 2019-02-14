@@ -328,10 +328,7 @@ class CommonManageViewSet(FormMixin,
         """
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
-            if self.model == get_user_model():
-                serializer = UserCreateUpdateForm(data=request.data)
-            else:
-                serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer = self.get_validate_form(self.action)(data=request.data)
             serializer.is_valid(raise_exception=True)
 
             instance = self.perform_create(serializer)
@@ -353,10 +350,7 @@ class CommonManageViewSet(FormMixin,
 
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
-            if self.model == get_user_model():
-                serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
-            else:
-                serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+            serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
 
             instance = self.perform_update(serializer)

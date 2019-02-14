@@ -53,7 +53,7 @@ def validate_condition_compare(operator):
         condition_value = data[condition_field]
         if operator == 'lt' and test_value >= condition_value:
             raise serializers.ValidationError({field: f'{field}的值必须小于{condition_field}的值'})
-        
+
         if operator == 'gt' and test_value <= condition_value:
             raise serializers.ValidationError({field: f'{field}的值必须大于{condition_field}的值'})
     return _validate_condition_compare
@@ -64,6 +64,7 @@ CONDICTION_VALIDATORS = {
     'condition_less': validate_condition_compare('lt'),
     'condition_great': validate_condition_compare('gt')
 }
+
 
 def get_validate(validators):
 
@@ -113,7 +114,9 @@ def create_form_class(model, exclude_fields=None, **kwargs):
 
 
 def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kwargs):
-    """获取用户自定义的表单类
+    """获取表单类
+
+    如果用户有自定义的表单类，则优先返回用户自定义的表单，如果没有，则使用默认创建的表单
 
     Params:
         model class 模型类
@@ -135,7 +138,8 @@ def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kw
         'update': 'Update',
     }
 
-    form_module = module.get_admin_module(model._meta.app_config.name, module.BSM_FORM)
+    form_module = module.get_admin_module(
+        model._meta.app_config.name, module.BSM_FORM)
 
     name_suffix = name_suffix_map.get(end)
     if not name_suffix:
@@ -143,6 +147,7 @@ def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kw
 
     class_name = '{}{}{}'.format(model.__name__, action_map[action], name_suffix)
     form_class = getattr(form_module, class_name, None)
+
     if form_class is None:
         return create_form_class(model, exclude_fields=exclude_fields, **kwargs)
     return form_class
