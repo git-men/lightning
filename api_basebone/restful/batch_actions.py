@@ -22,7 +22,7 @@ delete.short_description = '删除'
 
 
 default_action_map = {
-    'delete': delete
+    # 'delete': delete
 }
 
 
