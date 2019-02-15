@@ -13,8 +13,6 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 
-from api_basebone.app.account.forms import UserCreateUpdateForm
-
 from api_basebone.core import admin, exceptions, const
 
 from api_basebone.drf.response import success_response

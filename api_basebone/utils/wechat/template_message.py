@@ -66,7 +66,7 @@ def mp_send_template_message(app_id, touser, template_id, data, url=None, mini_p
     data = data if (data and isinstance(data, dict)) else {}
     try:
         app_secret = settings.WECHAT_APP_MAP[app_id]['app_secret']
-        client = WeChatClient(app_id, app_secret, session=RedisStorage(redis_conn))
+        client = WeChatClient(app_id, app_secret, session=RedisStorage(redis_client))
 
         return client.message.send_template(
             touser, template_id, data, url=url, mini_program=mini_program)
