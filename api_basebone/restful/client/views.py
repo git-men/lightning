@@ -464,5 +464,5 @@ class CommonManageViewSet(FormMixin,
         if isinstance(result, requests.Response):
             return HttpResponse(result, result.headers.get('Content-Type', None))
         if isinstance(result, list):
-            return success_response(result)
+            return success_response(result) or isinstance(result, dict)
         return success_response()

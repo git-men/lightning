@@ -451,9 +451,10 @@ class CommonManageViewSet(FormMixin,
                 raise PermissionDenied()
 
         result = func(request.user, **params)
+
         # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
         if isinstance(result, requests.Response):
             return HttpResponse(result, result.headers.get('Content-Type', None))
-        if isinstance(result, list):
+        if isinstance(result, list) or isinstance(result, dict):
             return success_response(result)
         return success_response()
