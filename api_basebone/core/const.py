@@ -20,6 +20,24 @@
 """
 FILTER_CONDITIONS = 'filters'
 
+"""客户端传入排除条件的关键字
+
+客户端可通过此进行数据排除
+
+支持的方法：POST 当前适用于列表方法
+数据格式 List:
+
+    [
+        {
+            'field': 字段名,
+            'operator': 运算符,
+            'value': 值,
+        },
+        ...
+    ]
+"""
+EXCLUDE_CONDITIONS = 'excludes'
+
 """客户端传入展示字段的关键字
 """
 DISPLAY_FIELDS = 'display_fields'

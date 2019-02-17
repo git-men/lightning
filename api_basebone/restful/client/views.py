@@ -119,7 +119,29 @@ class QuerySetMixin:
             cons = build_filter_conditions(filter_conditions)
             if cons:
                 return queryset.filter(cons)
+        return queryset
+
+    def get_queryset_by_exclude_conditions(self, queryset):
+        """用于检测客户端传入的排除条件
+
+        客户端传入的过滤条件的数据结构如下：
+
+        [
+            {
+                field: xxxx,
+                operator: xxxx,
+                value: xxxx
+            }
+        ]
+        """
+        if not queryset.first():
             return queryset
+
+        conditions = self.request.data.get(const.EXCLUDE_CONDITIONS)
+        if conditions:
+            cons = build_filter_conditions(conditions)
+            if cons:
+                return queryset.exclude(cons)
         return queryset
 
     def get_queryset_by_with_tree(self, queryset):
@@ -172,12 +194,6 @@ class GenericViewMixin:
             raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
 
         self.model = apps.all_models[self.app_label][self.model_slug]
-
-        # # 检测方法是否允许访问
-        # no_authentication = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_NO_AUTHENTICATION)
-        # if isinstance(no_authentication, tuple) and self.action in no_authentication:
-        #     raise exceptions.BusinessException(
-        #         error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
 
         # 检测方法是否允许访问
         api_authencicate_methods = get_gmeta_config_by_key(
