@@ -21,7 +21,6 @@ from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.pip_flow import add_login_user_data
 from api_basebone.restful.relations import (
     forward_relation_hand,
     reverse_relation_hand,
@@ -36,6 +35,8 @@ from api_basebone.restful.funcs import find_func
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
 from api_basebone.signals import post_bsm_create
+
+from .user_pip import add_login_user_data
 
 log = logging.getLogger(__name__)
 

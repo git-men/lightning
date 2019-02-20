@@ -22,7 +22,6 @@ from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.restful import batch_actions
 from api_basebone.restful.const import CLIENT_END_SLUG
 from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.pip_flow import add_login_user_data
 from api_basebone.restful.relations import (
     forward_relation_hand,
     reverse_relation_hand,
@@ -37,6 +36,8 @@ from api_basebone.utils import meta, get_app
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.utils.operators import build_filter_conditions
 from api_basebone.signals import post_bsm_create
+
+from .user_pip import add_login_user_data
 
 log = logging.getLogger(__name__)
 
@@ -85,8 +86,9 @@ class QuerySetMixin:
         if has_user_field:
             # 如果有，则读取模型中 GMeta 中的配置
             # FIXME: 注意，这里和管理端的处理逻辑暂时是不同的
-            user_field_name = get_gmeta_config_by_key(self.model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
-            if user_field_name:
+            user_field_name = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_USER_FIELD)
+            filter_by_login_user = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_FILTER_BY_LOGIN_USER)
+            if user_field_name and filter_by_login_user:
                 return queryset.filter(**{user_field_name: user})
         return queryset
 
@@ -181,7 +183,6 @@ class GenericViewMixin:
         - 处理树形数据
         - 给数据自动插入用户数据
         """
-
         result = super().perform_authentication(request)
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
