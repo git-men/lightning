@@ -28,7 +28,7 @@ def get_gmeta_pure_config(model, config_key):
     return getattr(gmeta_class, config_key, None)
 
 
-def get_gmeta_auto_add_current_user(model, config_key):
+def get_gmeta_client_user_field(model, config_key):
     """
     获取用户字段的配置
     """
@@ -53,7 +53,7 @@ def get_gmeta_config_by_key(model, config_key):
     """
 
     handler_map = {
-        gmeta_const.GMETA_AUTO_ADD_CURRENT_USER: get_gmeta_auto_add_current_user
+        gmeta_const.GMETA_CLIENT_USER_FIELD: get_gmeta_client_user_field
     }
     handler = handler_map.get(config_key)
     if handler:

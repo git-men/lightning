@@ -19,7 +19,7 @@ def insert_user_to_data(model, user, data):
     # 检测模型中是否有字段引用了用户模型
     has_user_field = meta.get_related_model_field(model, get_user_model())
     if has_user_field:
-        field_name = get_gmeta_config_by_key(model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+        field_name = get_gmeta_config_by_key(model, gmeta.GMETA_CLIENT_USER_FIELD)
         if field_name:
             auth_user_field = field_name
             # 如果用户数据中没有传递用户的数据，则进行插入
@@ -44,7 +44,7 @@ def insert_user_to_data(model, user, data):
                     item.related_model, get_user_model())
                 if has_user_field:
                     field_name = get_gmeta_config_by_key(
-                        item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                        item.related_model, gmeta.GMETA_CLIENT_USER_FIELD)
                     if field_name:
                         for reverse_item in value:
                             if isinstance(reverse_item, dict):
@@ -62,7 +62,7 @@ def insert_user_to_data(model, user, data):
                         item.related_model, get_user_model())
                     if has_user_field:
                         field_name = get_gmeta_config_by_key(
-                            item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                            item.related_model, gmeta.GMETA_CLIENT_USER_FIELD)
                         if field_name:
                             for child_item in value:
                                 if isinstance(child_item, dict):
@@ -76,7 +76,7 @@ def insert_user_to_data(model, user, data):
                             item.related_model, get_user_model())
                         if has_user_field:
                             field_name = get_gmeta_config_by_key(
-                                item.related_model, gmeta.GMETA_AUTO_ADD_CURRENT_USER)
+                                item.related_model, gmeta.GMETA_CLIENT_USER_FIELD)
                             if field_name:
                                 # 如果用户数据中没有传递用户的数据，则进行插入
                                 if field_name not in value:

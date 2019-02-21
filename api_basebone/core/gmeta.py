@@ -32,14 +32,20 @@ GMETA_FIELD_CONFIG_MAP = {
 
 
 """
-创建数据时，添加用户时，指定的用户的字段，作用有以下两个方面
+创建数据时，添加用户时，指定的用户的字段
 
 数据类型：str
 
 - 在创建数据时，根据指定的字段，自动插入用户的数据
-- 在获取数据时，根据指定的字段，根据当前用户，筛选对应的数据
 """
-GMETA_AUTO_ADD_CURRENT_USER = 'auto_add_current_user'
+GMETA_CLIENT_USER_FIELD = 'client_user_field'
+
+"""
+筛选数据时，是否根据当前登录用户进行筛选
+
+数据类型：bool
+"""
+GMETA_CLIENT_FILTER_BY_LOGIN_USER = 'client_filter_by_login_user'
 
 """
 客户端接口不需要权限的设置
