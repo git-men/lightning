@@ -85,6 +85,19 @@ class AliYunOSS:
             logger.error(f'upload to aliyun oss faile {status}')
         except Exception as e:
             logger.error(f'upload to aliyun oss faile {e}')
-
+    
+    def upload_object(self, key, data, replace=True):
+        """上传内容
+        """
+        # try:
+        if not replace and self.bucket.object_exists(key):
+            return f'{self.OSS_HOST}/{key}'
+        status = self.bucket.put_object(key, data).status
+        if status == 200:
+            return f'{self.OSS_HOST}/{key}'
+        # except Exception:
+        #     print('what the hell?')
+        #     logger.error(f'upload object {key} fail ', exc_info=True)
+        
 
 aliyun = AliYunOSS()

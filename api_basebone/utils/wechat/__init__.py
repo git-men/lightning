@@ -7,11 +7,11 @@ from api_basebone.utils.redis import redis_client
 session = RedisStorage(redis_client)
 
 
-def wrap(api, app_id):
+def wrap(api, app_id, app_secret=None):
     return api(
-        client=WeChatClient(appid=app_id, secret=settings.WECHAT_APP_MAP[app_id]['appsecret'], session=session)
+        client=WeChatClient(appid=app_id, secret=app_secret or settings.WECHAT_APP_MAP[app_id]['appsecret'], session=session)
     )
 
 
-def wxa(app_id):
-    return wrap(WeChatWxa, app_id=app_id)
+def wxa(app_id, app_secret=None):
+    return wrap(WeChatWxa, app_id=app_id, app_secret=app_secret)
