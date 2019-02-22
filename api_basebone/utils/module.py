@@ -9,6 +9,9 @@ BSM_BATCH_ACTION = 'actions'
 # 管理后台的的自定义表单
 BSM_FORM = 'forms'
 
+# 管理后台导出的自定义序列化类
+BSM_EXPORT = 'exports'
+
 
 def get_admin_module(app_full_name, slug=BSM_ADMIN):
     """获取管理后台指定的模块"""

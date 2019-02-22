@@ -3,7 +3,6 @@ from collections import OrderedDict
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
-from api_basebone.restful.serializers import create_serializer_class
 
 
 def get_fields(model):
@@ -18,29 +17,30 @@ def row_data(fields, data):
     return [data[key] for key in fields.keys()]
 
 
-def csv_render(model, queryset):
+def csv_render(model, queryset, serializer_class):
     """渲染数据"""
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="export.csv"'
 
     fields = get_fields(model)
     verbose_names = [item.verbose_name for item in fields.values()]
-    serializer_class = create_serializer_class(model)
 
     writer = csv.writer(response)
     writer.writerow(verbose_names)
 
     for instance in queryset.iterator():
         instance_data = serializer_class(instance).data
+        print(instance_data)
         writer.writerow(row_data(fields, instance_data))
     return response
 
 
 class ExcelResponse(HttpResponse):
 
-    def __init__(self, model, queryset, *args, **kwargs):
+    def __init__(self, model, queryset, serializer_class, *args, **kwargs):
         self.model = model
         self.queryset = queryset
+        self.serializer_class = serializer_class
         self.output_filename = f'{model._meta.model_name}.excel'
         self.worksheet_name = 'Sheet 1'
 
@@ -68,7 +68,7 @@ class ExcelResponse(HttpResponse):
         worksheet = workbook.create_sheet(title=self.worksheet_name)
         worksheet.append(headers)
 
-        serializer_class = create_serializer_class(self.model)
+        serializer_class = self.serializer_class
         for instance in self.queryset.iterator():
             instance_data = serializer_class(instance).data
             worksheet.append(row_data(fields, instance_data))
