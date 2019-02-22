@@ -421,9 +421,10 @@ class CommonManageViewSet(FormMixin,
 
         file_type = self.request.query_params.get('fileformat', csv_file)
         file_type = file_type if file_type in valid_list else csv_file
+        queryset = self.filter_queryset(self.get_queryset())
         if file_type == csv_file:
-            return renderers.csv_render(self.model)
-        return renderers.ExcelResponse(self.model)
+            return renderers.csv_render(self.model, queryset)
+        return renderers.ExcelResponse(self.model, queryset)
 
     @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, **kwargs):
