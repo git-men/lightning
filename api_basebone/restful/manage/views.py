@@ -280,11 +280,11 @@ class GenericViewMixin:
         tree_data = getattr(self, 'tree_data', None)
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            serializer_class = create_serializer_class(model, tree_structure=tree_data)
+            serializer_class = create_serializer_class(model, tree_structure=tree_data, action=self.action)
         else:
             # 如果有展开字段，则创建嵌套的序列化类
             serializer_class = multiple_create_serializer_class(
-                model, expand_fields, tree_structure=tree_data
+                model, expand_fields, tree_structure=tree_data, action=self.action
             )
         return serializer_class
 

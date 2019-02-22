@@ -4,13 +4,27 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
+from api_basebone.core import gmeta
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
+
 
 def get_fields(model):
-    result = OrderedDict()
-    for i in model._meta.get_fields():
-        if i.concrete and not i.many_to_many:
-            result[i.name] = i
-    return result
+    default_fields = OrderedDict()
+    for item in model._meta.get_fields():
+        if item.concrete and not item.many_to_many:
+            default_fields[item.name] = item.verbose_name
+
+    export_fields = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_EXPORT_FIELDS)
+    if not isinstance(export_fields, (list, tuple)) or not export_fields:
+        return default_fields
+
+    fields = OrderedDict()
+    for item in export_fields:
+        if isinstance(item, tuple):
+            fields[item[0]] = item[1]
+        else:
+            fields[item] = default_fields[item]
+    return fields
 
 
 def row_data(fields, data):
@@ -23,14 +37,13 @@ def csv_render(model, queryset, serializer_class):
     response['Content-Disposition'] = 'attachment; filename="export.csv"'
 
     fields = get_fields(model)
-    verbose_names = [item.verbose_name for item in fields.values()]
+    verbose_names = fields.values()
 
     writer = csv.writer(response)
     writer.writerow(verbose_names)
 
     for instance in queryset.iterator():
         instance_data = serializer_class(instance).data
-        print(instance_data)
         writer.writerow(row_data(fields, instance_data))
     return response
 
@@ -61,7 +74,7 @@ class ExcelResponse(HttpResponse):
 
     def build_excel(self, *args, **kwargs):
         fields = get_fields(self.model)
-        headers = [item.verbose_name for item in fields.values()]
+        headers = fields.values()
 
         workbook = Workbook(write_only=True)
         workbook.guess_types = True

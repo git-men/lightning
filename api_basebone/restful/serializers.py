@@ -149,6 +149,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
         """
         if self.action == 'export_file':
             self.serializer_field_mapping[models.BooleanField] = drf_field.ExportBooleanField
+            self.serializer_choice_field = drf_field.ExportChoiceField
         super(ModelSerializer, self).__init__(*args, **kwargs)
 
     attrs = {
