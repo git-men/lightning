@@ -18,6 +18,10 @@ def get_fields(model):
     return result
 
 
+def row_data(fields, data):
+    return [data[key] for key in fields.keys()]
+
+
 def csv_render(model):
     """渲染数据"""
     response = HttpResponse(content_type='text/csv')
@@ -34,7 +38,7 @@ def csv_render(model):
     writer = csv.writer(response)
     writer.writerow(verbose_names)
     for row in serializer.data:
-        writer.writerow(row.values())
+        writer.writerow(row_data(fields, row))
     return response
 
 
@@ -71,8 +75,5 @@ class ExcelResponse(HttpResponse):
         serializer_class = create_serializer_class(self.model)
         for instance in data.iterator():
             instance_data = serializer_class(instance).data
-            instance_data_list = [
-                instance_data[key] for key, value in fields.items()
-            ]
-            worksheet.append(instance_data_list)
+            worksheet.append(row_data(fields, instance_data))
         return workbook
