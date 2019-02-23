@@ -26,7 +26,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'DecimalField': 'Decimal',
     'GenericIPAddressField': 'String',
     'IntegerField': 'Integer',
-    'BigIntegerField': 'Integer',
+    'BigIntegerField': 'String',
     'PositiveIntegerField': 'Integer',
     'TextField': 'Text',
     'TimeField': 'Time',
