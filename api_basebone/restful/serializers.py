@@ -7,8 +7,8 @@ from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
 from rest_framework import fields
 
-from api_basebone.core import gmeta
-from api_basebone.utils import meta
+from api_basebone.core import gmeta, drf_field
+from api_basebone.utils import meta, module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 from api_basebone.export.specs import FieldType
@@ -27,6 +27,11 @@ FieldTypeSerializerMap = {
     FieldType.TIME: fields.TimeField,
     FieldType.DATETIME: fields.DateTimeField
 }
+
+
+class ModelSerializer(serializers.ModelSerializer):
+
+    pass
 
 
 def get_model_exclude_fields(model, exclude_fields):
@@ -138,14 +143,26 @@ def create_meta_class(model, exclude_fields=None, **kwargs):
     return type('Meta', (object, ), attrs)
 
 
-def create_serializer_class(model, exclude_fields=None, tree_structure=None, **kwargs):
+def create_serializer_class(model, exclude_fields=None, tree_structure=None, action=None, **kwargs):
     """构建序列化类
 
     Params:
         tree_structure 元组 admin 中做对应配置
     """
+
+    def __init__(self, *args, **kwargs):
+        """
+        重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
+        """
+        if self.action == 'export_file':
+            self.serializer_field_mapping[models.BooleanField] = drf_field.ExportBooleanField
+            self.serializer_choice_field = drf_field.ExportChoiceField
+        super(CustomModelSerializer, self).__init__(*args, **kwargs)
+
     attrs = {
-        'Meta': create_meta_class(model, exclude_fields=exclude_fields)
+        'Meta': create_meta_class(model, exclude_fields=exclude_fields),
+        'action': action,
+        '__init__': __init__
     }
     attrs.update(kwargs)
 
@@ -247,7 +264,7 @@ def sort_expand_fields(fields):
     return result
 
 
-def create_nested_serializer_class(model, field_list, exclude_fields=None, **kwargs):
+def create_nested_serializer_class(model, field_list, exclude_fields=None, action=None, **kwargs):
     """构建嵌套序列化类
 
     此方法仅仅为 multiple_create_serializer_class 方法服务
@@ -263,16 +280,17 @@ def create_nested_serializer_class(model, field_list, exclude_fields=None, **kwa
 
         if not value:
             attrs[key] = create_serializer_class(
-                field.related_model, exclude_fields=exclude_fields
+                field.related_model, exclude_fields=exclude_fields, action=action
             )(many=many)
         else:
             attrs[key] = create_nested_serializer_class(
-                field.related_model, value, exclude_fields=exclude_fields
+                field.related_model, value, exclude_fields=exclude_fields, action=action
             )(many=many)
-    return create_serializer_class(model, exclude_fields=exclude_fields, **attrs)
+    return create_serializer_class(model, exclude_fields=exclude_fields, action=action, **attrs)
 
 
-def multiple_create_serializer_class(model, expand_fields, tree_structure=None, exclude_fields=None):
+def multiple_create_serializer_class(model, expand_fields,
+                                     tree_structure=None, exclude_fields=None, action=None):
     """多重创建序列化类"""
     attrs = {}
 
@@ -285,11 +303,41 @@ def multiple_create_serializer_class(model, expand_fields, tree_structure=None, 
             many = False if field.one_to_one else True
 
         attrs[key] = create_nested_serializer_class(
-            field.related_model, value, exclude_fields=exclude_fields
+            field.related_model, value, exclude_fields=exclude_fields, action=action
         )(many=many)
     return create_serializer_class(
         model,
         exclude_fields=exclude_fields,
         tree_structure=tree_structure,
+        action=action,
         **attrs
+    )
+
+
+def get_export_serializer_class(model, serialier_class):
+    """获取导出的序列化类
+
+    如果用户有自定义的导出类，则合并序列化类和用户自定义的，如果没有，则使用默认的序列化类
+
+    Params:
+        model class 模型类
+        serialier_class class 序列化类
+
+    Returns:
+        class 表单类
+    """
+
+    export_module = module.get_admin_module(model._meta.app_config.name, module.BSM_EXPORT)
+
+    class_name = '{}ExportSerializer'.format(model.__name__)
+    custom_export_mixin = getattr(export_module, class_name, None)
+
+    if custom_export_mixin is None:
+        return serialier_class
+
+    class_name = f'{model.__name__}ExportSerializer'
+    return type(
+        class_name,
+        (serialier_class, custom_export_mixin, ),
+        {}
     )

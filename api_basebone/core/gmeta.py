@@ -98,3 +98,16 @@ managers = {
 }
 """
 GMETA_MANAGERS = 'managers'
+
+"""管理端导出文件指定的扩展字段 列表 List
+
+manage_export_expand_fields = []
+"""
+GMETA_MANAGE_EXPORT_EXPAND_FIELDS = 'manage_export_expand_fields'
+
+
+"""管理端导出文件指定的字段 列表 List
+
+manage_export_expand_fields = []
+"""
+GMETA_MANAGE_EXPORT_FIELDS = 'manage_export_fields'

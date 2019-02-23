@@ -1,47 +1,59 @@
 import csv
-
 from collections import OrderedDict
-
 from django.http import HttpResponse
-
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
-from api_basebone.restful.serializers import create_serializer_class
+from api_basebone.core import gmeta
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 
 def get_fields(model):
-    result = OrderedDict()
-    for i in model._meta.get_fields():
-        if i.concrete and not i.many_to_many:
-            result[i.name] = i
-    return result
+    default_fields = OrderedDict()
+    for item in model._meta.get_fields():
+        if item.concrete and not item.many_to_many:
+            default_fields[item.name] = item.verbose_name
+
+    export_fields = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_EXPORT_FIELDS)
+    if not isinstance(export_fields, (list, tuple)) or not export_fields:
+        return default_fields
+
+    fields = OrderedDict()
+    for item in export_fields:
+        if isinstance(item, tuple):
+            fields[item[0]] = item[1]
+        else:
+            fields[item] = default_fields[item]
+    return fields
 
 
-def csv_render(model):
+def row_data(fields, data):
+    return [data[key] for key in fields.keys()]
+
+
+def csv_render(model, queryset, serializer_class):
     """渲染数据"""
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="export.csv"'
 
-    serializer_class = create_serializer_class(model)
-    serializer = serializer_class(model.objects.all(), many=True)
-
     fields = get_fields(model)
-    verbose_names = [
-        value.verbose_name for key, value in fields.items()
-    ]
+    verbose_names = fields.values()
 
     writer = csv.writer(response)
     writer.writerow(verbose_names)
-    for row in serializer.data:
-        writer.writerow(row.values())
+
+    for instance in queryset.iterator():
+        instance_data = serializer_class(instance).data
+        writer.writerow(row_data(fields, instance_data))
     return response
 
 
 class ExcelResponse(HttpResponse):
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, queryset, serializer_class, *args, **kwargs):
         self.model = model
+        self.queryset = queryset
+        self.serializer_class = serializer_class
         self.output_filename = f'{model._meta.model_name}.excel'
         self.worksheet_name = 'Sheet 1'
 
@@ -55,24 +67,22 @@ class ExcelResponse(HttpResponse):
     def content(self, value):
         self['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         self['Content-Disposition'] = 'attachment; filename={}.xlsx'.format(self.output_filename)
-        workbook = self.build_excel(value)
+
+        workbook = self.build_excel()
         workbook = save_virtual_workbook(workbook)
         self._container = [self.make_bytes(workbook)]
 
-    def build_excel(self, data):
+    def build_excel(self, *args, **kwargs):
         fields = get_fields(self.model)
-        headers = [value.verbose_name for key, value in fields.items()]
+        headers = fields.values()
 
         workbook = Workbook(write_only=True)
         workbook.guess_types = True
         worksheet = workbook.create_sheet(title=self.worksheet_name)
         worksheet.append(headers)
 
-        serializer_class = create_serializer_class(self.model)
-        for instance in data.iterator():
+        serializer_class = self.serializer_class
+        for instance in self.queryset.iterator():
             instance_data = serializer_class(instance).data
-            instance_data_list = [
-                instance_data[key] for key, value in fields.items()
-            ]
-            worksheet.append(instance_data_list)
+            worksheet.append(row_data(fields, instance_data))
         return workbook

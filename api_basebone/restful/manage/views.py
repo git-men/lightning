@@ -13,7 +13,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 
-from api_basebone.core import admin, exceptions, const
+from api_basebone.core import admin, exceptions, const, gmeta
 
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
@@ -28,12 +28,14 @@ from api_basebone.restful.relations import (
 from api_basebone.restful.serializers import (
     create_serializer_class,
     multiple_create_serializer_class,
+    get_export_serializer_class,
 )
 
 from api_basebone.restful.funcs import find_func
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.signals import post_bsm_create
 
 from .user_pip import add_login_user_data
@@ -207,6 +209,8 @@ class GenericViewMixin:
                             self.expand_fields = detail_expand_fields
                     except Exception:
                         pass
+        elif self.action == 'export_file':
+            self.expand_fields = get_gmeta_config_by_key(self.model, gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS)
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
@@ -276,11 +280,11 @@ class GenericViewMixin:
         tree_data = getattr(self, 'tree_data', None)
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            serializer_class = create_serializer_class(model, tree_structure=tree_data)
+            serializer_class = create_serializer_class(model, tree_structure=tree_data, action=self.action)
         else:
             # 如果有展开字段，则创建嵌套的序列化类
             serializer_class = multiple_create_serializer_class(
-                model, expand_fields, tree_structure=tree_data
+                model, expand_fields, tree_structure=tree_data, action=self.action
             )
         return serializer_class
 
@@ -407,7 +411,7 @@ class CommonManageViewSet(FormMixin,
         serializer.handle()
         return success_response()
 
-    @action(detail=False, url_path='export/file')
+    @action(methods=['get', 'post'], detail=False, url_path='export/file')
     def export_file(self, request, *args, **kwargs):
         """输出 excel 和 excel 文件
 
@@ -421,9 +425,13 @@ class CommonManageViewSet(FormMixin,
 
         file_type = self.request.query_params.get('fileformat', csv_file)
         file_type = file_type if file_type in valid_list else csv_file
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer_class = get_export_serializer_class(
+            self.model, self.get_serializer_class()
+        )
         if file_type == csv_file:
-            return renderers.csv_render(self.model)
-        return renderers.ExcelResponse(self.model)
+            return renderers.csv_render(self.model, queryset, serializer_class)
+        return renderers.ExcelResponse(self.model, queryset, serializer_class)
 
     @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, **kwargs):
