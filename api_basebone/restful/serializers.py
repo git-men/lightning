@@ -125,7 +125,7 @@ class CustomModelSerializer(serializers.ModelSerializer):
     serializer_field_mapping[models.BigAutoField] = CharIntegerField
 
 
-def create_meta_class(model, exclude_fields=None, **kwargs):
+def create_meta_class(model, exclude_fields=None, extra_fields=None, **kwargs):
     """构建序列化类的 Meta
 
     Params:
@@ -137,11 +137,13 @@ def create_meta_class(model, exclude_fields=None, **kwargs):
     }
 
     exclude_field_list = get_model_exclude_fields(model, exclude_fields)
-    if exclude_field_list is not None and exclude_field_list:
-        attrs['exclude'] = exclude_field_list
+    flat_fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+    if extra_fields:
+        flat_fields += extra_fields
+    if exclude_field_list:
+        attrs['fields'] = list(set(flat_fields).difference(set(exclude_field_list)))
     else:
-        attrs['fields'] = '__all__'
-
+        attrs['fields'] = flat_fields
     return type('Meta', (object, ), attrs)
 
 
@@ -161,25 +163,29 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
             self.serializer_choice_field = drf_field.ExportChoiceField
         super(CustomModelSerializer, self).__init__(*args, **kwargs)
 
-    attrs = {
-        'Meta': create_meta_class(model, exclude_fields=exclude_fields),
-        'action': action,
-        '__init__': __init__
-    }
-    attrs.update(kwargs)
-
+    extra_fields = list(kwargs.keys())
+    new_attr = {}
     # 动态构建树形结构的字段
     if tree_structure:
-        attrs[tree_structure[1]] = RecursiveSerializer(many=True)
+        extra_fields.append(tree_structure[1])
+        new_attr[tree_structure[1]] = RecursiveSerializer(many=True)
 
     # 构建计算属性字段
     computed_fields = get_gmeta_config_by_key(model, gmeta.GMETA_COMPUTED_FIELDS)
     if computed_fields:
+        extra_fields += [f['name'] for f in computed_fields]
         for field in computed_fields:
             name = field['name']
             field_type = field['type']
-            attrs[name] = FieldTypeSerializerMap[field_type](read_only=True)
+            new_attr[name] = FieldTypeSerializerMap[field_type](read_only=True)
 
+    attrs = {
+        'Meta': create_meta_class(model, exclude_fields=exclude_fields, extra_fields=extra_fields),
+        'action': action,
+        '__init__': __init__
+    }
+    attrs.update(new_attr)
+    attrs.update(kwargs)
     class_name = f'{model.__name__}ModelSerializer'
     return type(
         class_name,
