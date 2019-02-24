@@ -125,7 +125,7 @@ class CustomModelSerializer(serializers.ModelSerializer):
     serializer_field_mapping[models.BigAutoField] = CharIntegerField
 
 
-def create_meta_class(model, exclude_fields=None, extra_fields=None, **kwargs):
+def create_meta_class(model, exclude_fields=None, extra_fields=None, action=None, **kwargs):
     """构建序列化类的 Meta
 
     Params:
@@ -137,7 +137,10 @@ def create_meta_class(model, exclude_fields=None, extra_fields=None, **kwargs):
     }
 
     exclude_field_list = get_model_exclude_fields(model, exclude_fields)
-    flat_fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+    if action in ['list', 'set']:
+        flat_fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+    else:
+        flat_fields = [f.name for f in model._meta.get_fields() if f.concrete]
     if extra_fields:
         flat_fields += extra_fields
     if exclude_field_list:
@@ -180,7 +183,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
             new_attr[name] = FieldTypeSerializerMap[field_type](read_only=True)
 
     attrs = {
-        'Meta': create_meta_class(model, exclude_fields=exclude_fields, extra_fields=extra_fields),
+        'Meta': create_meta_class(model, exclude_fields=exclude_fields, extra_fields=extra_fields, action=action),
         'action': action,
         '__init__': __init__
     }
