@@ -12,6 +12,7 @@ from api_basebone.utils import meta, module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 from api_basebone.export.specs import FieldType
+from api_basebone.drf.fields import CharIntegerField
 
 
 FieldTypeSerializerMap = {
@@ -120,8 +121,9 @@ class CustomModelSerializer(serializers.ModelSerializer):
     """由于BigInteger类型的数据到了前端，JS丢失了精度，所以在接口返回的时候就直接转成字符串
     """
     serializer_field_mapping = serializers.ModelSerializer.serializer_field_mapping
-    serializer_field_mapping[models.BigIntegerField] = fields.CharField
-    serializer_field_mapping[models.BigAutoField] = fields.CharField
+    serializer_field_mapping[models.BigIntegerField] = CharIntegerField
+    serializer_field_mapping[models.BigAutoField] = CharIntegerField
+
 
 def create_meta_class(model, exclude_fields=None, **kwargs):
     """构建序列化类的 Meta
