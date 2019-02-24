@@ -41,6 +41,12 @@ from .user_pip import add_login_user_data
 
 log = logging.getLogger(__name__)
 
+exposed_apis = {}
+
+def register_api(app, exposed_data):
+    for model, data in exposed_data.items():
+        exposed_apis[f'{app}__{model}'] = data
+
 
 class FormMixin(object):
     """表单处理集合"""
@@ -197,14 +203,14 @@ class GenericViewMixin:
         self.model = apps.all_models[self.app_label][self.model_slug]
 
         # 检测方法是否允许访问
-        api_authencicate_methods = get_gmeta_config_by_key(
-            self.model, gmeta.GMETA_CLIENT_API_AUTHENTICATE_METHODS)
-        if not isinstance(api_authencicate_methods, (tuple, list)):
+        model_str = f'{self.app_label}__{self.model_slug}'
+        expose = exposed_apis.get(model_str, None)
+        real_action = self.action
+        if self.action == 'set':
+            real_action = 'list'
+        if not expose or not expose.get('actions', None) or real_action not in expose['actions']:
             raise exceptions.BusinessException(
                 error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
-        elif self.action not in api_authencicate_methods:
-                raise exceptions.BusinessException(
-                    error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
 
         meta.load_custom_admin_module()
         self.get_expand_fields()

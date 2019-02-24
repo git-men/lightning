@@ -294,7 +294,7 @@ class CommonManageViewSet(FormMixin,
                           GenericViewMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
-    permission_classes = (permissions.IsAuthenticated, )
+    permission_classes = (permissions.IsAdminUser, )
     pagination_class = PageNumberPagination
 
     end_slug = MANAGE_END_SLUG
