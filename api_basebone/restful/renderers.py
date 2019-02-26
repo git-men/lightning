@@ -29,7 +29,8 @@ def get_fields(model):
 
 
 def row_data(fields, data):
-    return [data[key] for key in fields.keys()]
+    # print(fields, data)
+    return [data.get(key, '') for key in fields.keys()]
 
 
 def csv_render(model, queryset, serializer_class):

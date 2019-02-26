@@ -347,9 +347,11 @@ def get_export_serializer_class(model, serialier_class):
     if custom_export_mixin is None:
         return serialier_class
 
-    class_name = f'{model.__name__}ExportSerializer'
+    class_name = f'{model.__name__}ModelExportSerializer'
+
+    reset_serialzier_class = custom_export_mixin.get_serializer_class(serialier_class)
     return type(
         class_name,
-        (serialier_class, custom_export_mixin, ),
+        (reset_serialzier_class, ),
         {}
     )

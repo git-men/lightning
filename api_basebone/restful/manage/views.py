@@ -210,7 +210,8 @@ class GenericViewMixin:
                     except Exception:
                         pass
         elif self.action == 'export_file':
-            self.expand_fields = get_gmeta_config_by_key(self.model, gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS)
+            self.expand_fields = get_gmeta_config_by_key(
+                self.model, gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS)
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
