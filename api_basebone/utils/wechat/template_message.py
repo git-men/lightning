@@ -4,8 +4,9 @@ from django.conf import settings
 from wechatpy.client import WeChatClient
 from wechatpy.session.redisstorage import RedisStorage
 
+from api_basebone.utils.redis import redis_client
+
 from .form_id import FormID
-from ..redis import redis_client
 from api_basebone.utils.wechat import wxa
 
 logger = logging.getLogger('django')
@@ -65,8 +66,9 @@ def mp_send_template_message(app_id, touser, template_id, data, url=None, mini_p
 
     data = data if (data and isinstance(data, dict)) else {}
     try:
-        app_secret = settings.WECHAT_APP_MAP[app_id]['app_secret']
-        client = WeChatClient(app_id, app_secret, session=RedisStorage(redis_client))
+        appsecret = settings.WECHAT_APP_MAP[app_id]['appsecret']
+        client = WeChatClient(
+            app_id, appsecret, session=RedisStorage(redis_client))
 
         return client.message.send_template(
             touser, template_id, data, url=url, mini_program=mini_program)

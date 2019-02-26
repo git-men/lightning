@@ -15,6 +15,7 @@ def get_fields(model):
             default_fields[item.name] = item.verbose_name
 
     export_fields = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_EXPORT_FIELDS)
+
     if not isinstance(export_fields, (list, tuple)) or not export_fields:
         return default_fields
 
