@@ -3,6 +3,7 @@ from collections import OrderedDict
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
+from pydash import objects
 
 from api_basebone.core import gmeta
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
@@ -29,8 +30,7 @@ def get_fields(model):
 
 
 def row_data(fields, data):
-    # print(fields, data)
-    return [data.get(key, '') for key in fields.keys()]
+    return [objects.get(data, key) for key in fields.keys()]
 
 
 def csv_render(model, queryset, serializer_class):
