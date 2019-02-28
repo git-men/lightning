@@ -11,6 +11,7 @@ from api_basebone.utils.timezone import local_timestamp
 
 
 def get_fields(model):
+    """获取导出的字段，显示名称的映射"""
     default_fields = OrderedDict()
     for item in model._meta.get_fields():
         if item.concrete and not item.many_to_many:
@@ -31,7 +32,25 @@ def get_fields(model):
 
 
 def row_data(fields, data):
+    """获取每行的数据"""
     return [objects.get(data, key) for key in fields.keys()]
+
+
+def row_with_relation_data(fields, reverse_field, object_id, data, relation_field_map):
+    result = []
+
+    data_map = {
+        item['id']: item for item in data.get(reverse_field)
+    }
+
+    for key in fields.keys():
+        if key in relation_field_map:
+            result.append(
+                objects.get(data_map[object_id], relation_field_map[key])
+            )
+        else:
+            result.append(objects.get(data, key))
+    return result
 
 
 def csv_render(model, queryset, serializer_class):
@@ -48,9 +67,23 @@ def csv_render(model, queryset, serializer_class):
     writer = csv.writer(response)
     writer.writerow(verbose_names)
 
+    reverse_field = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_REVERSE_FIELD)
+    relation_field_map = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_REVERSE_FIELDS_MAP)
+
     for instance in queryset.iterator():
         instance_data = serializer_class(instance).data
-        writer.writerow(row_data(fields, instance_data))
+        if reverse_field:
+            reverse_relation = getattr(instance, reverse_field, None)
+            if not reverse_relation or not reverse_relation.count():
+                writer.writerow(row_data(fields, instance_data))
+            else:
+                for r_item in reverse_relation.all().iterator():
+                    writer.writerow(
+                        row_with_relation_data(
+                            fields, reverse_field, r_item.id, instance_data, relation_field_map)
+                    )
+        else:
+            writer.writerow(row_data(fields, instance_data))
     return response
 
 
