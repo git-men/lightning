@@ -7,6 +7,7 @@ from pydash import objects
 
 from api_basebone.core import gmeta
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
+from api_basebone.utils.timezone import local_timestamp
 
 
 def get_fields(model):
@@ -35,8 +36,11 @@ def row_data(fields, data):
 
 def csv_render(model, queryset, serializer_class):
     """渲染数据"""
+    app_label, model_name = model._meta.app_label, model._meta.model_name
+    file_name = f'{app_label}-{model_name}-{local_timestamp()}'
+
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="export.csv"'
+    response['Content-Disposition'] = f'attachment; filename="{file_name}.csv"'
 
     fields = get_fields(model)
     verbose_names = fields.values()
