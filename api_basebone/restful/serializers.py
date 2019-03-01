@@ -165,6 +165,12 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
             self.serializer_field_mapping[models.BooleanField] = drf_field.ExportBooleanField
             self.serializer_field_mapping[models.DateTimeField] = drf_field.ExportDateTimeField
             self.serializer_choice_field = drf_field.ExportChoiceField
+        else:
+            # 恢复为原来的字段类型映射，因为上面改了类的变量属性值
+            self.serializer_field_mapping[models.BooleanField] = fields.BooleanField
+            self.serializer_field_mapping[models.DateTimeField] = fields.DateTimeField
+            self.serializer_choice_field = fields.ChoiceField
+
         super(CustomModelSerializer, self).__init__(*args, **kwargs)
 
     extra_fields = list(kwargs.keys())
