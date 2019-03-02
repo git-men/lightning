@@ -111,3 +111,17 @@ GMETA_MANAGE_EXPORT_EXPAND_FIELDS = 'manage_export_expand_fields'
 manage_export_expand_fields = []
 """
 GMETA_MANAGE_EXPORT_FIELDS = 'manage_export_fields'
+
+
+"""管理端迭代模型反向关系字段名称 字符串 str
+
+manage_export_reverse_field = []
+"""
+GMETA_MANAGE_REVERSE_FIELD = 'manage_export_reverse_field'
+
+
+"""管理端模型反向关系字段和顶级字段的映射 字典 dict
+
+manage_export_reverse_fields_map = []
+"""
+GMETA_MANAGE_REVERSE_FIELDS_MAP = 'manage_export_reverse_fields_map'
