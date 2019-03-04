@@ -1,4 +1,5 @@
 import csv
+import codecs
 from collections import OrderedDict
 from django.http import HttpResponse
 from openpyxl import Workbook
@@ -60,6 +61,8 @@ def csv_render(model, queryset, serializer_class):
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{file_name}.csv"'
+
+    response.write(codecs.BOM_UTF8)
 
     fields = get_fields(model)
     verbose_names = fields.values()
