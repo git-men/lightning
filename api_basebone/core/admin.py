@@ -41,6 +41,9 @@ BSM_INLINE_FORM_FIELDS = 'inline_form_fields'
 # 数据详情的展开字段列表
 BSM_DETAIL_EXPAND_FIELDS = 'form_expand_fields'
 
+# 是否可以导出文件
+BSM_EXPORTABLE = 'exportable'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -57,6 +60,7 @@ VALID_MANAGE_ATTRS = [
     BSM_LIST_STYLE,
     BSM_INLINE_FORM_FIELDS,
     BSM_DETAIL_EXPAND_FIELDS,
+    BSM_EXPORTABLE,
 ]
 
 # 属性和默认值映射
@@ -64,6 +68,7 @@ ATTRS_DICT = {
     BSM_AUTH_FILTER_FIELD: None,
     BSM_FILTER_BY_LOGIN_USER: False,
     BSM_PARENT_FIELD: None,
+    BSM_EXPORTABLE: False,
 }
 
 

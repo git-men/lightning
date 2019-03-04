@@ -69,6 +69,10 @@ class FormMixin(object):
 class QuerySetMixin:
     """结果集处理集合"""
 
+    def get_basebone_admin(self):
+        """获取 basebone 的管理类"""
+        pass
+
     def get_queryset_by_filter_user(self, queryset):
         """通过用户过滤对应的数据集
 
@@ -422,6 +426,19 @@ class CommonManageViewSet(FormMixin,
             fileformat string csv | excel 形式使用 querystring 的形式
         ```
         """
+        # 检测是否支持导出
+        admin_class = self.get_bsm_model_admin()
+        if admin_class:
+            exportable = getattr(admin_class, admin.BSM_EXPORTABLE, False)
+            if not exportable:
+                raise exceptions.BusinessException(
+                    error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+                )
+        else:
+            raise exceptions.BusinessException(
+                error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+            )
+
         csv_file, excel_file = 'csv', 'excel'
         valid_list = (csv_file, excel_file)
 
