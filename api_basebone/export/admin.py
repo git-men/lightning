@@ -2,7 +2,7 @@ from django.apps import apps
 
 from api_basebone.core.admin import VALID_MANAGE_ATTRS, BSM_BATCH_ACTION
 from api_basebone.restful.batch_actions import get_model_batch_actions
-
+from api_basebone.core.admin import BSMAdminModule
 from api_basebone.utils import meta
 from api_basebone.utils.format import underline_to_camel
 
@@ -26,16 +26,15 @@ class BSMAdminConfig:
         """校验 BSM Admin 配置项"""
         pass
 
-    def admin_model_config(self, model):
+    def admin_model_config(self, cls):
         """获取指定模型对应的 admin 的配置"""
 
-        config, bsm_admin = {}, meta.get_bsm_model_admin(model)
-        if not bsm_admin:
-            return
+        config = {}
+        model = cls.Meta.model
 
-        for item in dir(bsm_admin):
+        for item in dir(cls):
             if item in VALID_MANAGE_ATTRS:
-                config[underline_to_camel(item)] = getattr(bsm_admin, item, None)
+                config[underline_to_camel(item)] = getattr(cls, item, None)
 
         model_actions = get_model_batch_actions(model)
         if model_actions:
@@ -44,10 +43,7 @@ class BSMAdminConfig:
                 for key, value in model_actions.items()
             ]
 
-        return {
-            f'{model._meta.app_label}__{model._meta.model_name}': config
-        }
-
+        return config
 
 bsm_admin_config = BSMAdminConfig()
 
@@ -60,10 +56,7 @@ def get_app_admin_config():
 
     # 动态加载 amdin 模块
     meta.load_custom_admin_module()
-    for item in export_apps:
-        app = apps.get_app_config(item)
-        for model in app.get_models():
-            config_data = bsm_admin_config.admin_model_config(model)
-            if config_data:
-                config.update(config_data)
+
+    for key, cls in BSMAdminModule.modules.items():
+        config[key] = bsm_admin_config.admin_model_config(cls)
     return config
