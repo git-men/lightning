@@ -24,6 +24,10 @@ def add_login_user_data(view, data):
     if not view.request.data:
         return
 
+    #  这里兼容签名方式
+    if view.request.user.is_anonymous:
+        return
+
     model_name, model = view.model_slug, view.model
 
     # 第一部分，先检测模型中的字段是否有引用用户模型，如果有，则注入用户数据
