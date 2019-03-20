@@ -37,5 +37,4 @@ class IsAdminUser(OriginIsAdminUser):
         if not self.check_with_sign(request):
             return request.user and request.user.is_staff
         else:
-            print('房间爱看电视就发肯定是', self.validate_sign(request))
             return self.validate_sign(request)
