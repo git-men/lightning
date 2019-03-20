@@ -25,8 +25,8 @@ class BSMWidgets(Enum):
     Checkbox = 'Checkbox'
     Cascader = 'Cascader'
     Radio = 'Radio'
-    SkuSpec = 'SkuSpec'
-
+    SkuSpec = 'SkuSpec'  # TODO 这个以及后面的控件，都是自定义控件，可以不写在这里。
+    DistrictSelect = 'DistrictSelect'
 
 class Widgets:
 
