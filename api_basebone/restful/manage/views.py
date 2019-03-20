@@ -17,6 +17,7 @@ from api_basebone.core import admin, exceptions, const, gmeta
 
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
+from api_basebone.drf.permissions import IsAdminUser
 
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
@@ -300,7 +301,7 @@ class CommonManageViewSet(FormMixin,
                           GenericViewMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
-    permission_classes = (permissions.IsAdminUser, )
+    permission_classes = (IsAdminUser, )
     pagination_class = PageNumberPagination
 
     end_slug = MANAGE_END_SLUG
@@ -460,7 +461,7 @@ class CommonManageViewSet(FormMixin,
         data = request.data
         func_name = data.get('func_name', None) or request.GET.get('func_name', None)
         params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
-
+        # import ipdb; ipdb.set_trace()
         func, options = find_func(app, model, func_name)
         if not func:
             raise exceptions.BusinessException(

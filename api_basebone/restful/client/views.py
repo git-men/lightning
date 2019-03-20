@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import requests
@@ -243,7 +244,7 @@ class GenericViewMixin:
                     try:
                         detail_expand_fields = getattr(admin_class, admin.BSM_DETAIL_EXPAND_FIELDS, None)
                         if detail_expand_fields:
-                            self.expand_fields = detail_expand_fields
+                            self.expand_fields = copy.deepcopy(detail_expand_fields)
                     except Exception:
                         pass
         elif self.action in ['create', 'update', 'custom_patch', 'partial_update']:
