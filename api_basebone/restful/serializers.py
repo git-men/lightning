@@ -15,6 +15,9 @@ from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.export.specs import FieldType
 from api_basebone.drf.fields import CharIntegerField
 
+# 导出文件的动作
+EXPORT_FILE_ACTION = 'export_file'
+
 
 FieldTypeSerializerMap = {
     FieldType.STRING: fields.CharField,
@@ -28,6 +31,12 @@ FieldTypeSerializerMap = {
     FieldType.DATE: fields.DateField,
     FieldType.TIME: fields.TimeField,
     FieldType.DATETIME: fields.DateTimeField
+}
+
+# 导出的字段序列化类映射
+FieldTypeExportSerializerMap = {
+    FieldType.BOOL: drf_field.ExportBooleanField,
+    FieldType.DATETIME: drf_field.ExportDateTimeField,
 }
 
 
@@ -190,7 +199,12 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
         for field in computed_fields:
             name = field['name']
             field_type = field['type']
-            new_attr[name] = FieldTypeSerializerMap[field_type](read_only=True)
+
+            # 如果是导出，则使用导出的字段序列化类
+            if action == EXPORT_FILE_ACTION and field_type in FieldTypeExportSerializerMap:
+                new_attr[name] = FieldTypeExportSerializerMap[field_type](read_only=True)
+            else:
+                new_attr[name] = FieldTypeSerializerMap[field_type](read_only=True)
 
     attrs = {
         'Meta': create_meta_class(model, exclude_fields=exclude_fields, extra_fields=extra_fields, action=action),
