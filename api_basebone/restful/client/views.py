@@ -125,7 +125,7 @@ class QuerySetMixin:
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         if filter_conditions:
-            cons = build_filter_conditions(filter_conditions)
+            cons, _ = build_filter_conditions(filter_conditions)
             if cons:
                 return queryset.filter(cons)
         return queryset
@@ -148,7 +148,7 @@ class QuerySetMixin:
 
         conditions = self.request.data.get(const.EXCLUDE_CONDITIONS)
         if conditions:
-            cons = build_filter_conditions(conditions)
+            cons, _ = build_filter_conditions(conditions)
             if cons:
                 return queryset.exclude(cons)
         return queryset

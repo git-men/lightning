@@ -17,6 +17,7 @@ from api_basebone.core import admin, exceptions, const, gmeta
 
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
+from api_basebone.drf.permissions import IsAdminUser
 
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
@@ -126,10 +127,21 @@ class QuerySetMixin:
             return queryset
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
+        filter_conditions = filter_conditions if filter_conditions else []
+
+        admin_class = self.get_bsm_model_admin()
+        if admin_class:
+            default_filter =  getattr(
+                admin_class, admin.BSM_DEFAULT_FILTER, None)
+            if default_filter and isinstance(default_filter, list):
+                filter_conditions += default_filter
+
         if filter_conditions:
-            cons = build_filter_conditions(filter_conditions)
+            cons, excludes = build_filter_conditions(filter_conditions)
             if cons:
-                return queryset.filter(cons)
+                queryset = queryset.filter(cons)
+            if excludes:
+                queryset = queryset.exclude(excludes)
             return queryset
         return queryset
 
@@ -300,7 +312,7 @@ class CommonManageViewSet(FormMixin,
                           GenericViewMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
-    permission_classes = (permissions.IsAdminUser, )
+    permission_classes = (IsAdminUser, )
     pagination_class = PageNumberPagination
 
     end_slug = MANAGE_END_SLUG
@@ -460,7 +472,7 @@ class CommonManageViewSet(FormMixin,
         data = request.data
         func_name = data.get('func_name', None) or request.GET.get('func_name', None)
         params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
-
+        # import ipdb; ipdb.set_trace()
         func, options = find_func(app, model, func_name)
         if not func:
             raise exceptions.BusinessException(

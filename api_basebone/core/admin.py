@@ -44,6 +44,9 @@ BSM_DETAIL_EXPAND_FIELDS = 'form_expand_fields'
 # 是否可以导出文件
 BSM_EXPORTABLE = 'exportable'
 
+# 默认的过滤条件
+BSM_DEFAULT_FILTER = 'default_filter'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,

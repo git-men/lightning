@@ -29,14 +29,17 @@ def build_filter_conditions(filters):
 
     assert isinstance(filters, list), 'filters 应该是一个列表的数据结构'
     if not filters:
-        return
+        return None, None
 
     trans_cons = []
+    exclude_cons = []
     for item in filters:
-        operate = OPERATOR_MAP.get(item['operator'], '')
-        field = item['field']
-        key = f'{field}{operate}'
-        trans_cons.append(Q(**{key: item['value']}))
+        if (item['operator'] in ['!=', '!==', '<>']):
+            exclude_cons.append(Q(**{item['field']: item['value']}))
+        else:
+            operate = OPERATOR_MAP.get(item['operator'], '')
+            field = item['field']
+            key = f'{field}{operate}'
+            trans_cons.append(Q(**{key: item['value']}))
 
-    if trans_cons:
-        return reduce(operator.and_, trans_cons)
+    return reduce(operator.and_, trans_cons) if trans_cons else None, reduce(operator.and_, exclude_cons) if exclude_cons else None
