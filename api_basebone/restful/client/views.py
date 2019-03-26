@@ -374,6 +374,7 @@ class CommonManageViewSet(FormMixin,
 
         原因：序列化类有可能嵌套
         """
+        
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
 
@@ -382,9 +383,7 @@ class CommonManageViewSet(FormMixin,
             else:
                 serializer = self.get_validate_form(self.action)(data=request.data)
             serializer.is_valid(raise_exception=True)
-
             instance = self.perform_create(serializer)
-
         reverse_relation_hand(self.model, request.data, instance, detail=False)
         instance = self.get_queryset().get(id=instance.id)
 
@@ -392,7 +391,6 @@ class CommonManageViewSet(FormMixin,
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
-
         serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
         return success_response(serializer.data)
 

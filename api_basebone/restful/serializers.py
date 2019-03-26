@@ -1,7 +1,7 @@
 from collections import OrderedDict, Mapping
 
 from django.db import models
-from django.db.models.fields.related import ForeignKey
+from django.db.models.fields.related import ForeignKey, OneToOneField
 
 from rest_framework import serializers
 from rest_framework.fields import SkipField
@@ -139,9 +139,11 @@ def create_meta_class(model, exclude_fields=None, extra_fields=None, action=None
 
     exclude_field_list = get_model_exclude_fields(model, exclude_fields)
     if action in ['list', 'set']:
-        flat_fields = [f.name for f in model._meta.get_fields() if f.concrete and not(f.is_relation and not isinstance(f, ForeignKey))]
+        flat_fields = [f.name for f in model._meta.get_fields()
+            if f.concrete and not(f.is_relation and not isinstance(f, ForeignKey))]
     else:
-        flat_fields = [f.name for f in model._meta.get_fields() if f.concrete]
+        flat_fields = [f.name for f in model._meta.get_fields()
+            if f.concrete and not isinstance(f, OneToOneField)]
     if extra_fields:
         flat_fields += extra_fields
     if exclude_field_list:
