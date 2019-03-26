@@ -127,6 +127,15 @@ class QuerySetMixin:
             return queryset
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
+        filter_conditions = filter_conditions if filter_conditions else []
+
+        admin_class = self.get_bsm_model_admin()
+        if admin_class:
+            default_filter =  getattr(
+                admin_class, admin.BSM_DEFAULT_FILTER, None)
+            if default_filter and isinstance(default_filter, list):
+                filter_conditions += default_filter
+
         if filter_conditions:
             cons, excludes = build_filter_conditions(filter_conditions)
             if cons:
