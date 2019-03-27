@@ -325,11 +325,11 @@ class GenericViewMixin:
 
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            return create_serializer_class(model, exclude_fields=exclude_fields, tree_structure=tree_data)
+            return create_serializer_class(model, exclude_fields=exclude_fields, tree_structure=tree_data, action=self.action)
 
         # 如果有展开字段，则创建嵌套的序列化类
         serializer_class = multiple_create_serializer_class(
-            model, expand_fields, exclude_fields=exclude_fields, tree_structure=tree_data
+            model, expand_fields, exclude_fields=exclude_fields, tree_structure=tree_data, action=self.action
         )
         return serializer_class
 

@@ -140,7 +140,7 @@ def create_meta_class(model, exclude_fields=None, extra_fields=None, action=None
     exclude_field_list = get_model_exclude_fields(model, exclude_fields)
     if action in ['list', 'set']:
         flat_fields = [f.name for f in model._meta.get_fields()
-            if f.concrete and not(f.is_relation and not isinstance(f, ForeignKey))]
+            if f.concrete and not(f.is_relation and (not isinstance(f, ForeignKey) or isinstance(f, OneToOneField)))]
     else:
         flat_fields = [f.name for f in model._meta.get_fields()
             if f.concrete and not isinstance(f, OneToOneField)]
