@@ -177,6 +177,48 @@ class GenericViewMixin:
 
         self.model = apps.all_models[self.app_label][self.model_slug]
 
+        # 加载 admin 配置
+        meta.load_custom_admin_module()
+
+        if self.action == 'export_file':
+            admin_class = self.get_bsm_model_admin()
+            if admin_class:
+                exportable = getattr(admin_class, admin.BSM_EXPORTABLE, False)
+                if not exportable:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+                    )
+                exportable_map = {item['key']: item for item in exportable}
+                file_type = self.request.query_params.get('fileformat')
+                if file_type in exportable_map:
+                    valid_item = exportable_map[file_type]
+                else:
+                    valid_item = [item for item in exportable if item['default']][0]
+
+                self._export_type_config = valid_item
+                print(valid_item)
+
+                self.app_label = valid_item['app_label']
+                self.model_slug = valid_item['model_slug']
+
+                # 检测应用是否在 INSTALLED_APPS 中
+                if get_app(self.app_label) not in settings.INSTALLED_APPS:
+                    raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
+
+                # 检测模型是否合法
+                if self.model_slug not in apps.all_models[self.app_label]:
+                    raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
+
+                self.model = apps.all_models[self.app_label][self.model_slug]
+
+                print(self.app_label, self.model_slug, self.model)
+
+            else:
+                raise exceptions.BusinessException(
+                    error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+                )
+
+
     def perform_authentication(self, request):
         """
         截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
@@ -192,7 +234,6 @@ class GenericViewMixin:
 
         self.check_app_model()
 
-        meta.load_custom_admin_module()
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
@@ -454,7 +495,7 @@ class CommonManageViewSet(FormMixin,
         csv_file, excel_file = 'csv', 'excel'
         valid_list = (csv_file, excel_file)
 
-        file_type = self.request.query_params.get('fileformat', csv_file)
+        file_type = self._export_type_config['file_type']
         file_type = file_type if file_type in valid_list else csv_file
         queryset = self.filter_queryset(self.get_queryset())
         serializer_class = get_export_serializer_class(
