@@ -20,6 +20,7 @@ OPERATOR_MAP = {
     "has": "__has",
     "has_any": "__has_any",
     "has_all": "__has_all",
+    "isnull": "__isnull",
 }
 
 
