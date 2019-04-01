@@ -1,4 +1,5 @@
 import inspect
+import types
 
 from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
@@ -49,16 +50,16 @@ VALIDATOR_MAP = {
     'django.core.validators.validate_ipv6_address': 'ip',
     'django.core.validators.validate_ipv46_address': 'ip',
     'django.core.validators.validate_comma_separated_integer_list': '',  # 未支持
-    'django.core.validators.int_list_validator': '', # 未支持
+    'django.core.validators.int_list_validator': '',  # 未支持
     'django.core.validators.MaxValueValidator': 'max_value',
     'django.core.validators.MinValueValidator': 'min_value',
     # 以下几个属性，与Model中定义的属性重复了，暂隐藏
     # 'django.core.validators.MaxLengthValidator': 'max_length',
     # 'django.core.validators.MinLengthValidator': 'min_length',
     # 'django.core.validators.DecimalValidator': 'decimal',
-    'django.core.validators.FileExtensionValidator': '', # 未支持
-    'django.core.validators.validate_image_file_extension': '', # 未支持
-    'django.core.validators.ProhibitNullCharactersValidator': '', # 未支持
+    'django.core.validators.FileExtensionValidator': '',  # 未支持
+    'django.core.validators.validate_image_file_extension': '',  # 未支持
+    'django.core.validators.ProhibitNullCharactersValidator': '',  # 未支持
 }
 
 
@@ -81,13 +82,16 @@ class FieldConfig:
 
     def reset_field_config(self, field, data_type=None):
         """根据 Gmeta 中声明的字段的配置进行重置"""
-        field_config = get_attr_in_gmeta_class(field.model, gmeta.GMETA_FIELD_CONFIG, {}).get(field.name, {})
+        field_config = get_attr_in_gmeta_class(
+            field.model, gmeta.GMETA_FIELD_CONFIG, {}
+        ).get(field.name, {})
         if not field_config:
             return field_config
 
         # 做 django 中的写法和输出的配置的转换
         result = {
-            gmeta.GMETA_FIELD_CONFIG_MAP[key] if key in gmeta.GMETA_FIELD_CONFIG_MAP else key: value
+            gmeta.GMETA_FIELD_CONFIG_MAP[key]
+            if key in gmeta.GMETA_FIELD_CONFIG_MAP else key: value
             for key, value in field_config.items()
         }
         return result
@@ -128,6 +132,19 @@ class FieldConfig:
             validators.append(attrs)
         return validators
 
+    def _check_is_function(self, func):
+        if inspect.isfunction(func):
+            return True
+
+        func_types = (
+            types.BuiltinFunctionType,
+            types.BuiltinMethodType,
+            types.MethodType,
+        )
+        if isinstance(func, func_types):
+            return True
+        return False
+
     def _get_common_field_params(self, field, data_type):
         """获取字段的通用的配置"""
         config = {
@@ -151,7 +168,7 @@ class FieldConfig:
         if field.default is not NOT_PROVIDED:
             if inspect.isclass(field.default):
                 config['default'] = field.default()
-            elif not inspect.isfunction(field.default):
+            elif not self._check_is_function(field.default):
                 config['default'] = field.default
         return config
 
