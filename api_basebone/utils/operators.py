@@ -26,16 +26,31 @@ OPERATOR_MAP = {
 
 def build_filter_conditions(filters):
     """构造过滤器
-    """
 
-    assert isinstance(filters, list), 'filters 应该是一个列表的数据结构'
-    if not filters:
+    Params:
+        filters list 包含字典的列表数据
+
+        数据示例：
+            [
+                {
+                    field: xxxx,
+                    operator: xxxx,
+                    value: xxxx,
+                }
+            ]
+    """
+    if not filters or not isinstance(filters, list):
         return None, None
 
-    trans_cons = []
-    exclude_cons = []
+    valid_keys = {'field', 'operator', 'value'}
+
+    trans_cons, exclude_cons = [], []
+
     for item in filters:
-        if (item['operator'] in ['!=', '!==', '<>']):
+        if not isinstance(item, dict) or not valid_keys.issubset(set(item.keys())):
+            continue
+
+        if item['operator'] in ['!=', '!==', '<>']:
             exclude_cons.append(Q(**{item['field']: item['value']}))
         else:
             operate = OPERATOR_MAP.get(item['operator'], '')
@@ -43,4 +58,7 @@ def build_filter_conditions(filters):
             key = f'{field}{operate}'
             trans_cons.append(Q(**{key: item['value']}))
 
-    return reduce(operator.and_, trans_cons) if trans_cons else None, reduce(operator.and_, exclude_cons) if exclude_cons else None
+    return (
+        reduce(operator.and_, trans_cons) if trans_cons else None,
+        reduce(operator.and_, exclude_cons) if exclude_cons else None,
+    )
