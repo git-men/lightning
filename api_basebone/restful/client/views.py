@@ -487,4 +487,7 @@ class CommonManageViewSet(FormMixin,
             return HttpResponse(result, result.headers.get('Content-Type', None))
         if isinstance(result, (list, dict)):
             return success_response(result)
+        if isinstance(result, self.model):
+            serializer = self.get_serializer(result)
+            return success_response(serializer.data)
         return success_response()
