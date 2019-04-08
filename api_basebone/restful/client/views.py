@@ -234,7 +234,7 @@ class GenericViewMixin:
         if self.action in ['list']:
             fields = self.request.query_params.get(const.EXPAND_FIELDS)
             self.expand_fields = fields.split(',') if fields else None
-        elif self.action in ['retrieve', 'set']:
+        elif self.action in ['retrieve', 'set', 'func']:
             self.expand_fields = self.request.data.get(const.EXPAND_FIELDS)
             # 详情的展开字段和列表的展开字段分开处理
             if not self.expand_fields and self.action == 'retrieve':
