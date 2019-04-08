@@ -15,6 +15,8 @@ from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.export.specs import FieldType
 from api_basebone.drf.fields import CharIntegerField
 
+from jsonfield import JSONField
+
 # 导出文件的动作
 EXPORT_FILE_ACTION = 'export_file'
 
@@ -173,6 +175,7 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
         """
         重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
         """
+        self.serializer_field_mapping[JSONField] = fields.JSONField
         if self.action == 'export_file':
             self.serializer_field_mapping[models.BooleanField] = drf_field.ExportBooleanField
             self.serializer_field_mapping[models.DateTimeField] = drf_field.ExportDateTimeField
