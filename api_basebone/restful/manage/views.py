@@ -529,10 +529,10 @@ class CommonManageViewSet(FormMixin,
             if not request.user.is_superuser:
                 raise PermissionDenied()
 
-        view_context = {
-            'queryset': self.filter_queryset(self.get_queryset())
-        }
-        params['view_context'] = view_context
+        # view_context = {
+        #     'queryset': self.filter_queryset(self.get_queryset())
+        # }
+        # params['view_context'] = view_context
         result = func(request.user, **params)
 
         # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
