@@ -125,9 +125,11 @@ class QuerySetMixin:
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         if filter_conditions:
-            cons, _ = build_filter_conditions(filter_conditions)
+            cons, exclude = build_filter_conditions(filter_conditions)
             if cons:
-                return queryset.filter(cons)
+                queryset = queryset.filter(cons)
+            if exclude:
+                queryset = queryset.exclude(exclude)
         return queryset
 
     def get_queryset_by_exclude_conditions(self, queryset):
