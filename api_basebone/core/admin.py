@@ -47,6 +47,9 @@ BSM_EXPORTABLE = 'exportable'
 # 默认的过滤条件
 BSM_DEFAULT_FILTER = 'default_filter'
 
+# 统计数据的配置
+BSM_STATISTICS = 'statistics'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -64,6 +67,7 @@ VALID_MANAGE_ATTRS = [
     BSM_INLINE_FORM_FIELDS,
     BSM_DETAIL_EXPAND_FIELDS,
     BSM_EXPORTABLE,
+    BSM_STATISTICS,
 ]
 
 # 属性和默认值映射

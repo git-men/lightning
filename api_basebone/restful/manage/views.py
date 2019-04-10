@@ -22,6 +22,7 @@ from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
+from api_basebone.restful.mixins import StatisticsMixin
 from api_basebone.restful.relations import (
     forward_relation_hand,
     reverse_relation_hand,
@@ -351,6 +352,7 @@ class GenericViewMixin:
 class CommonManageViewSet(FormMixin,
                           QuerySetMixin,
                           GenericViewMixin,
+                          StatisticsMixin,
                           viewsets.ModelViewSet):
     """通用的管理接口视图"""
     permission_classes = (IsAdminUser, )
