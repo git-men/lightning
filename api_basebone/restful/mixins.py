@@ -23,17 +23,19 @@ class StatisticsMixin:
                 error_code=exceptions.BSM_CAN_NOT_FIND_ADMIN
             )
 
-    @action(methods=['get'], detail=False, url_path='statistics')
+    @action(methods=['post'], detail=False, url_path='statistics')
     def statistics(self, request, *args, **kwargs):
         """计算统计数据
 
         请求的数据结构如下：
 
         {
-            field: {
+            key: {
                 method: 'count'
                 field: 'xxxx',
-            }
+                verbose_name: '可读名称',
+            },
+            ...
         }
         """
         configs = self._get_statistics_config()
