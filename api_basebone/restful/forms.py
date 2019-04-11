@@ -1,9 +1,11 @@
-from rest_framework import serializers
+from rest_framework import serializers, fields
 
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.core import gmeta
 from api_basebone.utils import module
 from api_basebone.restful.const import MANAGE_END_SLUG, CLIENT_END_SLUG
+
+from jsonfield import JSONField
 
 
 compare_funcs = {
@@ -96,8 +98,17 @@ def create_meta_class(model, exclude_fields=None):
 
 def create_form_class(model, exclude_fields=None, **kwargs):
     """构建序列化类"""
+
+    def __init__(self, *args, **kwargs):
+        """
+        重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
+        """
+        self.serializer_field_mapping[JSONField] = fields.JSONField
+        super(serializers.ModelSerializer, self).__init__(*args, **kwargs)
+
     attrs = {
-        'Meta': create_meta_class(model, exclude_fields=None)
+        'Meta': create_meta_class(model, exclude_fields=None),
+        '__init__': __init__,
     }
     attrs.update(kwargs)
 

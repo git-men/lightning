@@ -54,17 +54,17 @@ class FormMixin(object):
 
     def get_create_form(self):
         """获取创建数据的验证表单"""
-        return get_form_class(self.model, 'create', self.end_slug)
+        return get_form_class(self.model, 'create', end=self.end_slug)
 
     def get_update_form(self):
         """获取更新数据的验证表单"""
-        return get_form_class(self.model, 'update', self.end_slug)
+        return get_form_class(self.model, 'update', end=self.end_slug)
 
     def get_partial_update_form(self):
-        return get_form_class(self.model, 'update', self.end_slug)
+        return get_form_class(self.model, 'update', end=self.end_slug)
 
     def get_custom_patch_form(self):
-        return get_form_class(self.model, 'update', self.end_slug)
+        return get_form_class(self.model, 'update', end=self.end_slug)
 
     def get_validate_form(self, action):
         """获取验证表单"""
@@ -379,11 +379,7 @@ class CommonManageViewSet(FormMixin,
         
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
-
-            if self.model == get_user_model():
-                serializer = UserCreateUpdateForm(data=request.data)
-            else:
-                serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer = self.get_validate_form(self.action)(data=request.data)
             serializer.is_valid(raise_exception=True)
             instance = self.perform_create(serializer)
         reverse_relation_hand(self.model, request.data, instance, detail=False)
@@ -404,10 +400,9 @@ class CommonManageViewSet(FormMixin,
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
 
-            if self.model == get_user_model():
-                serializer = UserCreateUpdateForm(instance, data=request.data, partial=partial)
-            else:
-                serializer = self.get_validate_form(self.action)(instance, data=request.data, partial=partial)
+            serializer = self.get_validate_form(self.action)(
+                instance, data=request.data, partial=partial
+            )
             serializer.is_valid(raise_exception=True)
             instance = self.perform_update(serializer)
 
