@@ -324,7 +324,7 @@ class GenericViewMixin:
         if not expand_fields:
             queryset = self._get_queryset(self.model.objects.all())
             if admin_get_queryset:
-                return admin_get_queryset(self, self.request, queryset)
+                return admin_get_queryset(queryset, self.request, self)
             return queryset
 
         expand_fields = self.translate_expand_fields(expand_fields)
@@ -333,7 +333,7 @@ class GenericViewMixin:
             self.model.objects.all().prefetch_related(*field_list)
         )
         if admin_get_queryset:
-            return admin_get_queryset(self, self.request, queryset)
+            return admin_get_queryset(queryset, self.request, self)
         return queryset
 
     def get_serializer_class(self, expand_fields=None):
