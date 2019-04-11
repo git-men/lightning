@@ -197,7 +197,6 @@ class GenericViewMixin:
                     valid_item = [item for item in exportable if item['default']][0]
 
                 self._export_type_config = valid_item
-                print(valid_item)
 
                 self.app_label = valid_item['app_label']
                 self.model_slug = valid_item['model_slug']
@@ -211,14 +210,10 @@ class GenericViewMixin:
                     raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
 
                 self.model = apps.all_models[self.app_label][self.model_slug]
-
-                print(self.app_label, self.model_slug, self.model)
-
             else:
                 raise exceptions.BusinessException(
                     error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                 )
-
 
     def perform_authentication(self, request):
         """
@@ -318,14 +313,28 @@ class GenericViewMixin:
         """动态的计算结果集
 
         - 如果是展开字段，这里做好是否关联查询
+        - 如果 bsm admin 定义了 get_queryset 方法，贼继续使用 get_queryset 进行处理
         """
+        admin_get_queryset = None
+        admin_class = self.get_bsm_model_admin()
+        if admin_class:
+            admin_get_queryset = getattr(admin_class(), 'get_queryset', None)
+
         expand_fields = self.expand_fields
         if not expand_fields:
-            return self._get_queryset(self.model.objects.all())
+            queryset = self._get_queryset(self.model.objects.all())
+            if admin_get_queryset:
+                return admin_get_queryset(self, self.request, queryset)
+            return queryset
 
         expand_fields = self.translate_expand_fields(expand_fields)
         field_list = [item.replace('.', '__') for item in expand_fields]
-        return self._get_queryset(self.model.objects.all().prefetch_related(*field_list))
+        queryset = self._get_queryset(
+            self.model.objects.all().prefetch_related(*field_list)
+        )
+        if admin_get_queryset:
+            return admin_get_queryset(self, self.request, queryset)
+        return queryset
 
     def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类
