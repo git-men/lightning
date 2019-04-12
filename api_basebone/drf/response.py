@@ -22,22 +22,17 @@ def success_response(data=None):
     return Response(response_data)
 
 
-def error_response(error_code, error_message=None, error_data=None):
+def error_response(error_code, error_message=None, error_data=None, error_app=None):
     """业务异常返回的数据结构"""
 
     if not error_message:
         error_message = ERROR_PHRASES.get(error_code, '')
 
-    if error_data:
-        response_data = {
-            'error_code': error_code,
-            'error_message': error_message,
-            'error_data': error_data
-        }
-    else:
-        response_data = {
-            'error_code': error_code,
-            'error_message': error_message,
-        }
+    response_data = {
+        'error_code': error_code,
+        'error_message': error_message,
+        'error_data': error_data,
+        'error_app': error_app,
+    }
 
     return Response(response_data)

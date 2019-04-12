@@ -15,17 +15,20 @@ logger = logging.getLogger('django')
 def business_exception_handler(exc, context):
 
     set_rollback()
-    return error_response(exc.error_code, exc.error_message, exc.error_data)
+    return error_response(exc.error_code, exc.error_message, exc.error_data, exc.error_app)
 
 
 def exception_handler(exc, context):
     """异常接收处理器"""
-
     if isinstance(exc, BusinessException):
         return business_exception_handler(exc, context)
 
     if isinstance(exc, ValidationError):
-        return error_response(PARAMETER_FORMAT_ERROR, error_data=exc.detail)
+        return error_response(
+            PARAMETER_FORMAT_ERROR,
+            error_data=exc.detail,
+            error_app=getattr(exc, 'error_app', None)
+        )
 
     if isinstance(exc, APIException):
         api_exception = BusinessException(

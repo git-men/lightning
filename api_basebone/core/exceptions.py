@@ -47,7 +47,7 @@ class BusinessException(Exception):
     default_error_code = "9000"
     default_error_message = "系统错误"
 
-    def __init__(self, error_code=None, error_message=None, error_data=None):
+    def __init__(self, error_code=None, error_message=None, error_data=None, error_app=None):
 
         if error_code is not None and error_message is not None:
             self.error_code = error_code
@@ -59,6 +59,7 @@ class BusinessException(Exception):
             self.error_code = self.default_error_code
             self.error_message = force_text(self.default_error_message)
         self.error_data = error_data
+        self.error_app = error_app
 
     def __str__(self):
         return f'{self.error_code}:{self.error_message}'

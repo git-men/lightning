@@ -176,8 +176,9 @@ class GenericViewMixin:
 
     def check_permissions(self, request):
         """校验权限"""
-        action_skip = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
-        if isinstance(action_skip, tuple) and self.action in action_skip:
+        action_skip = get_gmeta_config_by_key(
+            self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
+        if isinstance(action_skip, (tuple, list)) and self.action in action_skip:
             return True
         super().check_permissions(request)
 
