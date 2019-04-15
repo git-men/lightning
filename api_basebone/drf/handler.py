@@ -63,14 +63,9 @@ def exception_handler(exc, context):
         settings, 'CLOSE_DIRECT_SERIOUS_ERROR_SHOW', True)
 
     if CLOSE_DIRECT_SERIOUS_ERROR_SHOW:
-        # 记录错误日志到对应的日志处理器中
-        logger = logging.getLogger('django')
-        logger.error('{}'.format(exc))
-
         try:
             # 如果有设置 sentry，日志打到对应的 sentry 中
-            if sentry_client:
-                sentry_client.captureException()
+            sentry_client.captureException()
         except Exception:
             pass
 
