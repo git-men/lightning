@@ -1,5 +1,8 @@
-from django.db.models import Count, Sum
+from django.db.models import Sum, Count, Value
+from django.db.models.functions import Coalesce
+
 from rest_framework.decorators import action
+
 from api_basebone.core import admin, exceptions
 from api_basebone.drf.response import success_response
 from api_basebone.restful import const
@@ -60,7 +63,10 @@ class StatisticsMixin:
                 continue
 
             field = value.get('field') if value.get('field') else key
-            aggregates[key] = method_map[value['method']](field)
+            aggregates[key] = Coalesce(
+                method_map[value['method']](field),
+                Value(0)
+            )
 
         if not aggregates:
             return success_response({})
