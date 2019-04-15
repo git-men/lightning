@@ -34,7 +34,9 @@ def get_model_batch_actions(model, end=MANAGE_END_SLUG):
     batch_actions = {}
     batch_actions.update(default_action_map)
 
-    action_module = module.get_admin_module(model._meta.app_config.name, module.BSM_BATCH_ACTION)
+    action_module = module.get_admin_module(
+        model._meta.app_config.name, module.BSM_BATCH_ACTION
+    )
 
     if action_module:
         end_map_name = BSM_BATCH_ACTION if end == MANAGE_END_SLUG else BSM_CLIENT_BATCH_ACTION
@@ -47,7 +49,7 @@ def get_model_batch_actions(model, end=MANAGE_END_SLUG):
 class BatchActionForm(serializers.Serializer):
     """批量操作的验证表单"""
 
-    action = serializers.CharField(max_length=20)
+    action = serializers.CharField(max_length=50)
     data = serializers.ListField(min_length=1)
 
     def validate_action(self, value):

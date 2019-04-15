@@ -4,7 +4,7 @@ BSM_BATCH_ACTION = 'bsm_action_map'
 BSM_CLIENT_BATCH_ACTION = 'bsm_client_action_map'
 
 
-def action(model, name, manage=True):
+def action(model, verbose_name='', manage=True):
     """
     管理端批量操作的连接器
 
@@ -12,7 +12,7 @@ def action(model, name, manage=True):
 
     Params:
         model class 模型类
-        name str 函数描述
+        verbose_name str 函数描述
         manage bool 是否是针对管理端，客户端写 False
     """
     def middle(func):
@@ -20,7 +20,9 @@ def action(model, name, manage=True):
         @wraps(func)
         def wrapper(request, queryset):
             return func(request, queryset)
-        wrapper.short_description = name
+
+        if verbose_name:
+            wrapper.short_description = verbose_name
 
         end_slug = BSM_BATCH_ACTION if manage else BSM_CLIENT_BATCH_ACTION
         bsm_action_map = getattr(model, end_slug, None)
