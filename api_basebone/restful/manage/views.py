@@ -22,7 +22,7 @@ from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.mixins import StatisticsMixin
+from api_basebone.restful.mixins import StatisticsMixin, CheckValidateMixin
 from api_basebone.restful.relations import (
     forward_relation_hand,
     reverse_relation_hand,
@@ -137,7 +137,15 @@ class QuerySetMixin:
             if default_filter and isinstance(default_filter, list):
                 filter_conditions += default_filter
 
+        # 这里做个动作 1 校验过滤条件中的字段，是否需要对结果集去重 2 组装过滤条件
         if filter_conditions:
+            # TODO: 这里没有做任何的检测，需要加上检测
+            filter_fields = [
+                item['field']
+                for item in filter_conditions
+                if isinstance(item, dict) and 'field' in item
+            ]
+            self.basebone_check_distinct_queryset(filter_fields)
             cons, excludes = build_filter_conditions(filter_conditions)
             if cons:
                 queryset = queryset.filter(cons)
@@ -159,13 +167,20 @@ class QuerySetMixin:
         methods = ['filter_user', 'filter_conditions', 'order_by', 'with_tree']
         for item in methods:
             queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
-        return queryset.distinct()
+
+        self.basebone_origin_queryset = queryset
+        if self.basebone_distinct_queryset:
+            return queryset.distinct()
+        return queryset
 
 
 class GenericViewMixin:
     """重写 GenericAPIView 中的某些方法"""
 
     def check_app_model(self):
+        # 是否对结果集进行去重
+        self.basebone_distinct_queryset = False
+
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
         # 检测应用是否在 INSTALLED_APPS 中
@@ -359,6 +374,7 @@ class GenericViewMixin:
 
 
 class CommonManageViewSet(FormMixin,
+                          CheckValidateMixin,
                           QuerySetMixin,
                           GenericViewMixin,
                           StatisticsMixin,

@@ -6,12 +6,56 @@ from rest_framework.decorators import action
 from api_basebone.core import admin, exceptions
 from api_basebone.drf.response import success_response
 from api_basebone.restful import const
+from api_basebone.utils.meta import get_all_relation_fields
+
+
+class CheckValidateMixin:
+    """检测校验"""
+
+    def basebone_check_distinct_queryset(self, fields):
+        """检测是否需要
+
+        检测是否需要对结果集去重，去重需要单独做好检测
+        因为去重在统计业务中，如果去重，对于关联的查询，会做子查询，导致
+        结果不符合预期
+
+        这里对于关系字段都需要做去重操作
+
+        - 一对多
+        - 多对一
+        - 多对多
+        """
+        if not fields:
+            return
+
+        # 获取非一对一的关系字段
+        relation_fields = [
+            item.name
+            for item in get_all_relation_fields(self.model)
+            if not item.one_to_one
+        ]
+
+        if not isinstance(fields, list):
+            fields = [fields]
+
+        separator = '__'
+
+        for item in fields:
+            if not isinstance(item, str):
+                continue
+            field = item.split(separator)[0]
+            if field in relation_fields:
+                self.basebone_distinct_queryset = True
+                break
 
 
 class StatisticsMixin:
     """获取统计数据"""
 
-    def _get_statistics_config(self):
+    def basebone_get_statistics_config(self):
+        """
+        FIXME: 获取统计配置，暂时只支持管理端，客户端待完成
+        """
         if self.end_slug == const.MANAGE_END_SLUG:
             # 如果是管理端的配置，直接使用 admin 中的配置
             admin_class = self.get_bsm_model_admin()
@@ -41,18 +85,23 @@ class StatisticsMixin:
             ...
         }
         """
-        configs = self._get_statistics_config()
+        configs = self.basebone_get_statistics_config()
         if not configs:
             return success_response({})
 
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
 
         method_map = {
             'sum': Sum,
             'count': Count,
         }
 
-        aggregates = {}
+        aggregates, relation_aggregates = {}, {}
+
+        relation_fields = [
+            item.name for item in get_all_relation_fields(self.model)
+        ]
+
         for key, value in configs.items():
             if not isinstance(value, dict):
                 continue
@@ -63,13 +112,24 @@ class StatisticsMixin:
                 continue
 
             field = value.get('field') if value.get('field') else key
-            aggregates[key] = Coalesce(
-                method_map[value['method']](field),
-                Value(0)
-            )
+            aggregate_param = method_map[value['method']](field)
 
-        if not aggregates:
+            if method == 'count':
+                aggregate_param = method_map[value['method']](field, distinct=True)
+
+            condition = Coalesce(aggregate_param, Value(0))
+
+            split_field = field.split('__')[0]
+            if split_field in relation_fields:
+                relation_aggregates[key] = condition
+            else:
+                aggregates[key] = condition
+
+        if not aggregates and not relation_aggregates:
             return success_response({})
 
         result = queryset.aggregate(**aggregates)
+        relation_result = self.basebone_origin_queryset.aggregate(**relation_aggregates)
+
+        result.update(relation_result)
         return success_response(result)
