@@ -20,6 +20,7 @@ class AliYunOSS:
     OSS_SECRET = settings.ALI_YUN_OSS_SECRET
     OSS_HOST = settings.ALI_YUN_OSS_HOST
     OSS_BUCKET = settings.ALI_YUN_OSS_BUCKET
+    OSS_CDN_HOST = getattr(settings, 'ALI_YUN_OSS_CDN_HOST', None)
 
     def __init__(self, *args, **kwargs):
         self.auth = oss2.Auth(self.OSS_KEY, self.OSS_SECRET)
@@ -50,6 +51,7 @@ class AliYunOSS:
         token_dict = {
             'accessid': self.OSS_KEY,
             'host': self.OSS_HOST,
+            'cdn_host': self.OSS_CDN_HOST,
             'policy': policy_encode,
             'signature': sign_result,
             'expire': expire_syncpoint,
