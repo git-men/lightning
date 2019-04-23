@@ -383,15 +383,15 @@ class CommonManageViewSet(FormMixin,
             serializer = self.get_validate_form(self.action)(data=request.data)
             serializer.is_valid(raise_exception=True)
             instance = self.perform_create(serializer)
-        reverse_relation_hand(self.model, request.data, instance, detail=False)
-        instance = self.get_queryset().get(id=instance.id)
+            reverse_relation_hand(self.model, request.data, instance, detail=False)
+            instance = self.get_queryset().get(id=instance.id)
 
-        with transaction.atomic():
+        #with transaction.atomic():
             log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
-        serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
-        return success_response(serializer.data)
+            serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
+            return success_response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
@@ -407,15 +407,15 @@ class CommonManageViewSet(FormMixin,
             serializer.is_valid(raise_exception=True)
             instance = self.perform_update(serializer)
 
-        reverse_relation_hand(self.model, request.data, instance)
-        instance = self.get_queryset().get(id=instance.id)
+            reverse_relation_hand(self.model, request.data, instance)
+            instance = self.get_queryset().get(id=instance.id)
 
-        with transaction.atomic():
+        # with transaction.atomic():
             log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
 
-        serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
-        return success_response(serializer.data)
+            serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
+            return success_response(serializer.data)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
