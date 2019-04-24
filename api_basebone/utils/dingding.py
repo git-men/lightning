@@ -32,12 +32,9 @@ class DingDingRobot:
 
         if not isinstance(data, str):
             try:
-                data = json.dumps(data)
+                data = str(data)
             except Exception:
-                try:
-                    data = str(data)
-                except Exception:
-                    return
+                return
 
         content = {
             "msgtype": "text",
