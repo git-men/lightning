@@ -40,15 +40,11 @@ def row_data(fields, data):
 def row_with_relation_data(fields, reverse_field, object_id, data, relation_field_map):
     result = []
 
-    data_map = {
-        item['id']: item for item in data.get(reverse_field)
-    }
+    data_map = {item['id']: item for item in data.get(reverse_field)}
 
     for key in fields.keys():
         if key in relation_field_map:
-            result.append(
-                objects.get(data_map[object_id], relation_field_map[key])
-            )
+            result.append(objects.get(data_map[object_id], relation_field_map[key]))
         else:
             result.append(objects.get(data, key))
     return result
@@ -73,7 +69,8 @@ def csv_render(model, queryset, serializer_class):
     reverse_field = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_REVERSE_FIELD)
     relation_field_map = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_REVERSE_FIELDS_MAP)
 
-    for instance in queryset.iterator():
+    queryset_iter = queryset if isinstance(queryset, list) else queryset.iterator()
+    for instance in queryset_iter:
         instance_data = serializer_class(instance).data
         if reverse_field:
             reverse_relation = getattr(instance, reverse_field, None)
@@ -83,7 +80,8 @@ def csv_render(model, queryset, serializer_class):
                 for r_item in reverse_relation.all().iterator():
                     writer.writerow(
                         row_with_relation_data(
-                            fields, reverse_field, r_item.id, instance_data, relation_field_map)
+                            fields, reverse_field, r_item.id, instance_data, relation_field_map
+                        )
                     )
         else:
             writer.writerow(row_data(fields, instance_data))
@@ -91,7 +89,6 @@ def csv_render(model, queryset, serializer_class):
 
 
 class ExcelResponse(HttpResponse):
-
     def __init__(self, model, queryset, serializer_class, *args, **kwargs):
         self.model = model
         self.queryset = queryset
