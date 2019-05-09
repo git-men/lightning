@@ -18,7 +18,7 @@ class Menu(models.Model):
     name = models.CharField('名称', max_length=30)
     icon = models.CharField('图标名', max_length=100, null=True, blank=True, help_text='请使用AntDesign的图标:https://ant.design/components/icon-cn/')
     parent = models.ForeignKey('self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单')
-    path = models.CharField('路径', max_length=200, help_text='前端功能页面的路径')
+    page = models.CharField('页面', max_length=200, help_text='前端功能页面的标识', default='list')
     permission = models.CharField('关联权限', max_length=200, help_text='格式有<app_label>.<codename>', blank=True, null=True)
     model = models.CharField('关联模型', max_length=200, help_text='格式为：<app_label>__<model>', blank=True, null=True)
 
