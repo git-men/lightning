@@ -5,10 +5,10 @@ from bsm_config.models import Menu
 
 @register
 class MenuAdmin(BSMAdmin):
-    display = ['icon', 'name', 'path', 'permission', 'model']
-    filter = ['name', 'permission', 'path']
+    display = ['icon', 'name', 'page', 'permission', 'model']
+    filter = ['name', 'permission', 'page']
     form_fields = [
-        'name', 'icon', 'parent', 'path', 'permission', 'model'
+        'name', 'icon', 'parent', 'page', 'permission', 'model'
     ]
     display_in_tree = True  # 树型列表
 
