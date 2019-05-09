@@ -14,6 +14,9 @@ BSM_PARENT_FIELD = 'parent_field'
 
 BSM_DISPLAY = 'display'
 
+# 以树型结构的表格展示
+BSM_DISPLAY_IN_TREE = 'display_in_tree'
+
 BSM_INLINE_ACTIONS = 'inline_actions'
 
 # 批量操作
@@ -68,6 +71,7 @@ VALID_MANAGE_ATTRS = [
     BSM_DETAIL_EXPAND_FIELDS,
     BSM_EXPORTABLE,
     BSM_STATISTICS,
+    BSM_DISPLAY_IN_TREE
 ]
 
 # 属性和默认值映射
