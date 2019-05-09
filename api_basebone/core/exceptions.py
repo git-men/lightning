@@ -44,22 +44,26 @@ class BusinessException(Exception):
     - 业务错误
     """
 
-    default_error_code = "9000"
-    default_error_message = "系统错误"
+    default_error_code = '9000'
+    default_error_message = '系统错误'
+    default_error_app = ''
 
-    def __init__(self, error_code=None, error_message=None, error_data=None, error_app=None):
+    def __init__(self, error_code=None, error_message=None, error_data='', error_app=''):
 
-        if error_code is not None and error_message is not None:
-            self.error_code = error_code
+        self.error_code = error_code if error_code is not None else self.default_error_code
+
+        if error_message is not None:
             self.error_message = error_message
-        elif error_code is not None:
-            self.error_code = error_code
-            self.error_message = force_text(ERROR_PHRASES.get(error_code))
         else:
-            self.error_code = self.default_error_code
-            self.error_message = force_text(self.default_error_message)
+            get_message = ''
+            if error_code in ERROR_PHRASES:
+                get_message = force_text(ERROR_PHRASES.get(error_code))
+            if not get_message:
+                get_message = force_text(self.default_error_message)
+            self.error_message = get_message
+
         self.error_data = error_data
-        self.error_app = error_app
+        self.error_app = error_app if error_app else force_text(self.default_error_app)
 
     def __str__(self):
         return f'{self.error_code}:{self.error_message}'

@@ -23,10 +23,7 @@ from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.restful import batch_actions
 from api_basebone.restful.const import CLIENT_END_SLUG
 from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.relations import (
-    forward_relation_hand,
-    reverse_relation_hand,
-)
+from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.restful.serializers import (
     create_serializer_class,
     multiple_create_serializer_class,
@@ -43,6 +40,7 @@ from .user_pip import add_login_user_data
 log = logging.getLogger(__name__)
 
 exposed_apis = {}
+
 
 def register_api(app, exposed_data):
     for model, data in exposed_data.items():
@@ -94,7 +92,9 @@ class QuerySetMixin:
             # 如果有，则读取模型中 GMeta 中的配置
             # FIXME: 注意，这里和管理端的处理逻辑暂时是不同的
             user_field_name = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_USER_FIELD)
-            filter_by_login_user = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_FILTER_BY_LOGIN_USER)
+            filter_by_login_user = get_gmeta_config_by_key(
+                self.model, gmeta.GMETA_CLIENT_FILTER_BY_LOGIN_USER
+            )
             if user_field_name and filter_by_login_user:
                 return queryset.filter(**{user_field_name: user})
         return queryset
@@ -158,9 +158,7 @@ class QuerySetMixin:
     def get_queryset_by_with_tree(self, queryset):
         """如果是树形结构，则需要做对应的过滤"""
         if self.tree_data:
-            params = {
-                self.tree_data[0]: self.tree_data[2]
-            }
+            params = {self.tree_data[0]: self.tree_data[2]}
             return queryset.filter(**params)
         return queryset
 
@@ -176,8 +174,7 @@ class GenericViewMixin:
 
     def check_permissions(self, request):
         """校验权限"""
-        action_skip = get_gmeta_config_by_key(
-            self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
+        action_skip = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
         if isinstance(action_skip, (tuple, list)) and self.action in action_skip:
             return True
         super().check_permissions(request)
@@ -214,7 +211,8 @@ class GenericViewMixin:
             real_action = 'list'
         if not expose or not expose.get('actions', None) or real_action not in expose['actions']:
             raise exceptions.BusinessException(
-                error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE)
+                error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE
+            )
 
         meta.load_custom_admin_module()
         self.get_expand_fields()
@@ -245,7 +243,9 @@ class GenericViewMixin:
                 admin_class = self.get_bsm_model_admin()
                 if admin_class:
                     try:
-                        detail_expand_fields = getattr(admin_class, admin.BSM_DETAIL_EXPAND_FIELDS, None)
+                        detail_expand_fields = getattr(
+                            admin_class, admin.BSM_DETAIL_EXPAND_FIELDS, None
+                        )
                         if detail_expand_fields:
                             self.expand_fields = copy.deepcopy(detail_expand_fields)
                     except Exception:
@@ -287,7 +287,9 @@ class GenericViewMixin:
             for index, value in enumerate(field_list):
                 field = model._meta.get_field(value)
                 if meta.check_field_is_reverse(field):
-                    result = meta.get_relation_field_related_name(field.related_model, field.remote_field.name)
+                    result = meta.get_relation_field_related_name(
+                        field.related_model, field.remote_field.name
+                    )
                     if result:
                         field_list[index] = result[0]
                 if field.is_relation:
@@ -328,21 +330,25 @@ class GenericViewMixin:
 
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
-            return create_serializer_class(model, exclude_fields=exclude_fields, tree_structure=tree_data, action=self.action)
+            return create_serializer_class(
+                model, exclude_fields=exclude_fields, tree_structure=tree_data, action=self.action
+            )
 
         # 如果有展开字段，则创建嵌套的序列化类
         serializer_class = multiple_create_serializer_class(
-            model, expand_fields, exclude_fields=exclude_fields, tree_structure=tree_data, action=self.action
+            model,
+            expand_fields,
+            exclude_fields=exclude_fields,
+            tree_structure=tree_data,
+            action=self.action,
         )
         return serializer_class
 
 
-class CommonManageViewSet(FormMixin,
-                          QuerySetMixin,
-                          GenericViewMixin,
-                          viewsets.ModelViewSet):
+class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewSet):
     """通用的管理接口视图"""
-    permission_classes = (permissions.IsAuthenticated, )
+
+    permission_classes = (permissions.IsAuthenticated,)
     pagination_class = PageNumberPagination
 
     end_slug = CLIENT_END_SLUG
@@ -377,7 +383,7 @@ class CommonManageViewSet(FormMixin,
 
         原因：序列化类有可能嵌套
         """
-        
+
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
             serializer = self.get_validate_form(self.action)(data=request.data)
@@ -386,10 +392,12 @@ class CommonManageViewSet(FormMixin,
             reverse_relation_hand(self.model, request.data, instance, detail=False)
             instance = self.get_queryset().get(id=instance.id)
 
-        #with transaction.atomic():
-            log.debug('sending Post Save signal with: model: %s, instance: %s', self.model, instance)
+            # with transaction.atomic():
+            log.debug(
+                'sending Post Save signal with: model: %s, instance: %s', self.model, instance
+            )
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
-        # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
+            # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
             serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
             return success_response(serializer.data)
 
@@ -410,8 +418,10 @@ class CommonManageViewSet(FormMixin,
             reverse_relation_hand(self.model, request.data, instance)
             instance = self.get_queryset().get(id=instance.id)
 
-        # with transaction.atomic():
-            log.debug('sending Post Update signal with: model: %s, instance: %s', self.model, instance)
+            # with transaction.atomic():
+            log.debug(
+                'sending Post Update signal with: model: %s, instance: %s', self.model, instance
+            )
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
 
             serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
@@ -456,7 +466,8 @@ class CommonManageViewSet(FormMixin,
         ```
         """
         serializer = batch_actions.BatchActionForm(
-            data=request.data, context=self.get_serializer_context())
+            data=request.data, context=self.get_serializer_context()
+        )
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
@@ -474,14 +485,14 @@ class CommonManageViewSet(FormMixin,
         if not func:
             raise exceptions.BusinessException(
                 error_code=exceptions.FUNCTION_NOT_FOUNT,
-                error_data=f'no such func: {func_name} found')
+                error_data=f'no such func: {func_name} found',
+            )
+
         if options.get('login_required', False):
             if not request.user.is_authenticated:
                 raise PermissionDenied()
 
-        view_context = {
-            'view': self,
-        }
+        view_context = {'view': self}
         params['view_context'] = view_context
 
         result = func(request.user, **params)
