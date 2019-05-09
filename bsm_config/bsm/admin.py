@@ -11,3 +11,6 @@ class MenuAdmin(BSMAdmin):
         'name', 'icon', 'parent', 'path', 'permission', 'content_type'
     ]
     display_in_tree = True  # 树型列表
+
+    class Meta:
+        model = Menu
