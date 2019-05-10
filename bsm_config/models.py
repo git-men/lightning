@@ -18,9 +18,10 @@ class Menu(models.Model):
     name = models.CharField('名称', max_length=30)
     icon = models.CharField('图标名', max_length=100, null=True, blank=True, help_text='请使用AntDesign的图标:https://ant.design/components/icon-cn/')
     parent = models.ForeignKey('self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单')
-    page = models.CharField('页面', max_length=200, help_text='前端功能页面的标识', default='list')
+    page = models.CharField('页面', max_length=200, help_text='前端功能页面的标识', default='list', null=True, blank=True)
     permission = models.CharField('关联权限', max_length=200, help_text='格式有<app_label>.<codename>', blank=True, null=True)
     model = models.CharField('关联模型', max_length=200, help_text='格式为：<app_label>__<model>', blank=True, null=True)
+    sequence = models.PositiveIntegerField('排序', default=0, help_text='数值越小，排列越前')
 
     class Meta:
         verbose_name = '导航菜单'
@@ -31,4 +32,3 @@ class Menu(models.Model):
         parent_field = 'parent'
 
 # 菜单的查询场景：1. 根据当前登录的用户得到它的权限和组权限。2. Filter菜单Permission in 用户的权限集或空。
-

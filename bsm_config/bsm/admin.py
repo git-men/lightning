@@ -6,7 +6,6 @@ from bsm_config.models import Menu
 @register
 class MenuAdmin(BSMAdmin):
     display = ['icon', 'name', 'page', 'permission', 'model']
-    filter = ['name', 'permission', 'page']
     form_fields = [
         'name', 'icon', 'parent', 'page', 'permission', 'model'
     ]
