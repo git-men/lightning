@@ -21,7 +21,7 @@ from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
 from api_basebone.restful.funcs import find_func
-from api_basebone.restful.mixins import CheckValidateMixin, StatisticsMixin
+from api_basebone.restful.mixins import CheckValidateMixin, StatisticsMixin, GroupStatisticsMixin
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.restful.serializers import (
     create_serializer_class,
@@ -375,6 +375,7 @@ class CommonManageViewSet(
     QuerySetMixin,
     GenericViewMixin,
     StatisticsMixin,
+    GroupStatisticsMixin,
     viewsets.ModelViewSet,
 ):
     """通用的管理接口视图"""
