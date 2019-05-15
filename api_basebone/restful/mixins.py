@@ -1,5 +1,7 @@
-from django.db.models import Sum, Count, Value
-from django.db.models.functions import Coalesce
+from functools import partial
+
+from django.db.models import Sum, Count, Value, F
+from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncHour
 
 from rest_framework.decorators import action
 
@@ -132,4 +134,30 @@ class StatisticsMixin:
         relation_result = self.basebone_origin_queryset.aggregate(**relation_aggregates)
 
         result.update(relation_result)
+        return success_response(result)
+
+
+class GroupStatisticsMixin:
+    """获取统计数据"""
+    @action(methods=['post'], detail=False, url_path='group_statistics')
+    def group_statistics(self, request, *args, **kwargs):
+        """
+        分组统计
+        """
+        group_functions = {
+            'TruncDay': TruncDay,
+            'TruncMonth': TruncMonth,
+            'TruncHour': TruncHour,
+            None: F,
+        }
+        methods = {
+            'sum': Sum,
+            'count': partial(Count, distinct=True),
+        }
+        group_method = request.data.get('group_method', None)
+        group_by = request.data.get('group_by')
+        fields = request.data.get('fields')
+        result = self.get_queryset().annotate(group=group_functions[group_method](group_by)).values('group').annotate(
+            **{key: methods[value['method']](value['field']) for key, value in fields.items()}).order_by('group')
+
         return success_response(result)
