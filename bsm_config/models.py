@@ -9,7 +9,9 @@ BSM体系的配置，都可以存储至数据库，包括：
 from django.db import models
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.apps.registry import apps
 
+from api_basebone.export.specs import FieldType
 
 # 自定义菜单
 class Menu(models.Model):
@@ -32,3 +34,63 @@ class Menu(models.Model):
         parent_field = 'parent'
 
 # 菜单的查询场景：1. 根据当前登录的用户得到它的权限和组权限。2. Filter菜单Permission in 用户的权限集或空。
+
+def app_verbose_name(self):
+    try:
+        return apps.get_app_config(self.app_label).verbose_name
+    except LookupError:
+        return self.name
+
+
+class ContentTypeGMeta:
+    computed_fields = [
+        {
+            'name': 'app_verbose_name', 
+            'display_name': '模块',
+            'type': FieldType.STRING
+        }
+    ]
+
+setattr(ContentType, 'app_verbose_name', app_verbose_name)
+setattr(ContentType, 'GMeta', ContentTypeGMeta)
+
+def permissions_new_str(self):
+    name = self.name
+    if 'Can delete' in name:
+        return name.replace('Can delete', '删除')
+    elif 'Can add' in name:
+        return name.replace('Can add', '添加')
+    elif 'Can change' in name:
+        return name.replace('Can change', '修改')
+    elif 'Can view' in name:
+        return name.replace('Can view', '查看')
+
+    return "{} | {} | {}".format(
+        self.content_type.app_verbose_name(),
+        self.content_type,
+        name)
+
+@property
+def display_name(self):
+    name = self.name
+    if 'Can delete' in name:
+        return name.replace('Can delete', '删除')
+    elif 'Can add' in name:
+        return name.replace('Can add', '添加')
+    elif 'Can change' in name:
+        return name.replace('Can change', '修改')
+    elif 'Can view' in name:
+        return name.replace('Can view', '查看')
+    else:
+        return name
+
+
+class PermissionGMeta:
+    title_field = 'display_name'
+    computed_fields = [
+        {'name': 'display_name', 'display_name': '名称', 'type': FieldType.STRING}
+    ]
+
+Permission.__str__ = permissions_new_str
+setattr(Permission, 'display_name', display_name)
+setattr(Permission, 'GMeta', PermissionGMeta)

@@ -1,3 +1,6 @@
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+
 from api_basebone.core.admin import BSMAdmin, register
 from api_basebone.core.widgets import widgets
 
@@ -22,3 +25,16 @@ class MenuAdmin(BSMAdmin):
 
     class Meta:
         model = Menu
+
+
+@register
+class PermissionAdmin(BSMAdmin):
+    display = ['']
+    class Meta:
+        model = Permission
+
+
+class ContentType(BSMAdmin):
+    
+    class Meta:
+        model = ContentType
