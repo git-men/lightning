@@ -1,0 +1,1 @@
+default_app_config = 'bsm_config.apps.BsmConfigConfig'
