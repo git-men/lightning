@@ -87,7 +87,9 @@ class StatisticsMixin:
             ...
         }
         """
-        configs = self.basebone_get_statistics_config()
+        configs = request.data.get('fields', None)
+        if not configs:
+            configs = self.basebone_get_statistics_config()
         if not configs:
             return success_response({})
 
