@@ -37,6 +37,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'ManyToManyField': 'RefMult',
     'BoneRichTextField': 'RichText',
     'BoneImageUrlField': 'Image',
+    'BoneFileUrlField': 'File',
 }
 
 VALIDATOR_MAP = {

@@ -20,3 +20,10 @@ class BoneImageUrlField(models.URLField):
 
     def get_bsm_internal_type(self):
         return 'BoneImageUrlField'
+
+
+class BoneFileUrlField(models.URLField):
+    """存储文件链接"""
+
+    def get_bsm_internal_type(self):
+        return 'BoneFileUrlField'
