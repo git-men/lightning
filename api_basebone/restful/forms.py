@@ -1,12 +1,10 @@
-from rest_framework import serializers, fields
-
-from api_basebone.utils.gmeta import get_gmeta_config_by_key
-from api_basebone.core import gmeta
-from api_basebone.utils import module
-from api_basebone.restful.const import MANAGE_END_SLUG, CLIENT_END_SLUG
-
 from jsonfield import JSONField
+from rest_framework import serializers
 
+from api_basebone.core import drf_field, gmeta
+from api_basebone.restful.const import CLIENT_END_SLUG, MANAGE_END_SLUG
+from api_basebone.utils import module
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 compare_funcs = {
     '=': lambda a, b: a == b,
@@ -15,11 +13,13 @@ compare_funcs = {
     '>': lambda a, b: a > b,
     '<': lambda a, b: a < b,
     'in': lambda a, b: a in b,
-    'include': lambda a, b: b in a
+    'include': lambda a, b: b in a,
 }
 
 
-def validate_condition_required(data, field=[], condition_field=None, operator=None, value=None):
+def validate_condition_required(
+    data, field=[], condition_field=None, operator=None, value=None
+):
     """条件性必填校验，如type字段值为0时，price字段才必填。
     """
     # 首先判断条件是否成立
@@ -49,51 +49,61 @@ def validate_condition_compare(operator):
     def _validate_condition_compare(data, field=None, condition_field=None):
         """表单范围的大小比较
         """
-        if not (field and condition_field and data.get(field, None) and data.get(condition_field, None)):
+        if not (
+            field
+            and condition_field
+            and data.get(field, None)
+            and data.get(condition_field, None)
+        ):
             return
         test_value = data[field]
         condition_value = data[condition_field]
         if operator == 'lt' and test_value >= condition_value:
-            raise serializers.ValidationError({field: f'{field}的值必须小于{condition_field}的值'})
+            raise serializers.ValidationError(
+                {field: f'{field}的值必须小于{condition_field}的值'}
+            )
 
         if operator == 'gt' and test_value <= condition_value:
-            raise serializers.ValidationError({field: f'{field}的值必须大于{condition_field}的值'})
+            raise serializers.ValidationError(
+                {field: f'{field}的值必须大于{condition_field}的值'}
+            )
+
     return _validate_condition_compare
 
 
 CONDICTION_VALIDATORS = {
     'condition_required': validate_condition_required,
     'condition_less': validate_condition_compare('lt'),
-    'condition_great': validate_condition_compare('gt')
+    'condition_great': validate_condition_compare('gt'),
 }
 
 
 def get_validate(validators):
-
     def validate(self, data):
         """ModelSerializer 里的Vaidate方法
         """
         # data = super().validate(data)
         for validator in validators:
             if CONDICTION_VALIDATORS[validator['type']]:
-                params = dict([(key, value) for key, value in validator.items() if key != 'type'])
+                params = dict(
+                    [(key, value) for key, value in validator.items() if key != 'type']
+                )
                 CONDICTION_VALIDATORS[validator['type']](data, **params)
         return data
+
     return validate
 
 
 def create_meta_class(model, exclude_fields=None):
     """构建序列化类的 Meta 类"""
-    attrs = {
-        'model': model,
-    }
+    attrs = {'model': model}
 
     if exclude_fields is not None and isinstance(exclude_fields, (list, tuple)):
         attrs['exclude'] = exclude_fields
     else:
         attrs['fields'] = '__all__'
 
-    return type('Meta', (object, ), attrs)
+    return type('Meta', (object,), attrs)
 
 
 def create_form_class(model, exclude_fields=None, **kwargs):
@@ -103,13 +113,10 @@ def create_form_class(model, exclude_fields=None, **kwargs):
         """
         重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
         """
-        self.serializer_field_mapping[JSONField] = fields.JSONField
+        self.serializer_field_mapping[JSONField] = drf_field.JSONField
         super(serializers.ModelSerializer, self).__init__(*args, **kwargs)
 
-    attrs = {
-        'Meta': create_meta_class(model, exclude_fields=None),
-        '__init__': __init__,
-    }
+    attrs = {'Meta': create_meta_class(model, exclude_fields=None), '__init__': __init__}
     attrs.update(kwargs)
 
     class_name = f'{model}ModelSerializer'
@@ -119,9 +126,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
     if validators:
         attrs['validate'] = get_validate(validators)
         # MethodType(get_validate(validators), cls)
-    return type(
-        class_name, (serializers.ModelSerializer, ), attrs
-    )
+    return type(class_name, (serializers.ModelSerializer,), attrs)
 
 
 def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kwargs):
@@ -139,18 +144,11 @@ def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kw
         class 表单类
     """
 
-    name_suffix_map = {
-        MANAGE_END_SLUG: 'ManageForm',
-        CLIENT_END_SLUG: 'ClientForm',
-    }
+    name_suffix_map = {MANAGE_END_SLUG: 'ManageForm', CLIENT_END_SLUG: 'ClientForm'}
 
-    action_map = {
-        'create': 'Create',
-        'update': 'Update',
-    }
+    action_map = {'create': 'Create', 'update': 'Update'}
 
-    form_module = module.get_admin_module(
-        model._meta.app_config.name, module.BSM_FORM)
+    form_module = module.get_admin_module(model._meta.app_config.name, module.BSM_FORM)
 
     name_suffix = name_suffix_map.get(end)
     if not name_suffix:

@@ -37,6 +37,7 @@ def add_login_user_data(view, data):
 
     # 检测模型中是否有字段引用了用户模型
     has_user_field = meta.get_related_model_field(model, get_user_model())
+
     if has_user_field:
         # 如果有，则读取 BSM Admin 中的配置
         admin_class = meta.get_bsm_model_admin(model)
@@ -68,7 +69,9 @@ def add_login_user_data(view, data):
                 if not value or not isinstance(value, list):
                     continue
 
-                has_user_field = meta.get_related_model_field(item.related_model, get_user_model())
+                has_user_field = meta.get_related_model_field(
+                    item.related_model, get_user_model()
+                )
                 if has_user_field:
                     # 如果有，则读取 BSM Admin 中的配置
                     admin_class = meta.get_bsm_model_admin(item.related_model)
@@ -77,7 +80,9 @@ def add_login_user_data(view, data):
                             if isinstance(reverse_item, dict):
                                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                                 try:
-                                    field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
+                                    field_name = getattr(
+                                        admin_class, admin.BSM_AUTH_FILTER_FIELD, None
+                                    )
                                     if field_name:
                                         # 如果用户数据中没有传递用户的数据，则进行插入
                                         if field_name not in reverse_item:
@@ -92,7 +97,9 @@ def add_login_user_data(view, data):
                     if not value or not isinstance(value, list):
                         continue
 
-                    has_user_field = meta.get_related_model_field(item.related_model, get_user_model())
+                    has_user_field = meta.get_related_model_field(
+                        item.related_model, get_user_model()
+                    )
                     if has_user_field:
                         # 如果有，则读取 BSM Admin 中的配置
                         admin_class = meta.get_bsm_model_admin(item.related_model)
@@ -101,9 +108,15 @@ def add_login_user_data(view, data):
                                 if isinstance(child_item, dict):
                                     # 检测 admin 配置中是否指定了 auth_filter_field 属性
                                     try:
-                                        field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
+                                        field_name = getattr(
+                                            admin_class, admin.BSM_AUTH_FILTER_FIELD, None
+                                        )
                                         if field_name:
-                                            print(value, 'this is add user login data', child_item)
+                                            print(
+                                                value,
+                                                'this is add user login data',
+                                                child_item,
+                                            )
                                             # 如果用户数据中没有传递用户的数据，则进行插入
                                             if field_name not in child_item:
                                                 child_item[field_name] = user.id
@@ -113,14 +126,18 @@ def add_login_user_data(view, data):
                 else:
                     # 使用字典数据结构
                     if isinstance(value, dict):
-                        has_user_field = meta.get_related_model_field(item.related_model, get_user_model())
+                        has_user_field = meta.get_related_model_field(
+                            item.related_model, get_user_model()
+                        )
                         if has_user_field:
                             # 如果有，则读取 BSM Admin 中的配置
                             admin_class = meta.get_bsm_model_admin(item.related_model)
                             if admin_class:
                                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                                 try:
-                                    field_name = getattr(admin_class, admin.BSM_AUTH_FILTER_FIELD, None)
+                                    field_name = getattr(
+                                        admin_class, admin.BSM_AUTH_FILTER_FIELD, None
+                                    )
                                     if field_name:
                                         # 如果用户数据中没有传递用户的数据，则进行插入
                                         if field_name not in value:

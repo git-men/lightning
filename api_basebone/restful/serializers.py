@@ -87,7 +87,9 @@ class BaseModelSerializerMixin:
             except SkipField:
                 continue
 
-            check_for_none = attribute.pk if isinstance(attribute, PKOnlyObject) else attribute
+            check_for_none = (
+                attribute.pk if isinstance(attribute, PKOnlyObject) else attribute
+            )
             if check_for_none is None:
                 ret[field.field_name] = None
             elif isinstance(attribute, models.Manager):
@@ -105,7 +107,9 @@ class BaseModelSerializerMixin:
 
         # 这了处理 admin 中计算属性字段的业务
         if self.basebone_end_slug == MANAGE_END_SLUG:
-            admin_computed_fields = getattr(self.basebone_model, BSM_ADMIN_COMPUTED_FIELDS_MAP, {})
+            admin_computed_fields = getattr(
+                self.basebone_model, BSM_ADMIN_COMPUTED_FIELDS_MAP, {}
+            )
             if not admin_computed_fields:
                 return ret
             admin_class = meta.get_bsm_model_admin(self.basebone_model)
@@ -121,7 +125,10 @@ class BaseModelSerializerMixin:
                 value = computed_func(instance)
                 serializer_class = ComputedFieldTypeSerializerMap[field_type]
                 # 如果是导出，则使用导出的字段序列化类
-                if self.action == EXPORT_FILE_ACTION and field_type in ExportFieldTypeSerializerMap:
+                if (
+                    self.action == EXPORT_FILE_ACTION
+                    and field_type in ExportFieldTypeSerializerMap
+                ):
                     serializer_class = ExportFieldTypeSerializerMap[field_type]
                 ret[name] = serializer_class(read_only=True).to_representation(value)
         return ret
@@ -136,7 +143,9 @@ class CustomModelSerializer(serializers.ModelSerializer):
     serializer_field_mapping[models.BigAutoField] = CharIntegerField
 
 
-def create_meta_class(model, exclude_fields=None, extra_fields=None, action=None, **kwargs):
+def create_meta_class(
+    model, exclude_fields=None, extra_fields=None, action=None, **kwargs
+):
     """构建序列化类的 Meta
 
     Params:
@@ -152,7 +161,8 @@ def create_meta_class(model, exclude_fields=None, extra_fields=None, action=None
             for f in model._meta.get_fields()
             if f.concrete
             and not (
-                f.is_relation and (not isinstance(f, ForeignKey) or isinstance(f, OneToOneField))
+                f.is_relation
+                and (not isinstance(f, ForeignKey) or isinstance(f, OneToOneField))
             )
         ]
     else:
@@ -184,10 +194,14 @@ def create_serializer_class(
         """
         重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
         """
-        self.serializer_field_mapping[JSONField] = fields.JSONField
+        self.serializer_field_mapping[JSONField] = drf_field.JSONField
         if self.action == 'export_file':
-            self.serializer_field_mapping[models.BooleanField] = drf_field.ExportBooleanField
-            self.serializer_field_mapping[models.DateTimeField] = drf_field.ExportDateTimeField
+            self.serializer_field_mapping[
+                models.BooleanField
+            ] = drf_field.ExportBooleanField
+            self.serializer_field_mapping[
+                models.DateTimeField
+            ] = drf_field.ExportDateTimeField
             self.serializer_choice_field = drf_field.ExportChoiceField
         else:
             # 恢复为原来的字段类型映射，因为上面改了类的变量属性值
@@ -213,10 +227,15 @@ def create_serializer_class(
             field_type = field['type']
 
             # 如果是导出，则使用导出的字段序列化类
-            if action == EXPORT_FILE_ACTION and field_type in ExportFieldTypeSerializerMap:
+            if (
+                action == EXPORT_FILE_ACTION
+                and field_type in ExportFieldTypeSerializerMap
+            ):
                 new_attr[name] = ExportFieldTypeSerializerMap[field_type](read_only=True)
             else:
-                new_attr[name] = ComputedFieldTypeSerializerMap[field_type](read_only=True)
+                new_attr[name] = ComputedFieldTypeSerializerMap[field_type](
+                    read_only=True
+                )
 
     attrs = {
         'Meta': create_meta_class(
@@ -268,7 +287,11 @@ def dict_merge(dct, merge_dct):
         merge_dict dict 待合并的字典
     """
     for key, value in merge_dct.items():
-        if key in dct and isinstance(dct[key], dict) and isinstance(merge_dct[key], Mapping):
+        if (
+            key in dct
+            and isinstance(dct[key], dict)
+            and isinstance(merge_dct[key], Mapping)
+        ):
             dict_merge(dct[key], merge_dct[key])
         else:
             dct[key] = merge_dct[key]
@@ -327,7 +350,10 @@ def create_nested_serializer_class(
 
         if not value:
             attrs[key] = create_serializer_class(
-                field.related_model, exclude_fields=exclude_fields, action=action, end_slug=end_slug
+                field.related_model,
+                exclude_fields=exclude_fields,
+                action=action,
+                end_slug=end_slug,
             )(many=many)
         else:
             attrs[key] = create_nested_serializer_class(
@@ -343,7 +369,12 @@ def create_nested_serializer_class(
 
 
 def multiple_create_serializer_class(
-    model, expand_fields, tree_structure=None, exclude_fields=None, action=None, end_slug=None
+    model,
+    expand_fields,
+    tree_structure=None,
+    exclude_fields=None,
+    action=None,
+    end_slug=None,
 ):
     """多重创建序列化类"""
     attrs = {}
@@ -386,7 +417,9 @@ def get_export_serializer_class(model, serialier_class):
         class 表单类
     """
 
-    export_module = module.get_admin_module(model._meta.app_config.name, module.BSM_EXPORT)
+    export_module = module.get_admin_module(
+        model._meta.app_config.name, module.BSM_EXPORT
+    )
 
     class_name = '{}ExportSerializer'.format(model.__name__)
     custom_export_mixin = getattr(export_module, class_name, None)
