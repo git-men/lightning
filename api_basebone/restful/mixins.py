@@ -9,6 +9,8 @@ from api_basebone.core import admin, exceptions
 from api_basebone.drf.response import success_response
 from api_basebone.restful import const
 from api_basebone.utils.meta import get_all_relation_fields
+from api_basebone.models import AdminLog
+from api_basebone.settings import settings as basebone_settings
 
 
 class CheckValidateMixin:
@@ -32,9 +34,7 @@ class CheckValidateMixin:
 
         # 获取非一对一的关系字段
         relation_fields = [
-            item.name
-            for item in get_all_relation_fields(self.model)
-            if not item.one_to_one
+            item.name for item in get_all_relation_fields(self.model) if not item.one_to_one
         ]
 
         if not isinstance(fields, list):
@@ -68,9 +68,7 @@ class StatisticsMixin:
                         error_code=exceptions.BSM_NOT_STATISTICS_CONFIG
                     )
                 return config
-            raise exceptions.BusinessException(
-                error_code=exceptions.BSM_CAN_NOT_FIND_ADMIN
-            )
+            raise exceptions.BusinessException(error_code=exceptions.BSM_CAN_NOT_FIND_ADMIN)
 
     @action(methods=['post'], detail=False, url_path='statistics')
     def statistics(self, request, *args, **kwargs):
@@ -95,16 +93,11 @@ class StatisticsMixin:
 
         queryset = self.get_queryset()
 
-        method_map = {
-            'sum': Sum,
-            'count': Count,
-        }
+        method_map = {'sum': Sum, 'count': Count}
 
         aggregates, relation_aggregates = {}, {}
 
-        relation_fields = [
-            item.name for item in get_all_relation_fields(self.model)
-        ]
+        relation_fields = [item.name for item in get_all_relation_fields(self.model)]
 
         for key, value in configs.items():
             if not isinstance(value, dict):
@@ -141,6 +134,7 @@ class StatisticsMixin:
 
 class GroupStatisticsMixin:
     """获取统计数据"""
+
     @action(methods=['post'], detail=False, url_path='group_statistics')
     def group_statistics(self, request, *args, **kwargs):
         """
@@ -152,14 +146,39 @@ class GroupStatisticsMixin:
             'TruncHour': TruncHour,
             None: F,
         }
-        methods = {
-            'sum': Sum,
-            'count': partial(Count, distinct=True),
-        }
+        methods = {'sum': Sum, 'count': partial(Count, distinct=True)}
         group_method = request.data.get('group_method', None)
         group_by = request.data.get('group_by')
         fields = request.data.get('fields')
-        result = self.get_queryset().annotate(group=group_functions[group_method](group_by)).values('group').annotate(
-            **{key: methods[value['method']](value['field']) for key, value in fields.items()}).order_by('group')
+        result = (
+            self.get_queryset()
+            .annotate(group=group_functions[group_method](group_by))
+            .values('group')
+            .annotate(
+                **{key: methods[value['method']](value['field']) for key, value in fields.items()}
+            )
+            .order_by('group')
+        )
 
         return success_response(result)
+
+
+class ActionLogMixin:
+    """动作记录"""
+
+    def initial(self, request, *args, **kwargs):
+        result = super().initial(request, *args, **kwargs)
+
+        if self.app_label == 'api_basebone' and self.model_slug == 'adminlog':
+            return result
+
+        if basebone_settings.MANAGE_USE_ACTION_LOG:
+            AdminLog.objects.create(
+                user=self.request.user,
+                action=self.action,
+                app_label=self.app_label,
+                model_slug=self.model_slug,
+                object_id=self.kwargs.get('pk', ''),
+                params=request.data,
+            )
+        return result

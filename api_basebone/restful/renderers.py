@@ -7,17 +7,30 @@ from openpyxl.writer.excel import save_virtual_workbook
 from pydash import objects
 
 from api_basebone.core import gmeta
-from api_basebone.utils.gmeta import get_gmeta_config_by_key
+from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
+from api_basebone.utils.gmeta import get_gmeta_config_by_key, get_attr_in_gmeta_class
 from api_basebone.utils.timezone import local_timestamp
 
 
-def get_fields(model):
+def get_fields(model, serializer_class):
     """获取导出的字段，显示名称的映射"""
     default_fields = OrderedDict()
     for item in model._meta.get_fields():
         if item.concrete and not item.many_to_many:
             default_fields[item.name] = item.verbose_name
 
+    # 添加 model GMeta 下声明的计算属性字段
+    computed_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_COMPUTED_FIELDS, [])
+    for field in computed_fields:
+        default_fields[field['name']] = field.get('display_name', field['name'])
+
+    # 添加 admin 中声明的计算属性字段
+    # 添加 model GMeta 下声明的计算属性字段
+    admin_computed_fields = getattr(model, BSM_ADMIN_COMPUTED_FIELDS_MAP, {})
+    for key, value in admin_computed_fields.items():
+        default_fields[key] = value['display_name']
+
+    # 指定导出的字段
     export_fields = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_EXPORT_FIELDS)
 
     if not isinstance(export_fields, (list, tuple)) or not export_fields:
@@ -60,7 +73,7 @@ def csv_render(model, queryset, serializer_class):
 
     response.write(codecs.BOM_UTF8)
 
-    fields = get_fields(model)
+    fields = get_fields(model, serializer_class)
     verbose_names = fields.values()
 
     writer = csv.writer(response)

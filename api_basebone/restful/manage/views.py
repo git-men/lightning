@@ -8,7 +8,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import HttpResponse
-
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -21,7 +20,12 @@ from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
 from api_basebone.restful.funcs import find_func
-from api_basebone.restful.mixins import CheckValidateMixin, StatisticsMixin, GroupStatisticsMixin
+from api_basebone.restful.mixins import (
+    ActionLogMixin,
+    CheckValidateMixin,
+    GroupStatisticsMixin,
+    StatisticsMixin,
+)
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.restful.serializers import (
     create_serializer_class,
@@ -359,12 +363,16 @@ class GenericViewMixin:
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
             serializer_class = create_serializer_class(
-                model, tree_structure=tree_data, action=self.action
+                model, tree_structure=tree_data, action=self.action, end_slug=self.end_slug
             )
         else:
             # 如果有展开字段，则创建嵌套的序列化类
             serializer_class = multiple_create_serializer_class(
-                model, expand_fields, tree_structure=tree_data, action=self.action
+                model,
+                expand_fields,
+                tree_structure=tree_data,
+                action=self.action,
+                end_slug=self.end_slug,
             )
         return serializer_class
 
@@ -373,6 +381,7 @@ class CommonManageViewSet(
     FormMixin,
     CheckValidateMixin,
     QuerySetMixin,
+    ActionLogMixin,
     GenericViewMixin,
     StatisticsMixin,
     GroupStatisticsMixin,

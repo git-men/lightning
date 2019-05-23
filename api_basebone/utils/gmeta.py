@@ -52,10 +52,23 @@ def get_gmeta_config_by_key(model, config_key):
     这个方法获取到的配置，是经过校验过的配置，可以放心使用
     """
 
-    handler_map = {
-        gmeta_const.GMETA_CLIENT_USER_FIELD: get_gmeta_client_user_field
-    }
+    handler_map = {gmeta_const.GMETA_CLIENT_USER_FIELD: get_gmeta_client_user_field}
     handler = handler_map.get(config_key)
     if handler:
         return handler(model, config_key)
     return get_gmeta_pure_config(model, config_key)
+
+
+def get_attr_in_gmeta_class(model, config_name, default_value=None):
+    """获取指定模型 GMeta 类中指定的属性
+
+    Params:
+        model class django 模型类
+        config_name string GMeta 类中配置项的名称
+        default_value 任何数据类型 默认数据
+    """
+
+    gmeta_class = getattr(model, 'GMeta', None)
+    if not gmeta_class:
+        return default_value
+    return getattr(gmeta_class, config_name, default_value)

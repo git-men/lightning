@@ -5,8 +5,11 @@ from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core import gmeta
+from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
 from api_basebone.utils.meta import (
-    get_concrete_fields, get_export_apps, get_reverse_fields,
+    get_concrete_fields,
+    get_export_apps,
+    get_reverse_fields,
     get_field_by_reverse_field,
 )
 
@@ -80,19 +83,17 @@ def get_attr_in_gmeta_class(model, config_name, default_value=None):
 
 
 class FieldConfig:
-
     def reset_field_config(self, field, data_type=None):
         """根据 Gmeta 中声明的字段的配置进行重置"""
-        field_config = get_attr_in_gmeta_class(
-            field.model, gmeta.GMETA_FIELD_CONFIG, {}
-        ).get(field.name, {})
+        field_config = get_attr_in_gmeta_class(field.model, gmeta.GMETA_FIELD_CONFIG, {}).get(
+            field.name, {}
+        )
         if not field_config:
             return field_config
 
         # 做 django 中的写法和输出的配置的转换
         result = {
-            gmeta.GMETA_FIELD_CONFIG_MAP[key]
-            if key in gmeta.GMETA_FIELD_CONFIG_MAP else key: value
+            gmeta.GMETA_FIELD_CONFIG_MAP[key] if key in gmeta.GMETA_FIELD_CONFIG_MAP else key: value
             for key, value in field_config.items()
         }
         return result
@@ -120,11 +121,13 @@ class FieldConfig:
                 attrs.update({'value': validator.limit_value})
 
             if rule_name == 'regex':
-                attrs.update({
-                    'regex': validator.regex.pattern,
-                    'inverse_match': validator.inverse_match,
-                    'flags': validator.flags
-                })
+                attrs.update(
+                    {
+                        'regex': validator.regex.pattern,
+                        'inverse_match': validator.inverse_match,
+                        'flags': validator.flags,
+                    }
+                )
 
             if rule_name == 'decimal':
                 attrs['max_digits'] = validator.max_digits
@@ -137,11 +140,7 @@ class FieldConfig:
         if inspect.isfunction(func):
             return True
 
-        func_types = (
-            types.BuiltinFunctionType,
-            types.BuiltinMethodType,
-            types.MethodType,
-        )
+        func_types = (types.BuiltinFunctionType, types.BuiltinMethodType, types.MethodType)
         if isinstance(func, func_types):
             return True
         return False
@@ -153,7 +152,7 @@ class FieldConfig:
             'displayName': field.verbose_name,
             'required': not field.blank,
             'type': data_type,
-            'help': field.help_text
+            'help': field.help_text,
         }
 
         if field.choices:
@@ -253,11 +252,7 @@ def get_model_field_config(model):
             if not field:
                 continue
 
-            reverse_config = {
-                'name': item.name,
-                'required': False,
-                'type': 'bref',
-            }
+            reverse_config = {'name': item.name, 'required': False, 'type': 'bref'}
 
             if field.many_to_many:
                 reverse_config['type'] = 'mref'
@@ -267,12 +262,10 @@ def get_model_field_config(model):
 
             reverse_config['displayName'] = model_verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
-            reverse_config.update(
-                field_config_instance.reset_field_config(item)
-            )
+            reverse_config.update(field_config_instance.reset_field_config(item))
             config.append(reverse_config)
 
-    # 添加只读属性
+    # 添加 model 中  GMETA 中设置的只读属性
     computed_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_COMPUTED_FIELDS, [])
     for field in computed_fields:
         attrs = {
@@ -280,17 +273,29 @@ def get_model_field_config(model):
             'type': field['type'],
             'required': False,
             'readonly': True,
-            'displayName': field.get('display_name', field['name'])
+            'displayName': field.get('display_name', field['name']),
         }
         if 'choices' in field:
             attrs['choices'] = field['choices']
+        config.append(attrs)
+
+    # 添加 admin 冲设置的计算只读属性
+    admin_computed_fields = getattr(model, BSM_ADMIN_COMPUTED_FIELDS_MAP, {})
+    for name, field_value in admin_computed_fields.items():
+        attrs = {
+            'name': name,
+            'type': field_value['field_type'],
+            'required': False,
+            'readonly': True,
+            'displayName': field_value['display_name'],
+        }
         config.append(attrs)
 
     ret = {
         'name': key,
         'displayName': model._meta.verbose_name,
         'titleField': title_field,
-        'fields': config
+        'fields': config,
     }
 
     # 添加全局校验规则

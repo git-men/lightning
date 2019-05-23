@@ -71,7 +71,7 @@ VALID_MANAGE_ATTRS = [
     BSM_DETAIL_EXPAND_FIELDS,
     BSM_EXPORTABLE,
     BSM_STATISTICS,
-    BSM_DISPLAY_IN_TREE
+    BSM_DISPLAY_IN_TREE,
 ]
 
 # 属性和默认值映射
@@ -89,6 +89,7 @@ class BSMAdmin:
     用户可以继承此类，然后重新定义配置，然后服务端导出配置，
     前端可以根据配置动态的构造管理后台界面
     """
+
     pass
 
 

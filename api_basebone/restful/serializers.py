@@ -1,45 +1,26 @@
-from collections import OrderedDict, Mapping
+from collections import Mapping, OrderedDict
 
 from django.db import models
 from django.db.models.fields.related import ForeignKey, OneToOneField
-
-from rest_framework import serializers
+from jsonfield import JSONField
+from rest_framework import fields, serializers
 from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
-from rest_framework import fields
 
-from api_basebone.core import gmeta, drf_field
+from api_basebone.const.field_map import (
+    ComputedFieldTypeSerializerMap,
+    ExportFieldTypeSerializerMap,
+)
+from api_basebone.core import drf_field, gmeta
+from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
+from api_basebone.drf.fields import CharIntegerField
 from api_basebone.utils import meta, module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
-from api_basebone.export.specs import FieldType
-from api_basebone.drf.fields import CharIntegerField
-
-from jsonfield import JSONField
+from .const import MANAGE_END_SLUG
 
 # 导出文件的动作
 EXPORT_FILE_ACTION = 'export_file'
-
-
-FieldTypeSerializerMap = {
-    FieldType.STRING: fields.CharField,
-    FieldType.INTEGER: fields.IntegerField,
-    FieldType.BOOL: fields.BooleanField,
-    FieldType.TEXT: fields.CharField,
-    FieldType.RICHTEXT: fields.CharField,
-    FieldType.FLOAT: fields.FloatField,
-    FieldType.DECIMAL: fields.DecimalField,
-    FieldType.IMAGE: fields.CharField,
-    FieldType.DATE: fields.DateField,
-    FieldType.TIME: fields.TimeField,
-    FieldType.DATETIME: fields.DateTimeField
-}
-
-# 导出的字段序列化类映射
-FieldTypeExportSerializerMap = {
-    FieldType.BOOL: drf_field.ExportBooleanField,
-    FieldType.DATETIME: drf_field.ExportDateTimeField,
-}
 
 
 class ModelSerializer(serializers.ModelSerializer):
@@ -81,14 +62,6 @@ class BaseModelSerializerMixin:
     class Meta:
         fields = '__all__'
 
-    def _to_representation_from_property(self, model, instance):
-        """
-        获取模型中 property 装饰器装饰的属性值
-        """
-        for key in dir(model):
-            if key != 'pk' and isinstance(getattr(model, key, None), property):
-                ret[key] = getattr(instance, key, None)
-
     def to_representation(self, instance):
         """
         Object instance -> Dict of primitive datatypes.
@@ -121,17 +94,43 @@ class BaseModelSerializerMixin:
                 data = attribute.all()
 
                 # 检测字段是否是反向字段的 related_name, 如果是，转换为反向字段的名称
-                field_name = reverse_field_map[field.field_name] if field.field_name in reverse_field_map else field.field_name
+                field_name = (
+                    reverse_field_map[field.field_name]
+                    if field.field_name in reverse_field_map
+                    else field.field_name
+                )
                 ret[field_name] = field.to_representation(data)
             else:
                 ret[field.field_name] = field.to_representation(attribute)
 
+        # 这了处理 admin 中计算属性字段的业务
+        if self.basebone_end_slug == MANAGE_END_SLUG:
+            admin_computed_fields = getattr(self.basebone_model, BSM_ADMIN_COMPUTED_FIELDS_MAP, {})
+            if not admin_computed_fields:
+                return ret
+            admin_class = meta.get_bsm_model_admin(self.basebone_model)
+            if not admin_class:
+                return ret
+
+            admin_instance = admin_class()
+            for name, field_value in admin_computed_fields.items():
+                field_type = field_value['field_type']
+                computed_func = getattr(admin_instance, name, None)
+                if not computed_func:
+                    continue
+                value = computed_func(instance)
+                serializer_class = ComputedFieldTypeSerializerMap[field_type]
+                # 如果是导出，则使用导出的字段序列化类
+                if self.action == EXPORT_FILE_ACTION and field_type in ExportFieldTypeSerializerMap:
+                    serializer_class = ExportFieldTypeSerializerMap[field_type]
+                ret[name] = serializer_class(read_only=True).to_representation(value)
         return ret
 
 
 class CustomModelSerializer(serializers.ModelSerializer):
     """由于BigInteger类型的数据到了前端，JS丢失了精度，所以在接口返回的时候就直接转成字符串
     """
+
     serializer_field_mapping = serializers.ModelSerializer.serializer_field_mapping
     serializer_field_mapping[models.BigIntegerField] = CharIntegerField
     serializer_field_mapping[models.BigAutoField] = CharIntegerField
@@ -144,27 +143,37 @@ def create_meta_class(model, exclude_fields=None, extra_fields=None, action=None
         exclude_fields list 排除的字段
     """
 
-    attrs = {
-        'model': model,
-    }
+    attrs = {'model': model}
 
     exclude_field_list = get_model_exclude_fields(model, exclude_fields)
     if action in ['list', 'set']:
-        flat_fields = [f.name for f in model._meta.get_fields()
-            if f.concrete and not(f.is_relation and (not isinstance(f, ForeignKey) or isinstance(f, OneToOneField)))]
+        flat_fields = [
+            f.name
+            for f in model._meta.get_fields()
+            if f.concrete
+            and not (
+                f.is_relation and (not isinstance(f, ForeignKey) or isinstance(f, OneToOneField))
+            )
+        ]
     else:
-        flat_fields = [f.name for f in model._meta.get_fields()
-            if f.concrete and not isinstance(f, OneToOneField)]
+        flat_fields = [
+            f.name
+            for f in model._meta.get_fields()
+            if f.concrete and not isinstance(f, OneToOneField)
+        ]
     if extra_fields:
         flat_fields += extra_fields
+
     if exclude_field_list:
         attrs['fields'] = list(set(flat_fields).difference(set(exclude_field_list)))
     else:
         attrs['fields'] = flat_fields
-    return type('Meta', (object, ), attrs)
+    return type('Meta', (object,), attrs)
 
 
-def create_serializer_class(model, exclude_fields=None, tree_structure=None, action=None, **kwargs):
+def create_serializer_class(
+    model, exclude_fields=None, tree_structure=None, action=None, end_slug=None, **kwargs
+):
     """构建序列化类
 
     Params:
@@ -204,24 +213,24 @@ def create_serializer_class(model, exclude_fields=None, tree_structure=None, act
             field_type = field['type']
 
             # 如果是导出，则使用导出的字段序列化类
-            if action == EXPORT_FILE_ACTION and field_type in FieldTypeExportSerializerMap:
-                new_attr[name] = FieldTypeExportSerializerMap[field_type](read_only=True)
+            if action == EXPORT_FILE_ACTION and field_type in ExportFieldTypeSerializerMap:
+                new_attr[name] = ExportFieldTypeSerializerMap[field_type](read_only=True)
             else:
-                new_attr[name] = FieldTypeSerializerMap[field_type](read_only=True)
+                new_attr[name] = ComputedFieldTypeSerializerMap[field_type](read_only=True)
 
     attrs = {
-        'Meta': create_meta_class(model, exclude_fields=exclude_fields, extra_fields=extra_fields, action=action),
+        'Meta': create_meta_class(
+            model, exclude_fields=exclude_fields, extra_fields=extra_fields, action=action
+        ),
         'action': action,
-        '__init__': __init__
+        'basebone_model': model,
+        'basebone_end_slug': end_slug,
+        '__init__': __init__,
     }
     attrs.update(new_attr)
     attrs.update(kwargs)
     class_name = f'{model.__name__}ModelSerializer'
-    return type(
-        class_name,
-        (BaseModelSerializerMixin, CustomModelSerializer, ),
-        attrs
-    )
+    return type(class_name, (BaseModelSerializerMixin, CustomModelSerializer), attrs)
 
 
 def get_field(model, field_name):
@@ -234,9 +243,7 @@ def get_field(model, field_name):
     Returns:
         field 指定 model 的字段
     """
-    valid_fields = {
-        item.name: item for item in model._meta.get_fields()
-    }
+    valid_fields = {item.name: item for item in model._meta.get_fields()}
     if field_name in valid_fields:
         return valid_fields[field_name]
 
@@ -302,7 +309,9 @@ def sort_expand_fields(fields):
     return result
 
 
-def create_nested_serializer_class(model, field_list, exclude_fields=None, action=None, **kwargs):
+def create_nested_serializer_class(
+    model, field_list, exclude_fields=None, action=None, end_slug=None, **kwargs
+):
     """构建嵌套序列化类
 
     此方法仅仅为 multiple_create_serializer_class 方法服务
@@ -318,17 +327,24 @@ def create_nested_serializer_class(model, field_list, exclude_fields=None, actio
 
         if not value:
             attrs[key] = create_serializer_class(
-                field.related_model, exclude_fields=exclude_fields, action=action
+                field.related_model, exclude_fields=exclude_fields, action=action, end_slug=end_slug
             )(many=many)
         else:
             attrs[key] = create_nested_serializer_class(
-                field.related_model, value, exclude_fields=exclude_fields, action=action
+                field.related_model,
+                value,
+                exclude_fields=exclude_fields,
+                action=action,
+                end_slug=end_slug,
             )(many=many)
-    return create_serializer_class(model, exclude_fields=exclude_fields, action=action, **attrs)
+    return create_serializer_class(
+        model, exclude_fields=exclude_fields, action=action, end_slug=end_slug, **attrs
+    )
 
 
-def multiple_create_serializer_class(model, expand_fields,
-                                     tree_structure=None, exclude_fields=None, action=None):
+def multiple_create_serializer_class(
+    model, expand_fields, tree_structure=None, exclude_fields=None, action=None, end_slug=None
+):
     """多重创建序列化类"""
     attrs = {}
 
@@ -341,14 +357,19 @@ def multiple_create_serializer_class(model, expand_fields,
             many = False if field.one_to_one else True
 
         attrs[key] = create_nested_serializer_class(
-            field.related_model, value, exclude_fields=exclude_fields, action=action
+            field.related_model,
+            value,
+            exclude_fields=exclude_fields,
+            action=action,
+            end_slug=end_slug,
         )(many=many)
     return create_serializer_class(
         model,
         exclude_fields=exclude_fields,
         tree_structure=tree_structure,
         action=action,
-        **attrs
+        end_slug=end_slug,
+        **attrs,
     )
 
 
@@ -376,8 +397,4 @@ def get_export_serializer_class(model, serialier_class):
     class_name = f'{model.__name__}ModelExportSerializer'
 
     reset_serialzier_class = custom_export_mixin.get_serializer_class(serialier_class)
-    return type(
-        class_name,
-        (reset_serialzier_class, ),
-        {}
-    )
+    return type(class_name, (reset_serialzier_class,), {})
