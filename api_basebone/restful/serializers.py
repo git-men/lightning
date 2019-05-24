@@ -2,7 +2,6 @@ from collections import Mapping, OrderedDict
 
 from django.db import models
 from django.db.models.fields.related import ForeignKey, OneToOneField
-from jsonfield import JSONField
 from rest_framework import fields, serializers
 from rest_framework.fields import SkipField
 from rest_framework.relations import PKOnlyObject
@@ -13,6 +12,7 @@ from api_basebone.const.field_map import (
 )
 from api_basebone.core import drf_field, gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
+from api_basebone.core.fields import JSONField
 from api_basebone.drf.fields import CharIntegerField
 from api_basebone.utils import meta, module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key

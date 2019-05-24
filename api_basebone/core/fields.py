@@ -1,4 +1,6 @@
+import json
 from django.db import models
+from jsonfield import JSONField as OriginJSONField
 
 
 class BoneRichTextField(models.TextField):
@@ -27,3 +29,14 @@ class BoneFileUrlField(models.URLField):
 
     def get_bsm_internal_type(self):
         return 'BoneFileUrlField'
+
+
+class JSONField(OriginJSONField):
+    def get_prep_value(self, value):
+        """把对象转换为字符串"""
+        if self.null and value is None:
+            return None
+
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, **self.dump_kwargs)
+        return value

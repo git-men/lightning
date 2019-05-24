@@ -64,3 +64,15 @@ class JSONField(OriginJSONField):
         except (TypeError, ValueError):
             self.fail('invalid')
         return data
+
+    def to_representation(self, value):
+        if self.binary:
+            value = json.dumps(value)
+            # On python 2.x the return type for json.dumps() is underspecified.
+            # On python 3.x json.dumps() returns unicode strings.
+            if isinstance(value, six.text_type):
+                value = bytes(value.encode('utf-8'))
+
+        if isinstance(value, str):
+            value = json.loads(value)
+        return value

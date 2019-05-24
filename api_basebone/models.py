@@ -2,7 +2,8 @@ import logging
 
 from django.conf import settings
 from django.db import models
-from jsonfield import JSONField
+from api_basebone.core.fields import JSONField
+
 
 logger = logging.getLogger('django')
 

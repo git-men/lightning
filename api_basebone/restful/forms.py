@@ -1,7 +1,7 @@
-from jsonfield import JSONField
 from rest_framework import serializers
 
 from api_basebone.core import drf_field, gmeta
+from api_basebone.core.fields import JSONField
 from api_basebone.restful.const import CLIENT_END_SLUG, MANAGE_END_SLUG
 from api_basebone.utils import module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
