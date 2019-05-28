@@ -27,11 +27,11 @@ class MenuAdmin(BSMAdmin):
         model = Menu
 
 
-@register
-class PermissionAdmin(BSMAdmin):
-    display = ['']
-    class Meta:
-        model = Permission
+# @register
+# class PermissionAdmin(BSMAdmin):
+#     display = ['']
+#     class Meta:
+#         model = Permission
 
 
 class ContentType(BSMAdmin):
