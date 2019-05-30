@@ -1,6 +1,7 @@
-import csv
 import codecs
+import csv
 from collections import OrderedDict
+
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
@@ -8,11 +9,23 @@ from pydash import objects
 
 from api_basebone.core import gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
-from api_basebone.utils.gmeta import get_gmeta_config_by_key, get_attr_in_gmeta_class
+from api_basebone.utils.gmeta import get_attr_in_gmeta_class, get_gmeta_config_by_key
 from api_basebone.utils.timezone import local_timestamp
 
 
-def get_fields(model, serializer_class):
+def get_export_config_by_key(model, key, export_config=None):
+    """
+    获取指定键的导出配置数据
+    """
+    value = None
+    if isinstance(export_config, dict):
+        value = export_config.get(key)
+    if not value:
+        value = get_gmeta_config_by_key(model, key)
+    return value
+
+
+def get_fields(model, serializer_class, export_config):
     """获取导出的字段，显示名称的映射"""
     default_fields = OrderedDict()
     for item in model._meta.get_fields():
@@ -31,7 +44,9 @@ def get_fields(model, serializer_class):
         default_fields[key] = value['display_name']
 
     # 指定导出的字段
-    export_fields = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_EXPORT_FIELDS)
+    export_fields = get_export_config_by_key(
+        model, gmeta.GMETA_MANAGE_EXPORT_FIELDS, export_config
+    )
 
     if not isinstance(export_fields, (list, tuple)) or not export_fields:
         return default_fields
@@ -63,7 +78,7 @@ def row_with_relation_data(fields, reverse_field, object_id, data, relation_fiel
     return result
 
 
-def csv_render(model, queryset, serializer_class):
+def csv_render(model, queryset, serializer_class, export_config=None):
     """渲染数据"""
     app_label, model_name = model._meta.app_label, model._meta.model_name
     file_name = f'{app_label}-{model_name}-{local_timestamp()}'
@@ -73,14 +88,18 @@ def csv_render(model, queryset, serializer_class):
 
     response.write(codecs.BOM_UTF8)
 
-    fields = get_fields(model, serializer_class)
+    fields = get_fields(model, serializer_class, export_config)
     verbose_names = fields.values()
 
     writer = csv.writer(response)
     writer.writerow(verbose_names)
 
-    reverse_field = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_REVERSE_FIELD)
-    relation_field_map = get_gmeta_config_by_key(model, gmeta.GMETA_MANAGE_REVERSE_FIELDS_MAP)
+    reverse_field = get_export_config_by_key(
+        model, gmeta.GMETA_MANAGE_REVERSE_FIELD, export_config
+    )
+    relation_field_map = get_export_config_by_key(
+        model, gmeta.GMETA_MANAGE_REVERSE_FIELDS_MAP, export_config
+    )
 
     queryset_iter = queryset if isinstance(queryset, list) else queryset.iterator()
     for instance in queryset_iter:
@@ -93,7 +112,11 @@ def csv_render(model, queryset, serializer_class):
                 for r_item in reverse_relation.all().iterator():
                     writer.writerow(
                         row_with_relation_data(
-                            fields, reverse_field, r_item.id, instance_data, relation_field_map
+                            fields,
+                            reverse_field,
+                            r_item.id,
+                            instance_data,
+                            relation_field_map,
                         )
                     )
         else:
@@ -117,8 +140,12 @@ class ExcelResponse(HttpResponse):
 
     @content.setter
     def content(self, value):
-        self['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        self['Content-Disposition'] = 'attachment; filename={}.xlsx'.format(self.output_filename)
+        self[
+            'Content-Type'
+        ] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        self['Content-Disposition'] = 'attachment; filename={}.xlsx'.format(
+            self.output_filename
+        )
 
         workbook = self.build_excel()
         workbook = save_virtual_workbook(workbook)

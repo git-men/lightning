@@ -22,3 +22,15 @@ def get_admin_module(app_full_name, slug=BSM_ADMIN):
             return importlib.import_module(module_name)
     except ModuleNotFoundError:
         return
+
+
+def import_class_from_string(value):
+    """
+    尝试从一个字符串中加载一个类
+    """
+    try:
+        module_path, class_name = value.rsplit('.', 1)
+        module = importlib.import_module(module_path)
+        return getattr(module, class_name)
+    except (ImportError, AttributeError):
+        raise ImportError(f'不能加载 {value}')

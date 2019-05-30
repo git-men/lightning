@@ -34,7 +34,6 @@ from api_basebone.restful.serializers import (
 )
 from api_basebone.signals import post_bsm_create
 from api_basebone.utils import get_app, meta
-from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.utils.operators import build_filter_conditions
 
 from .user_pip import add_login_user_data
@@ -185,7 +184,9 @@ class GenericViewMixin:
 
         # 检测模型是否合法
         if self.model_slug not in apps.all_models[self.app_label]:
-            raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
+            raise exceptions.BusinessException(
+                error_code=exceptions.MODEL_SLUG_IS_INVALID
+            )
 
         self.model = apps.all_models[self.app_label][self.model_slug]
 
@@ -214,11 +215,15 @@ class GenericViewMixin:
 
                 # 检测应用是否在 INSTALLED_APPS 中
                 if get_app(self.app_label) not in settings.INSTALLED_APPS:
-                    raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.APP_LABEL_IS_INVALID
+                    )
 
                 # 检测模型是否合法
                 if self.model_slug not in apps.all_models[self.app_label]:
-                    raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.MODEL_SLUG_IS_INVALID
+                    )
 
                 self.model = apps.all_models[self.app_label][self.model_slug]
             else:
@@ -277,7 +282,11 @@ class GenericViewMixin:
                         pass
         elif self.action == 'export_file':
             self.expand_fields = copy.deepcopy(
-                get_gmeta_config_by_key(self.model, gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS)
+                renderers.get_export_config_by_key(
+                    self.model,
+                    gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS,
+                    self._export_type_config,
+                )
             )
 
     def _get_data_with_tree(self, request):
@@ -300,7 +309,9 @@ class GenericViewMixin:
                     if parent_field:
                         # 获取父亲字段数据，包含字段名，related_name 和 默认值
                         # 这些数据在其他地方会用到
-                        parent_field_data = meta.tree_parent_field(self.model, parent_field)
+                        parent_field_data = meta.tree_parent_field(
+                            self.model, parent_field
+                        )
                         if parent_field_data:
                             self.tree_data = parent_field_data
                 except Exception:
@@ -344,7 +355,9 @@ class GenericViewMixin:
 
         expand_fields = self.translate_expand_fields(expand_fields)
         field_list = [item.replace('.', '__') for item in expand_fields]
-        queryset = self._get_queryset(self.model.objects.all().prefetch_related(*field_list))
+        queryset = self._get_queryset(
+            self.model.objects.all().prefetch_related(*field_list)
+        )
         if admin_get_queryset:
             return admin_get_queryset(queryset, self.request, self)
         return queryset
@@ -363,7 +376,10 @@ class GenericViewMixin:
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
             serializer_class = create_serializer_class(
-                model, tree_structure=tree_data, action=self.action, end_slug=self.end_slug
+                model,
+                tree_structure=tree_data,
+                action=self.action,
+                end_slug=self.end_slug,
             )
         else:
             # 如果有展开字段，则创建嵌套的序列化类
@@ -437,7 +453,9 @@ class CommonManageViewSet(
 
         with transaction.atomic():
             log.debug(
-                'sending Post Save signal with: model: %s, instance: %s', self.model, instance
+                'sending Post Save signal with: model: %s, instance: %s',
+                self.model,
+                instance,
             )
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
         return success_response(serializer.data)
@@ -465,7 +483,9 @@ class CommonManageViewSet(
 
         with transaction.atomic():
             log.debug(
-                'sending Post Update signal with: model: %s, instance: %s', self.model, instance
+                'sending Post Update signal with: model: %s, instance: %s',
+                self.model,
+                instance,
             )
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
         return success_response(serializer.data)
@@ -531,7 +551,9 @@ class CommonManageViewSet(
                     error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                 )
         else:
-            raise exceptions.BusinessException(error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT)
+            raise exceptions.BusinessException(
+                error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+            )
 
         csv_file, excel_file = 'csv', 'excel'
         valid_list = (csv_file, excel_file)
@@ -540,13 +562,13 @@ class CommonManageViewSet(
         file_type = file_type if file_type in valid_list else csv_file
         queryset = self.filter_queryset(self.get_queryset())
 
-        serializer_class = None
-
-        serializer_queryset_handler = self._export_type_config.get('serializer_queryset_handler')
+        serializer_queryset_handler = self._export_type_config.get(
+            'serializer_queryset_handler'
+        )
         if serializer_queryset_handler:
             func_handler = getattr(admin_class, serializer_queryset_handler, None)
             if func_handler:
-                queryset, serializer_class = func_handler(queryset)
+                queryset = func_handler(queryset)
 
         actual_app_label = self._export_type_config.get('actual_app_label')
         actual_model_slug = self._export_type_config.get('actual_model_slug')
@@ -554,11 +576,15 @@ class CommonManageViewSet(
         if actual_app_label and actual_model_slug:
             self.model = apps.get_model(actual_app_label, actual_model_slug)
 
-        if not serializer_class:
-            serializer_class = get_export_serializer_class(self.model, self.get_serializer_class())
-        if file_type == csv_file:
-            return renderers.csv_render(self.model, queryset, serializer_class)
-        return renderers.ExcelResponse(self.model, queryset, serializer_class)
+        custom_serializer_class = self._export_type_config.get('serializer_class')
+        serializer_class = get_export_serializer_class(
+            self.model,
+            self.get_serializer_class(),
+            custom_serializer_class=custom_serializer_class,
+        )
+        return renderers.csv_render(
+            self.model, queryset, serializer_class, export_config=self._export_type_config
+        )
 
     @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, **kwargs):

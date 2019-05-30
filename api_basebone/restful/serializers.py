@@ -16,6 +16,7 @@ from api_basebone.core.fields import JSONField
 from api_basebone.drf.fields import CharIntegerField
 from api_basebone.utils import meta, module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
+from api_basebone.utils.module import import_class_from_string
 
 from .const import MANAGE_END_SLUG
 
@@ -404,7 +405,7 @@ def multiple_create_serializer_class(
     )
 
 
-def get_export_serializer_class(model, serialier_class):
+def get_export_serializer_class(model, serialier_class, custom_serializer_class=None):
     """获取导出的序列化类
 
     如果用户有自定义的导出类，则合并序列化类和用户自定义的，如果没有，则使用默认的序列化类
@@ -416,18 +417,22 @@ def get_export_serializer_class(model, serialier_class):
     Returns:
         class 表单类
     """
-
-    export_module = module.get_admin_module(
-        model._meta.app_config.name, module.BSM_EXPORT
-    )
-
+    custom_export_mixin = None
     class_name = '{}ExportSerializer'.format(model.__name__)
-    custom_export_mixin = getattr(export_module, class_name, None)
+
+    if custom_serializer_class is None:
+        export_module = module.get_admin_module(
+            model._meta.app_config.name, module.BSM_EXPORT
+        )
+        custom_export_mixin = getattr(export_module, class_name, None)
+    else:
+        _, class_name = custom_serializer_class.rsplit('.', 1)
+        custom_export_mixin = import_class_from_string(custom_serializer_class)
 
     if custom_export_mixin is None:
         return serialier_class
 
-    class_name = f'{model.__name__}ModelExportSerializer'
+    class_name = f'Model{class_name}'
 
     reset_serialzier_class = custom_export_mixin.get_serializer_class(serialier_class)
     return type(class_name, (reset_serialzier_class,), {})
