@@ -53,7 +53,6 @@ def add_login_user_data(view, data):
                         data[field_name] = user.id
             except Exception as e:
                 raise e
-                print(e)
 
     relation_fields = meta.get_all_relation_fields(model)
     if relation_fields:
@@ -89,7 +88,6 @@ def add_login_user_data(view, data):
                                             reverse_item[field_name] = user.id
                                 except Exception as e:
                                     raise e
-                                    print(e)
             else:
                 # 这里说明是正向字段
                 if item.many_to_many:
@@ -122,7 +120,6 @@ def add_login_user_data(view, data):
                                                 child_item[field_name] = user.id
                                     except Exception as e:
                                         raise e
-                                        print(e)
                 else:
                     # 使用字典数据结构
                     if isinstance(value, dict):
@@ -144,5 +141,4 @@ def add_login_user_data(view, data):
                                             value[field_name] = user
                                 except Exception as error:
                                     raise error
-                                    pass
     return data

@@ -91,7 +91,9 @@ class QuerySetMixin:
         if has_user_field:
             # 如果有，则读取模型中 GMeta 中的配置
             # FIXME: 注意，这里和管理端的处理逻辑暂时是不同的
-            user_field_name = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_USER_FIELD)
+            user_field_name = get_gmeta_config_by_key(
+                self.model, gmeta.GMETA_CLIENT_USER_FIELD
+            )
             filter_by_login_user = get_gmeta_config_by_key(
                 self.model, gmeta.GMETA_CLIENT_FILTER_BY_LOGIN_USER
             )
@@ -174,7 +176,9 @@ class GenericViewMixin:
 
     def check_permissions(self, request):
         """校验权限"""
-        action_skip = get_gmeta_config_by_key(self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP)
+        action_skip = get_gmeta_config_by_key(
+            self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP
+        )
         if isinstance(action_skip, (tuple, list)) and self.action in action_skip:
             return True
         super().check_permissions(request)
@@ -199,7 +203,9 @@ class GenericViewMixin:
 
         # 检测模型是否合法
         if self.model_slug not in apps.all_models[self.app_label]:
-            raise exceptions.BusinessException(error_code=exceptions.MODEL_SLUG_IS_INVALID)
+            raise exceptions.BusinessException(
+                error_code=exceptions.MODEL_SLUG_IS_INVALID
+            )
 
         self.model = apps.all_models[self.app_label][self.model_slug]
 
@@ -209,7 +215,11 @@ class GenericViewMixin:
         real_action = self.action
         if self.action == 'set':
             real_action = 'list'
-        if not expose or not expose.get('actions', None) or real_action not in expose['actions']:
+        if (
+            not expose
+            or not expose.get('actions', None)
+            or real_action not in expose['actions']
+        ):
             raise exceptions.BusinessException(
                 error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE
             )
@@ -273,7 +283,9 @@ class GenericViewMixin:
                     if parent_field:
                         # 获取父亲字段数据，包含字段名，related_name 和 默认值
                         # 这些数据在其他地方会用到
-                        parent_field_data = meta.tree_parent_field(self.model, parent_field)
+                        parent_field_data = meta.tree_parent_field(
+                            self.model, parent_field
+                        )
                         if parent_field_data:
                             self.tree_data = parent_field_data
                 except Exception:
@@ -331,7 +343,10 @@ class GenericViewMixin:
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
             return create_serializer_class(
-                model, exclude_fields=exclude_fields, tree_structure=tree_data, action=self.action
+                model,
+                exclude_fields=exclude_fields,
+                tree_structure=tree_data,
+                action=self.action,
             )
 
         # 如果有展开字段，则创建嵌套的序列化类
@@ -345,7 +360,9 @@ class GenericViewMixin:
         return serializer_class
 
 
-class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewSet):
+class CommonManageViewSet(
+    FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewSet
+):
     """通用的管理接口视图"""
 
     permission_classes = (permissions.IsAuthenticated,)
@@ -394,7 +411,9 @@ class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.M
 
             # with transaction.atomic():
             log.debug(
-                'sending Post Save signal with: model: %s, instance: %s', self.model, instance
+                'sending Post Save signal with: model: %s, instance: %s',
+                self.model,
+                instance,
             )
             post_bsm_create.send(sender=self.model, instance=instance, create=True)
             # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
@@ -420,7 +439,9 @@ class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.M
 
             # with transaction.atomic():
             log.debug(
-                'sending Post Update signal with: model: %s, instance: %s', self.model, instance
+                'sending Post Update signal with: model: %s, instance: %s',
+                self.model,
+                instance,
             )
             post_bsm_create.send(sender=self.model, instance=instance, create=False)
 
