@@ -15,17 +15,35 @@ logger = logging.getLogger('django')
 class AliYunOSS:
     """阿里云 OSS 类"""
 
-    OSS_ENDPOINT = settings.ALI_YUN_OSS_ENDPOINT
-    OSS_KEY = settings.ALI_YUN_OSS_KEY
-    OSS_SECRET = settings.ALI_YUN_OSS_SECRET
-    OSS_HOST = settings.ALI_YUN_OSS_HOST
-    OSS_BUCKET = settings.ALI_YUN_OSS_BUCKET
+    OSS_ENDPOINT = getattr(settings, 'ALI_YUN_OSS_ENDPOINT', None)
+    OSS_KEY = getattr(settings, 'ALI_YUN_OSS_KEY', None)
+    OSS_SECRET = getattr(settings, 'ALI_YUN_OSS_SECRET', None)
+    OSS_HOST = getattr(settings, 'ALI_YUN_OSS_HOST', None)
+    OSS_BUCKET = getattr(settings, 'ALI_YUN_OSS_BUCKET', None)
     OSS_CDN_HOST = getattr(settings, 'ALI_YUN_OSS_CDN_HOST', None)
 
     def __init__(self, *args, **kwargs):
-        self.auth = oss2.Auth(self.OSS_KEY, self.OSS_SECRET)
-        self.service = oss2.Service(self.auth, self.OSS_ENDPOINT)
-        self.bucket = oss2.Bucket(self.auth, self.OSS_ENDPOINT, self.OSS_BUCKET)
+        self._auth = None
+        self._service = None
+        self._bucket = None
+
+    @property
+    def auth(self):
+        if self._auth is None:
+            self._auth = oss2.Auth(self.OSS_KEY, self.OSS_SECRET)
+        return self._auth
+
+    @property
+    def service(self):
+        if self._service is None:
+            self._service = oss2.Service(self.auth, self.OSS_ENDPOINT)
+        return self._service
+
+    @property
+    def bucket(self):
+        if self._bucket is None:
+            self._bucket = oss2.Bucket(self.auth, self.OSS_ENDPOINT, self.OSS_BUCKET)
+        return self._bucket
 
     def local_timestamp(self):
         return arrow.utcnow().to(settings.TIME_ZONE).timestamp
