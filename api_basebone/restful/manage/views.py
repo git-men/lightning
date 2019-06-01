@@ -170,11 +170,9 @@ class QuerySetMixin:
             return queryset
 
         role_filters = get_valid_conditions(self.get_user_role_filters())
-        print(role_filters)
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         filter_conditions = get_valid_conditions(filter_conditions)
-        print(filter_conditions)
 
         admin_class = self.get_bsm_model_admin()
         if admin_class:
@@ -196,7 +194,6 @@ class QuerySetMixin:
             cons, excludes = build_filter_conditions(
                 list(filter_conditions.values()), context={'user': self.request.user}
             )
-            print(cons, excludes, 'this is filter conditions ------')
             if cons:
                 for item in cons.children:
                     query_params = {item[0]: item[1]}

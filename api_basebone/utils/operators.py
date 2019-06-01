@@ -32,7 +32,6 @@ def get_expression_value(item, context):
     """获取表达式的值"""
     object_key, attrs = None, None
     expression, expression_type = item.get('expression'), item.get('expression_type')
-
     if expression_type == 'object_attr':
         split_express = expression.split(".", 1)
         split_len = len(split_express)
@@ -61,8 +60,10 @@ def get_expression_value(item, context):
 
         split_express = expression.split("=", 1)
         field_key, template = split_express
-        value = django_engine.from_string(template).render(context=context)
-        return model.objects.filter(field_key=value)
+        filter_kwargs = {
+            field_key: django_engine.from_string(template).render(context=context)
+        }
+        return model.objects.filter(**filter_kwargs)
     return value
 
 
@@ -157,5 +158,5 @@ def get_valid_conditions(filters):
             if temp_set_keys:
                 temp_key = item["field"]
                 if temp_key not in result:
-                    result[temp_key] = {key: item[key] for key in temp_set_keys}
+                    result[temp_key] = item
     return result
