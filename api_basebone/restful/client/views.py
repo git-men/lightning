@@ -228,7 +228,8 @@ class GenericViewMixin:
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
-        add_login_user_data(self, request.data)
+        if self.action in ['create']:
+            add_login_user_data(self, request.data)
 
         return result
 
