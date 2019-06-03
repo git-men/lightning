@@ -497,7 +497,9 @@ class CommonManageViewSet(
         """
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
-            serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer = self.get_validate_form(self.action)(
+                data=request.data, context=self.get_serializer_context()
+            )
             serializer.is_valid(raise_exception=True)
 
             instance = self.perform_create(serializer)
@@ -524,7 +526,8 @@ class CommonManageViewSet(
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
             serializer = self.get_validate_form(self.action)(
-                instance, data=request.data, partial=partial
+                instance, data=request.data, partial=partial,
+                context=self.get_serializer_context()
             )
             serializer.is_valid(raise_exception=True)
 
