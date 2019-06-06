@@ -228,9 +228,6 @@ class GenericViewMixin:
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
-        if self.action in ['create']:
-            add_login_user_data(self, request.data)
-
         return result
 
     def get_expand_fields(self):
@@ -403,6 +400,7 @@ class CommonManageViewSet(
         """
 
         with transaction.atomic():
+            add_login_user_data(self, request.data)
             forward_relation_hand(self.model, request.data)
             serializer = self.get_validate_form(self.action)(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -424,6 +422,7 @@ class CommonManageViewSet(
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
         with transaction.atomic():
+            add_login_user_data(self, request.data)
             forward_relation_hand(self.model, request.data)
 
             partial = kwargs.pop('partial', False)
