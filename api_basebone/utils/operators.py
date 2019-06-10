@@ -102,8 +102,6 @@ def build_filter_conditions(filters, context=None):
             except Exception:
                 continue
 
-        print(item_value)
-
         if item["operator"] in ["!=", "!==", "<>"]:
             exclude_cons.append(Q(**{item["field"]: item_value}))
         else:
