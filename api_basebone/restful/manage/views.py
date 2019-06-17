@@ -221,7 +221,7 @@ class QuerySetMixin:
         # 权限中配置是否去重
         role_config = self.basebone_get_model_role_config()
         role_distict = False
-        if role_config and isinstance(role_config):
+        if role_config and isinstance(role_config, dict):
             role_distict = role_config.get(
                 basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
             )
