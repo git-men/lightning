@@ -40,6 +40,8 @@ BSM_GLOBAL_ROLES = 'ROLES'
 # 角色中的配置，是否使用 bsm admin 中的 use_admin_filter_by_login_user 配置进行筛选
 BSM_GLOBAL_ROLE_USE_ADMIN_FILTER_BY_LOGIN_USER = 'use_admin_filter_by_login_user'
 
+BSM_GLOBAL_ROLE_QS_DISTINCT = 'distinct'
+
 
 def get_admin_module(app_full_name, slug=BSM_ADMIN):
     """获取管理后台指定的模块"""

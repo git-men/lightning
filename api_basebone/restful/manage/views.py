@@ -92,7 +92,8 @@ class QuerySetMixin:
 
         key_prefix = f'{self.app_label}__{self.model_slug}'
         if isinstance(role_config, dict):
-            return role_config.get(key_prefix)
+            self.model_role_config = role_config.get(key_prefix)
+        return self.model_role_config
 
     def get_queryset_by_filter_user(self, queryset):
         """通过用户过滤对应的数据集
@@ -216,7 +217,15 @@ class QuerySetMixin:
             queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
 
         self.basebone_origin_queryset = queryset
-        if self.basebone_distinct_queryset:
+
+        # 权限中配置是否去重
+        role_config = self.basebone_get_model_role_config()
+        role_distict = False
+        if role_config and isinstance(role_config):
+            role_distict = role_config.get(
+                basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
+            )
+        if self.basebone_distinct_queryset or role_distict:
             return queryset.distinct()
         return queryset
 
@@ -526,8 +535,10 @@ class CommonManageViewSet(
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
             serializer = self.get_validate_form(self.action)(
-                instance, data=request.data, partial=partial,
-                context=self.get_serializer_context()
+                instance,
+                data=request.data,
+                partial=partial,
+                context=self.get_serializer_context(),
             )
             serializer.is_valid(raise_exception=True)
 
