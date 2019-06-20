@@ -170,7 +170,7 @@ class QuerySetMixin:
             }
         ]
         """
-        if not queryset:
+        if not queryset or self.action in ['create']:
             return queryset
 
         role_filters = get_valid_conditions(self.get_user_role_filters())
@@ -198,6 +198,7 @@ class QuerySetMixin:
             cons, excludes = build_filter_conditions(
                 list(filter_conditions.values()), context={'user': self.request.user}
             )
+
             if cons:
                 for item in cons.children:
                     query_params = {item[0]: item[1]}
@@ -513,14 +514,12 @@ class CommonManageViewSet(
                 data=request.data, context=self.get_serializer_context()
             )
             serializer.is_valid(raise_exception=True)
-
             instance = self.perform_create(serializer)
             # 如果有联合查询，单个对象创建后并没有联合查询
             instance = self.get_queryset().filter(id=instance.id).first()
             serializer = self.get_serializer(instance)
             reverse_relation_hand(self.model, request.data, instance, detail=False)
 
-        with transaction.atomic():
             log.debug(
                 'sending Post Save signal with: model: %s, instance: %s',
                 self.model,
