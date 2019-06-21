@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser
 
 from api_basebone.drf.response import success_response
 from api_basebone.export.admin import get_app_admin_config
@@ -37,7 +38,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         data = {'schemas': get_app_field_schema(), 'admins': get_app_admin_config()}
         return success_response(data)
 
-    @action(detail=False, url_path='manage/menu')
+    @action(detail=False, url_path='manage/menu', permission_classes=(IsAdminUser,))
     def get_manage_menu(self, request, *args, **kwargs):
         """获取管理端的菜单配置"""
         menu_module = module.get_bsm_global_module(module.BSM_GLOBAL_MODULE_MENU)

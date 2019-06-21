@@ -156,7 +156,7 @@ class QuerySetMixin:
 
         这里面的各种过滤条件的权重
 
-        - 角色配置的过滤条件 高
+        - 角色配置的过滤条件 高 
         - admin 配置的默认的过滤条件 中
         - 客户端传进来的过滤条件 低
 
@@ -173,30 +173,27 @@ class QuerySetMixin:
         if not queryset or self.action in ['create']:
             return queryset
 
-        role_filters = get_valid_conditions(self.get_user_role_filters())
-
-        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
-        filter_conditions = get_valid_conditions(filter_conditions)
+        role_filters = self.get_user_role_filters()
+        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS, [])
 
         admin_class = self.get_bsm_model_admin()
         if admin_class:
             default_filter = getattr(admin_class, admin.BSM_DEFAULT_FILTER, None)
-            default_filter = get_valid_conditions(default_filter)
+            default_filter = default_filter
             if default_filter:
-                filter_conditions = {
-                    key: value for key, value in filter_conditions.items()
-                }
-                filter_conditions.update(default_filter)
+                filter_conditions += default_filter
 
         if role_filters:
-            filter_conditions.update(role_filters)
+            filter_conditions += role_filters
 
         # 这里做个动作 1 校验过滤条件中的字段，是否需要对结果集去重 2 组装过滤条件
         if filter_conditions:
             # TODO: 这里没有做任何的检测，需要加上检测
-            self.basebone_check_distinct_queryset(filter_conditions.keys())
+            self.basebone_check_distinct_queryset(
+                list({item['field'] for item in filter_conditions})
+            )
             cons, excludes = build_filter_conditions(
-                list(filter_conditions.values()), context={'user': self.request.user}
+                filter_conditions, context={'user': self.request.user}
             )
 
             if cons:
