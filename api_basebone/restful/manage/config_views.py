@@ -64,7 +64,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         menu_module = module.get_bsm_global_module(module.BSM_GLOBAL_MODULE_MENU)
         result = getattr(menu_module, module.BSM_GLOBAL_MODULE_MENU_MANAGE, None)
 
-        by_role = settings.BSM_MANAGE_MENU_BY_ROLE
+        by_role = getattr(settings, 'BSM_MANAGE_MENU_BY_ROLE', False)
         if not by_role:
             return success_response(result['default'])
         else:
@@ -83,7 +83,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
 
     def _get_menu_from_autobuild(self):
         """根据模型自定义菜单"""
-        export_apps = settings.BSM_EXPORT_APPS
+        export_apps = getattr(settings, 'BSM_EXPORT_APPS', None)
         if not export_apps:
             return success_response([])
         try:
