@@ -4,14 +4,13 @@ from rest_framework.decorators import action
 
 from api_basebone.drf.response import success_response
 from api_basebone.restful.serializers import create_serializer_class
-
 from api_basebone.utils.aliyun import aliyun
 
 
 class UploadViewSet(viewsets.GenericViewSet):
     """通用上传接口"""
 
-    permission_classes = (permissions.IsAuthenticated, )
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_serializer_class(self):
         model = get_user_model()

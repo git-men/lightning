@@ -32,6 +32,12 @@ from api_basebone.restful.serializers import (
     get_export_serializer_class,
     multiple_create_serializer_class,
 )
+
+from api_basebone.restful.funcs import find_func
+
+from api_basebone.utils import meta, get_app, module as basebone_module
+from api_basebone.utils.operators import build_filter_conditions, get_valid_conditions
+from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.signals import post_bsm_create
 from api_basebone.utils import get_app, meta
 from api_basebone.utils.operators import build_filter_conditions
@@ -55,6 +61,9 @@ class FormMixin(object):
     def get_partial_update_form(self):
         return get_form_class(self.model, 'update', end=self.end_slug)
 
+    def get_custom_patch_form(self):
+        return get_form_class(self.model, 'update', end=self.end_slug)
+
     def get_validate_form(self, action):
         """获取验证表单"""
         return getattr(self, 'get_{}_form'.format(action))()
@@ -71,22 +80,49 @@ class QuerySetMixin:
         """获取 basebone 的管理类"""
         pass
 
+    def basebone_get_model_role_config(self):
+        """获取角色配置"""
+        if self.model_role_config is not None:
+            return self.model_role_config
+
+        role_config = getattr(
+            basebone_module.get_bsm_global_module(
+                basebone_module.BSM_GLOBAL_MODULE_ROLES
+            ),
+            basebone_module.BSM_GLOBAL_ROLES,
+            None,
+        )
+
+        key_prefix = f'{self.app_label}__{self.model_slug}'
+        if isinstance(role_config, dict):
+            self.model_role_config = role_config.get(key_prefix)
+        return self.model_role_config
+
     def get_queryset_by_filter_user(self, queryset):
         """通过用户过滤对应的数据集
 
         - 如果用户是超级用户，则不做任何过滤
         - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
+
+        FIXME: 这里先根据模型角色配置做出对应的响应
+
+        TODO: 当前一个用户只能属于一个用户组，如果用户没有属于任何组，则暂时不做任何处理
         """
         user = self.request.user
         if user and user.is_staff and user.is_superuser:
             return queryset
 
+        role_config = self.basebone_get_model_role_config()
+        if role_config:
+            # 如果
+            config_key = basebone_module.BSM_GLOBAL_ROLE_USE_ADMIN_FILTER_BY_LOGIN_USER
+            if role_config.get(config_key):
+                return queryset
+
         # 检测模型中是否有字段引用了用户模型
         has_user_field = meta.get_related_model_field(self.model, get_user_model())
         if has_user_field:
-            # 如果有，则读取 BSM Admin 中的配置
             admin_class = self.get_bsm_model_admin()
-
             if admin_class:
                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                 try:
@@ -108,9 +144,26 @@ class QuerySetMixin:
             return queryset.order_by(*fields)
         return queryset
 
+    def get_user_role_filters(self):
+        """获取此用户权限对应的过滤条件"""
+
+        user = self.request.user
+        if user and user.is_staff and user.is_superuser:
+            return []
+
+        role_config = self.basebone_get_model_role_config()
+        if role_config and isinstance(role_config, dict):
+            return role_config.get('filters')
+
     def get_queryset_by_filter_conditions(self, queryset):
         """
         用于检测客户端传入的过滤条件
+
+        这里面的各种过滤条件的权重
+
+        - 角色配置的过滤条件 高 
+        - admin 配置的默认的过滤条件 中
+        - 客户端传进来的过滤条件 低
 
         客户端传入的过滤条件的数据结构如下：
 
@@ -122,30 +175,36 @@ class QuerySetMixin:
             }
         ]
         """
-        if not queryset:
+        if not queryset or self.action in ['create']:
             return queryset
 
-        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
-        filter_conditions = filter_conditions if filter_conditions else []
+        role_filters = self.get_user_role_filters()
+        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS, [])
 
         admin_class = self.get_bsm_model_admin()
         if admin_class:
             default_filter = getattr(admin_class, admin.BSM_DEFAULT_FILTER, None)
-            if default_filter and isinstance(default_filter, list):
+            default_filter = default_filter
+            if default_filter:
                 filter_conditions += default_filter
+
+        if role_filters:
+            filter_conditions += role_filters
 
         # 这里做个动作 1 校验过滤条件中的字段，是否需要对结果集去重 2 组装过滤条件
         if filter_conditions:
             # TODO: 这里没有做任何的检测，需要加上检测
-            filter_fields = [
-                item['field']
-                for item in filter_conditions
-                if isinstance(item, dict) and 'field' in item
-            ]
-            self.basebone_check_distinct_queryset(filter_fields)
-            cons, excludes = build_filter_conditions(filter_conditions)
+            self.basebone_check_distinct_queryset(
+                list({item['field'] for item in filter_conditions})
+            )
+            cons, excludes = build_filter_conditions(
+                filter_conditions, context={'user': self.request.user}
+            )
+
             if cons:
-                queryset = queryset.filter(cons)
+                for item in cons.children:
+                    query_params = {item[0]: item[1]}
+                    queryset = queryset.filter(**query_params)
             if excludes:
                 queryset = queryset.exclude(excludes)
             return queryset
@@ -164,7 +223,15 @@ class QuerySetMixin:
             queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
 
         self.basebone_origin_queryset = queryset
-        if self.basebone_distinct_queryset:
+
+        # 权限中配置是否去重
+        role_config = self.basebone_get_model_role_config()
+        role_distict = False
+        if role_config and isinstance(role_config, dict):
+            role_distict = role_config.get(
+                basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
+            )
+        if self.basebone_distinct_queryset or role_distict:
             return queryset.distinct()
         return queryset
 
@@ -175,6 +242,9 @@ class GenericViewMixin:
     def check_app_model(self):
         # 是否对结果集进行去重
         self.basebone_distinct_queryset = False
+
+        # 模型角色配置
+        self.model_role_config = None
 
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
@@ -442,16 +512,16 @@ class CommonManageViewSet(
         """
         with transaction.atomic():
             forward_relation_hand(self.model, request.data)
-            serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer = self.get_validate_form(self.action)(
+                data=request.data, context=self.get_serializer_context()
+            )
             serializer.is_valid(raise_exception=True)
-
             instance = self.perform_create(serializer)
             # 如果有联合查询，单个对象创建后并没有联合查询
             instance = self.get_queryset().filter(id=instance.id).first()
             serializer = self.get_serializer(instance)
             reverse_relation_hand(self.model, request.data, instance, detail=False)
 
-        with transaction.atomic():
             log.debug(
                 'sending Post Save signal with: model: %s, instance: %s',
                 self.model,
@@ -469,7 +539,10 @@ class CommonManageViewSet(
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
             serializer = self.get_validate_form(self.action)(
-                instance, data=request.data, partial=partial
+                instance,
+                data=request.data,
+                partial=partial,
+                context=self.get_serializer_context(),
             )
             serializer.is_valid(raise_exception=True)
 
@@ -532,6 +605,11 @@ class CommonManageViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
+
+    @action(methods=['put'], detail=True, url_path='patch')
+    def custom_patch(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     @action(methods=['get', 'post'], detail=False, url_path='export/file')
     def export_file(self, request, *args, **kwargs):
