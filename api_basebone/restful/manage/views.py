@@ -146,6 +146,11 @@ class QuerySetMixin:
 
     def get_user_role_filters(self):
         """获取此用户权限对应的过滤条件"""
+
+        user = self.request.user
+        if user and user.is_staff and user.is_superuser:
+            return []
+
         role_config = self.basebone_get_model_role_config()
         if role_config and isinstance(role_config, dict):
             return role_config.get('filters')
