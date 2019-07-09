@@ -27,7 +27,7 @@ class Menu(models.Model):
         help_text='请使用AntDesign的图标:https://ant.design/components/icon-cn/',
     )
     parent = models.ForeignKey(
-        'self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单'
+        'self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单', related_name='children'
     )
     page = models.CharField(
         '页面', max_length=200, help_text='前端功能页面的标识', default='list', null=True, blank=True
@@ -74,6 +74,7 @@ class ContentTypeGMeta:
     computed_fields = [
         {'name': 'app_verbose_name', 'display_name': '模块', 'type': FieldType.STRING}
     ]
+    title_field = 'app_verbose_name'
 
 
 setattr(ContentType, 'app_verbose_name', app_verbose_name)

@@ -1,5 +1,6 @@
 from django.apps import apps
 from django.conf import settings
+from django.db.models import Q
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -55,8 +56,10 @@ class ConfigViewSet(viewsets.GenericViewSet):
             tree_structure=tree_data,
             action='list',
             end_slug=MANAGE_END_SLUG,
+            exclude_fields={'bsm_config__menu': ['id', 'parent', 'permission', 'sequence']},
         )
-        queryset = Menu.objects.all()
+        permissions = self.request.user.get_all_permissions()
+        queryset = Menu.objects.filter(Q(permission=None) | Q(permission='') | Q(permission__in=permissions), parent=None).order_by('sequence').all()
         return success_response(serializer_class(queryset, many=True).data)
 
     def _get_menu_from_custom(self):
