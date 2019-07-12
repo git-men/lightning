@@ -46,7 +46,7 @@ class Menu(models.Model):
         blank=True,
         null=True,
     )
-    sequence = models.PositiveIntegerField('排序', default=0, help_text='数值越小，排列越前')
+    sequence = models.PositiveIntegerField('排序', default=1000, help_text='数值越小，排列越前')
 
     class Meta:
         verbose_name = '导航菜单'
