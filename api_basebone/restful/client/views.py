@@ -122,8 +122,9 @@ class QuerySetMixin:
             }
         ]
         """
-        if not queryset:
-            return queryset
+        # 原先的写法是`if not queryset`，这样会引起queryset调用__bool__，并会触发fetch_all，导致请求变慢
+        # if not queryset.exists():
+        #     return queryset
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         if filter_conditions:
