@@ -74,7 +74,7 @@ class ContentTypeGMeta:
     computed_fields = [
         {'name': 'app_verbose_name', 'display_name': '模块', 'type': FieldType.STRING}
     ]
-    title_field = 'app_verbose_name'
+    title_field = 'model'
 
 
 setattr(ContentType, 'app_verbose_name', app_verbose_name)
