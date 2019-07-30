@@ -109,3 +109,5 @@ blog/
 member/
 service/
 manage.py
+
+.idea
