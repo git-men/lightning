@@ -32,15 +32,10 @@ def get_table_from_structure(document, app, model_name):
     row.append("默认值")
     l.append(row)
 
-    app_config = apps.get_app_config(app)
-    models = app_config.get_models()
+    # app_config = apps.get_app_config(app)
     model_class = apps.get_model(app, model_name)
-    # print(model_class)
-    # for model in models:
     field_config = get_model_field_config(model_class)
-    print(field_config.keys())
     fields = field_config[model_fullname].get('fields')
-    print(fields)
     for field in fields:
         row = []
         row.append(str(field.get('name', '')))
