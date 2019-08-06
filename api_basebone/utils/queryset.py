@@ -53,6 +53,9 @@ def get_relation_field_related_name(model, field_name):
         return
 
     related_name = field.remote_field.related_name
+
+    if field.one_to_one:
+        return field.remote_field.name, field
     if related_name is None:
         return '{}_set'.format(model.__name__.lower()), field
     return related_name, field
