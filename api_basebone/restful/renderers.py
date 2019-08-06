@@ -101,7 +101,7 @@ def csv_render(model, queryset, serializer_class, export_config=None):
         model, gmeta.GMETA_MANAGE_REVERSE_FIELDS_MAP, export_config
     )
 
-    queryset_iter = queryset if isinstance(queryset, list) else queryset.iterator()
+    queryset_iter = queryset if isinstance(queryset, list) else queryset.all()
     for instance in queryset_iter:
         instance_data = serializer_class(instance).data
         if reverse_field:

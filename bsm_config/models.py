@@ -74,7 +74,7 @@ class ContentTypeGMeta:
     computed_fields = [
         {'name': 'app_verbose_name', 'display_name': '模块', 'type': FieldType.STRING}
     ]
-    title_field = 'app_verbose_name'
+    title_field = 'model'
 
 
 setattr(ContentType, 'app_verbose_name', app_verbose_name)
@@ -115,7 +115,7 @@ def display_name(self):
 class PermissionGMeta:
     title_field = 'display_name'
     computed_fields = [
-        {'name': 'display_name', 'display_name': '名称', 'type': FieldType.STRING}
+        {'name': 'display_name', 'display_name': '显示名称', 'type': FieldType.STRING}
     ]
 
 

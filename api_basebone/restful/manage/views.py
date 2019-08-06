@@ -175,7 +175,8 @@ class QuerySetMixin:
             }
         ]
         """
-        if not queryset or self.action in ['create']:
+        # 原先的写法是`if not queryset or self.action in ['create']`，这样会引起queryset调用__bool__，并会触发fetch_all，导致请求变慢
+        if self.action in ['create']:
             return queryset
 
         role_filters = self.get_user_role_filters()
