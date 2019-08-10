@@ -1,3 +1,5 @@
+from django.db.models.query import QuerySet
+from django.db.models import Manager
 from .operators import build_filter_conditions
 from ..restful.serializers import multiple_create_serializer_class
 
@@ -78,16 +80,23 @@ def translate_expand_fields(_model, expand_fields):
     return expand_fields
 
 
-def serialize_queryset(queryset, action='list', expand_fields=None):
+def serialize_queryset(data, action='list', expand_fields=None):
+    if isinstance(data, QuerySet) or isinstance(data, Manager):
+        model = data.model
+        many = True
+    else:
+        model = data.__class__
+        many = False
+
     if expand_fields is None:
         expand_fields = []
     else:
-        expand_fields = translate_expand_fields(queryset.model, expand_fields)
+        expand_fields = translate_expand_fields(model, expand_fields)
         pass
     serializer_class = multiple_create_serializer_class(
-        queryset.model, expand_fields, action=action,
+        model, expand_fields, action=action,
     )
-    serializer = serializer_class(queryset, many=True)
+    serializer = serializer_class(data, many=many)
     return serializer.data
 
 
