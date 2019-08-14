@@ -6,6 +6,7 @@ from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core import gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
+from api_basebone.utils.format import underline_to_camel
 from api_basebone.utils.meta import (
     get_concrete_fields,
     get_export_apps,
@@ -292,14 +293,15 @@ def get_model_field_config(model):
         config.append(attrs)
 
     # 添加 annotated_field
-    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, [])
-    for field in annotated_fields:
+    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    for name, field in annotated_fields.items():
         attrs = {
             'required': False,
             'readonly': True,
+            'name': name,
         }
-        attrs.update(field)
-        attrs.setdefault('displayName', field['name'])
+        attrs.update({underline_to_camel(k): v for k, v in field.items()})
+        attrs.setdefault('displayName', name)
         del attrs['annotation']
         config.append(attrs)
 

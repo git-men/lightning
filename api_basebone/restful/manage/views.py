@@ -362,10 +362,10 @@ class GenericViewMixin:
             if admin_get_queryset:
                 queryset = admin_get_queryset(queryset, self.request, self)
 
-        annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, [])
+        annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
         if annotated_fields:
             # TODO 这个 v() 可以传入一些上下文参数
-            queryset = queryset.annotate(**{field['name']: field['annotation'] for field in annotated_fields})
+            queryset = queryset.annotate(**{name: field['annotation'] for name, field in annotated_fields.items()})
 
         return queryset
 

@@ -239,14 +239,12 @@ def create_serializer_class(
                     read_only=True
                 )
 
-    # 构建计算属性字段
-    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, [])
+    # 构建annotate算属性字段
+    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, {})
     if annotated_fields:
-        extra_fields += [f['name'] for f in annotated_fields]
-        for field in annotated_fields:
-            name = field['name']
-            field_type = field['type']
-            new_attr[name] = ComputedFieldTypeSerializerMap[field_type](read_only=True)
+        extra_fields += annotated_fields.keys()
+        for name, field in annotated_fields.items():
+            new_attr[name] = ComputedFieldTypeSerializerMap[field['type']](read_only=True)
 
     attrs = {
         'Meta': create_meta_class(
