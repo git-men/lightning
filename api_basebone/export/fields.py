@@ -291,6 +291,18 @@ def get_model_field_config(model):
         }
         config.append(attrs)
 
+    # 添加 annotated_field
+    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, [])
+    for field in annotated_fields:
+        attrs = {
+            'required': False,
+            'readonly': True,
+        }
+        attrs.update(field)
+        attrs.setdefault('displayName', field['name'])
+        del attrs['annotation']
+        config.append(attrs)
+
     ret = {
         'name': key,
         'displayName': model._meta.verbose_name,

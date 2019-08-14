@@ -88,6 +88,19 @@ computed_fields = (
 """
 GMETA_COMPUTED_FIELDS = 'computed_fields'
 
+"""
+使用Django的annotate来作计算字段
+annotated_fields = [
+    {
+        'name': 'account_num',
+        'display_name': '账号数量',
+        'annotation': models.Count('account'),
+        'type': FieldType.INTEGER,
+    }
+]
+"""
+GMETA_ANNOTATED_FIELDS = 'annotated_fields'
+
 GMETA_OBJECT_VALIDATORS = 'validators'
 
 """

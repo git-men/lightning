@@ -16,6 +16,7 @@ from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.drf.response import success_response
+from api_basebone.export.fields import get_attr_in_gmeta_class
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.forms import get_form_class
@@ -351,16 +352,21 @@ class GenericViewMixin:
         if not expand_fields:
             queryset = self._get_queryset(self.model.objects.all())
             if admin_get_queryset:
-                return admin_get_queryset(queryset, self.request, self)
-            return queryset
+                queryset = admin_get_queryset(queryset, self.request, self)
+        else:
+            expand_fields = self.translate_expand_fields(expand_fields)
+            field_list = [item.replace('.', '__') for item in expand_fields]
+            queryset = self._get_queryset(
+                self.model.objects.all().prefetch_related(*field_list)
+            )
+            if admin_get_queryset:
+                queryset = admin_get_queryset(queryset, self.request, self)
 
-        expand_fields = self.translate_expand_fields(expand_fields)
-        field_list = [item.replace('.', '__') for item in expand_fields]
-        queryset = self._get_queryset(
-            self.model.objects.all().prefetch_related(*field_list)
-        )
-        if admin_get_queryset:
-            return admin_get_queryset(queryset, self.request, self)
+        annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, [])
+        if annotated_fields:
+            # TODO 这个 v() 可以传入一些上下文参数
+            queryset = queryset.annotate(**{field['name']: field['annotation'] for field in annotated_fields})
+
         return queryset
 
     def get_serializer_class(self, expand_fields=None):

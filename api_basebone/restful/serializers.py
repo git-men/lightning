@@ -14,6 +14,7 @@ from api_basebone.core import drf_field, gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
 from api_basebone.core.fields import JSONField
 from api_basebone.drf.fields import CharIntegerField
+from api_basebone.export.fields import get_attr_in_gmeta_class
 from api_basebone.utils import meta, module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.utils.module import import_class_from_string
@@ -237,6 +238,15 @@ def create_serializer_class(
                 new_attr[name] = ComputedFieldTypeSerializerMap[field_type](
                     read_only=True
                 )
+
+    # 构建计算属性字段
+    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, [])
+    if annotated_fields:
+        extra_fields += [f['name'] for f in annotated_fields]
+        for field in annotated_fields:
+            name = field['name']
+            field_type = field['type']
+            new_attr[name] = ComputedFieldTypeSerializerMap[field_type](read_only=True)
 
     attrs = {
         'Meta': create_meta_class(
