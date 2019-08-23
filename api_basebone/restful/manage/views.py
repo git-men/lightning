@@ -348,24 +348,22 @@ class GenericViewMixin:
         if admin_class:
             admin_get_queryset = getattr(admin_class(), 'get_queryset', None)
 
+        queryset = self.model.objects.all()
+
         expand_fields = self.expand_fields
-        if not expand_fields:
-            queryset = self._get_queryset(self.model.objects.all())
-            if admin_get_queryset:
-                queryset = admin_get_queryset(queryset, self.request, self)
-        else:
+        if expand_fields:
             expand_fields = self.translate_expand_fields(expand_fields)
             field_list = [item.replace('.', '__') for item in expand_fields]
-            queryset = self._get_queryset(
-                self.model.objects.all().prefetch_related(*field_list)
-            )
-            if admin_get_queryset:
-                queryset = admin_get_queryset(queryset, self.request, self)
+            queryset = queryset.prefetch_related(*field_list)
 
         annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
         if annotated_fields:
-            # TODO 这个 v() 可以传入一些上下文参数
             queryset = queryset.annotate(**{name: field['annotation'] for name, field in annotated_fields.items()})
+
+        queryset = self._get_queryset(queryset)
+
+        if admin_get_queryset:
+            queryset = admin_get_queryset(queryset, self.request, self)
 
         return queryset
 
