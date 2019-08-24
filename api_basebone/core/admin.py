@@ -53,6 +53,9 @@ BSM_DEFAULT_FILTER = 'default_filter'
 # 统计数据的配置
 BSM_STATISTICS = 'statistics'
 
+# 允许排序的字段
+BSM_SORTABLE = 'sortable'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -72,6 +75,7 @@ VALID_MANAGE_ATTRS = [
     BSM_EXPORTABLE,
     BSM_STATISTICS,
     BSM_DISPLAY_IN_TREE,
+    BSM_SORTABLE,
 ]
 
 # 属性和默认值映射
