@@ -1,50 +1,56 @@
-import copy
-import json
 import logging
+import decimal
+import copy
 import requests
+import re
 
 from django.apps import apps
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.db import DatabaseError, transaction
 from django.http import HttpResponse
+from django.db import transaction
 
+from api_basebone.core import exceptions
+
+
+from api_basebone.core import admin, const, gmeta
+
+from django.contrib.auth import get_user_model
 from rest_framework import permissions, viewsets
-from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 
-from api_basebone.app.account.forms import UserCreateUpdateForm
-
-from api_basebone.core import admin, exceptions, const, gmeta
+# from rest_framework.decorators import action
 
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
 
-from api_basebone.restful import batch_actions
 from api_basebone.restful.const import CLIENT_END_SLUG
+
+
+# from api_basebone.services.api_services import API_RUNNER_MAP
+
+from rest_framework.exceptions import PermissionDenied
+
+from api_basebone.restful.serializers import create_serializer_class
+from api_basebone.restful.serializers import multiple_create_serializer_class
+from api_basebone.restful import batch_actions
 from api_basebone.restful.forms import get_form_class
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
-from api_basebone.restful.serializers import (
-    create_serializer_class,
-    multiple_create_serializer_class,
-)
 from api_basebone.restful.funcs import find_func
 
-from api_basebone.utils import meta, get_app
+from api_basebone.utils import meta
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
-from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.utils.operators import build_filter_conditions2
 from api_basebone.signals import post_bsm_create
 
 from .user_pip import add_login_user_data
 
+from api_basebone.models import Api
+from api_basebone.models import Parameter
+from api_basebone.models import Filter
+from api_basebone.models import Field
+
+from api_basebone.services import api_services
+
+
 log = logging.getLogger(__name__)
-
-exposed_apis = {}
-
-
-def register_api(app, exposed_data):
-    for model, data in exposed_data.items():
-        exposed_apis[f'{app}__{model}'] = data
 
 
 class FormMixin(object):
@@ -128,11 +134,9 @@ class QuerySetMixin:
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         if filter_conditions:
-            cons, exclude = build_filter_conditions(filter_conditions)
+            cons = build_filter_conditions2(filter_conditions)
             if cons:
                 queryset = queryset.filter(cons)
-            if exclude:
-                queryset = queryset.exclude(exclude)
         return queryset
 
     def get_queryset_by_exclude_conditions(self, queryset):
@@ -153,7 +157,7 @@ class QuerySetMixin:
 
         conditions = self.request.data.get(const.EXCLUDE_CONDITIONS)
         if conditions:
-            cons, _ = build_filter_conditions(conditions)
+            cons = build_filter_conditions2(conditions)
             if cons:
                 return queryset.exclude(cons)
         return queryset
@@ -175,55 +179,22 @@ class QuerySetMixin:
 class GenericViewMixin:
     """重写 GenericAPIView 中的某些方法"""
 
-    def check_permissions(self, request):
-        """校验权限"""
-        action_skip = get_gmeta_config_by_key(
-            self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP
-        )
-        if isinstance(action_skip, (tuple, list)) and self.action in action_skip:
-            return True
-        super().check_permissions(request)
+    # def check_permissions(self, request):
+    #     """校验权限"""
+    #     action_skip = get_gmeta_config_by_key(
+    #         self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP
+    #     )
+    #     if isinstance(action_skip, (tuple, list)) and self.action in action_skip:
+    #         return True
+    #     super().check_permissions(request)
 
     def perform_authentication(self, request):
         """
-        截断，校验对应的 app 和 model 是否合法以及赋予当前对象对应的属性值
-
-        - 检验 app 和 model 是否合法
-        - 加载 admin 模块
-        - 记录模型对象
         - 处理展开字段
         - 处理树形数据
         - 给数据自动插入用户数据
         """
         result = super().perform_authentication(request)
-        self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
-
-        # 检测应用是否在 INSTALLED_APPS 中
-        if get_app(self.app_label) not in settings.INSTALLED_APPS:
-            raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
-
-        # 检测模型是否合法
-        if self.model_slug not in apps.all_models[self.app_label]:
-            raise exceptions.BusinessException(
-                error_code=exceptions.MODEL_SLUG_IS_INVALID
-            )
-
-        self.model = apps.all_models[self.app_label][self.model_slug]
-
-        # 检测方法是否允许访问
-        model_str = f'{self.app_label}__{self.model_slug}'
-        expose = exposed_apis.get(model_str, None)
-        real_action = self.action
-        if self.action == 'set':
-            real_action = 'list'
-        if (
-            not expose
-            or not expose.get('actions', None)
-            or real_action not in expose['actions']
-        ):
-            raise exceptions.BusinessException(
-                error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE
-            )
 
         meta.load_custom_admin_module()
         self.get_expand_fields()
@@ -359,10 +330,8 @@ class GenericViewMixin:
         return serializer_class
 
 
-class CommonManageViewSet(
-    FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewSet
-):
-    """通用的管理接口视图"""
+class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewSet):
+    """"""
 
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = PageNumberPagination
@@ -381,16 +350,58 @@ class CommonManageViewSet(
         serializer = self.get_serializer(instance)
         return success_response(serializer.data)
 
+    def filter_display_fields(self, request, data):
+        display_fields = request.data.get(const.DISPLAY_FIELDS)
+        if not display_fields:
+            return data
+        display_fields_set = set()
+        for field_str in display_fields:
+            items = field_str.split('.')
+            for i in range(len(items)):
+                display_fields_set.add('.'.join(items[:i+1]))
+
+        results = []
+        for record in data:
+            display_record = self.filter_sub_display_fields(display_fields_set, record)
+            results.append(display_record)
+
+        return results
+
+    def filter_sub_display_fields(self, display_fields_set, record, prefix=''):
+        display_record = {}
+        for k, v in record.items():
+            if prefix:
+                full_key = prefix + '.' + k
+            else:
+                full_key = k
+            if isinstance(v, list):
+                if full_key not in display_fields_set:
+                    continue
+                display_record[k] = []
+                for d in v:
+                    sub_record = self.filter_sub_display_fields(display_fields_set, d, full_key)
+                    display_record[k].append(sub_record)
+            elif isinstance(v, dict):
+                if full_key not in display_fields_set:
+                    continue
+                display_record[k] = self.filter_sub_display_fields(display_fields_set, v, full_key)
+            elif full_key in display_fields_set:
+                display_record[k] = v
+        return display_record
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
+            result = self.filter_display_fields(request, serializer.data)
+            response = self.get_paginated_response(result)
             return success_response(response.data)
+
         serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+        result = self.filter_display_fields(request, serializer.data)
+        return success_response(result)
 
     def create(self, request, *args, **kwargs):
         """
@@ -402,7 +413,7 @@ class CommonManageViewSet(
         with transaction.atomic():
             add_login_user_data(self, request.data)
             forward_relation_hand(self.model, request.data)
-            serializer = self.get_validate_form(self.action)(data=request.data)
+            serializer = self.get_validate_form('create')(data=request.data)
             serializer.is_valid(raise_exception=True)
             instance = self.perform_create(serializer)
             reverse_relation_hand(self.model, request.data, instance, detail=False)
@@ -428,7 +439,8 @@ class CommonManageViewSet(
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
 
-            serializer = self.get_validate_form(self.action)(
+            action = 'update'
+            serializer = self.get_validate_form(action)(
                 instance, data=request.data, partial=partial
             )
             serializer.is_valid(raise_exception=True)
@@ -453,7 +465,7 @@ class CommonManageViewSet(
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
 
-    @action(methods=['put'], detail=True, url_path='patch')
+    # @action(methods=['put'], detail=True, url_path='patch')
     def custom_patch(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
@@ -464,7 +476,7 @@ class CommonManageViewSet(
         self.perform_destroy(instance)
         return success_response()
 
-    @action(methods=['POST'], detail=False, url_path='list')
+    # @action(methods=['POST'], detail=False, url_path='list')
     def set(self, request, app, model, **kwargs):
         """获取列表数据"""
         queryset = self.filter_queryset(self.get_queryset())
@@ -477,7 +489,7 @@ class CommonManageViewSet(
         serializer = self.get_serializer(queryset, many=True)
         return success_response(serializer.data)
 
-    @action(methods=['POST'], detail=False, url_path='batch')
+    # @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
         """
         ## 批量操作
@@ -493,15 +505,10 @@ class CommonManageViewSet(
         serializer.handle()
         return success_response()
 
-    @action(methods=['POST', 'GET'], detail=False, url_path='func')
-    def func(self, request, app, model, **kwargs):
+    # @action(methods=['POST', 'GET'], detail=False, url_path='func')
+    def func(self, request, app, model, func_name, params, **kwargs):
         """云函数, 由客户端直接调用的服务函数
         """
-
-        data = request.data
-        func_name = data.get('func_name', None) or request.GET.get('func_name', None)
-        params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
-
         func, options = find_func(app, model, func_name)
         if not func:
             raise exceptions.BusinessException(
@@ -526,3 +533,225 @@ class CommonManageViewSet(
             serializer = self.get_serializer(result)
             return success_response(serializer.data)
         return success_response()
+
+    def api(self, request, *args, **kwargs):
+        slug = kwargs.get('pk')
+        api = Api.objects.filter(slug=slug).first()
+        if not api:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data=f'没有\'{slug}\'这一api',
+            )
+
+        if request.method.lower() != api.method.lower():
+            raise exceptions.BusinessException(
+                error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE,
+                error_data=f'{request.method}此种请求不允许访问\"{slug}\"',
+            )
+        self.model = apps.all_models[api.app][api.model]
+        self.action = self.API_ACTION_MAP.get(api.operation, '')
+        api_runnser = self.API_RUNNER_MAP.get(api.operation)
+        return api_runnser(self, request, api, *args, **kwargs)
+
+    def get_config_parameters(self, api_id):
+        return Parameter.objects.filter(api__id=api_id).all()
+
+    def get_config_fields(self, api_id):
+        return Field.objects.filter(api__id=api_id).all()
+
+    def get_param_value(self, request, parameter):
+        value = request.GET.get(parameter.name) or request.POST.get(parameter.name) or parameter.default
+        if ((value is None) or (value == '')) and (parameter.required):
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data=f'{parameter.name}参数为必填',
+            )
+        if parameter.type == Parameter.TYPE_BOOLEAN:
+            value = bool(value)
+        elif parameter.type in (Parameter.TYPE_INT, Parameter.TYPE_PAGE_IDX, Parameter.TYPE_PAGE_SIZE):
+            value = int(value)
+        elif parameter.type == Parameter.TYPE_DECIMAL:
+            value = decimal.Decimal(value)
+        return value
+
+    def get_pk_value(self, request, api_id):
+        parameters = self.get_config_parameters(api_id)
+        for p in parameters:
+            if p.type == Parameter.TYPE_PK:
+                id = self.get_param_value(request, p)
+                if id:
+                    return id
+                else:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=f'没有\'{p.name}\'这一pk参数',
+                    )
+        else:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data='api没有配置pk参数',
+            )
+
+    def get_page_param(self, request, api_id):
+        parameters = self.get_config_parameters(api_id)
+        size = None
+        page = None
+        for p in parameters:
+            if p.type == Parameter.TYPE_PAGE_SIZE:
+                size = self.get_param_value(request, p)
+                if not size:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=f'没有\'{p.name}\'这一页长参数',
+                    )
+            elif p.type == Parameter.TYPE_PAGE_IDX:
+                page = self.get_param_value(request, p)
+                if not page:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=f'没有\'{p.name}\'这一页码参数',
+                    )
+
+        return size, page
+
+    def get_request_params(self, request, api_id):
+        parameters = self.get_config_parameters(api_id)
+        params = {}
+        for p in parameters:
+            if not p.is_special_defined():
+                params[p.name] = self.get_param_value(request, p)
+        return params
+
+    def run_func_api(self, request, api, *args, **kwargs):
+        parameters = self.get_config_parameters(api.id)
+        params = {}
+        for p in parameters:
+            params[p.name] = self.get_param_value(request, p)
+        return self.func(request, api.app, api.model, api.func_name, params, **kwargs)
+
+    def run_create_api(self, request, api, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def run_update_api(self, request, api, *args, **kwargs):
+        id = self.get_pk_value(request, api.id)
+        kwargs[self.lookup_field] = id
+        self.kwargs = kwargs
+        
+        return self.update(request, *args, **kwargs)
+
+    def run_replace_api(self, request, api, *args, **kwargs):
+        id = self.get_pk_value(request, api.id)
+        kwargs[self.lookup_field] = id
+        self.kwargs = kwargs
+        
+        return self.custom_patch(request, *args, **kwargs)
+
+    def run_delete_api(self, request, api, *args, **kwargs):
+        id = self.get_pk_value(request, api.id)
+        kwargs[self.lookup_field] = id
+        self.kwargs = kwargs
+        
+        return self.destroy(request, *args, **kwargs)
+
+    def run_retrieve_api(self, request, api, *args, **kwargs):
+        id = self.get_pk_value(request, api.id)
+        kwargs[self.lookup_field] = id
+        self.kwargs = kwargs
+        
+        return self.retrieve(request, *args, **kwargs)
+
+    def put_params_into_filters(self, filters, params):
+        for filter in filters:
+            self.put_param_into_one_filter(filter, params)
+
+    def put_param_into_one_filter(self, filter, params):
+        # if ('children' in filter) and (filter['children']):
+        if filter['type'] == Filter.TYPE_CONTAINER:
+            children = filter['children']
+            for child in children:
+                self.put_param_into_one_filter(child, params)
+        else:
+            if '${' in filter['value']:
+                pat = r'\${([\w\.-]+)}'
+                ls = re.findall(pat, filter['value'])
+                for k in ls:
+                    if not params:
+                        raise exceptions.BusinessException(
+                            error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                            error_data=f'filters设置的参数\'{k}\'为未定义参数',
+                        )
+                    v = params[k]
+                    filter['value'] = filter['value'].replace(f'${{{k}}}', f'{v}')
+
+            key_works = {'$$': '$', '{{': '}', '}}': '}'}
+            for k, v in key_works.items():
+                if k in filter['value']:
+                    filter['value'] = filter['value'].replace(k, v)
+
+    def get_config_expand_fields(self, fields):
+        expand_fields = set()
+        for field in fields:
+            nest_fields = field.name.split('.')
+            if len(nest_fields) > 1:
+                expand = '.'.join(nest_fields[:-1])
+                expand_fields.add(expand)
+        return list(expand_fields)
+
+    def run_list_api(self, request, api, *args, **kwargs):
+        data = request.data
+        if hasattr(data, '_mutable'):
+            data._mutable = True
+        data[const.ORDER_BY_FIELDS] = api.get_order_by_fields()
+        
+        params = self.get_request_params(request, api.id)
+        
+        filters = api_services.get_filters_json(api)
+        self.put_params_into_filters(filters, params)
+        data[const.FILTER_CONDITIONS] = filters
+
+        fields = self.get_config_fields(api.id)
+        self.expand_fields = self.get_config_expand_fields(fields)
+        # data['exclude_fields'] = {f'{api.app}__{api.model}': ['id']}
+        data[const.DISPLAY_FIELDS] = [f.name for f in fields]
+
+        size, page = self.get_page_param(request, api.id)
+
+        self.kwargs = {}
+        if size:
+            self.kwargs['size'] = size
+        if page:
+            self.kwargs['page'] = page
+
+        request.query_params._mutable = True
+        request.query_params.clear()
+        request.query_params.update(self.kwargs)
+        request.query_params._mutable = False
+        if hasattr(data, '_mutable'):
+            data._mutable = False
+
+        return self.list(request, *args, **self.kwargs)
+
+    # 放在最后
+    API_RUNNER_MAP = {
+        Api.OPERATION_LIST: run_list_api,
+        Api.OPERATION_RETRIEVE: run_retrieve_api,
+        Api.OPERATION_CREATE: run_create_api,
+        Api.OPERATION_UPDATE: run_update_api,
+        Api.OPERATION_REPLACE: run_replace_api,
+        Api.OPERATION_DELETE: run_delete_api,
+        Api.OPERATION_BATCH_UPDATE: None,
+        Api.OPERATION_BATCH_DELETE: None,
+        Api.OPERATION_FUNC: run_func_api,
+    }
+    
+    API_ACTION_MAP = {
+        Api.OPERATION_LIST: 'list',
+        Api.OPERATION_RETRIEVE: 'retrieve',
+        Api.OPERATION_CREATE: 'create',
+        Api.OPERATION_UPDATE: 'update',
+        Api.OPERATION_REPLACE: 'custom_patch',
+        Api.OPERATION_DELETE: 'destroy',
+        Api.OPERATION_BATCH_UPDATE: '',
+        Api.OPERATION_BATCH_DELETE: '',
+        Api.OPERATION_FUNC: 'func',
+    }

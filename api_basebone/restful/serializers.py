@@ -172,6 +172,7 @@ def create_meta_class(
             for f in model._meta.get_fields()
             if f.concrete and not isinstance(f, OneToOneField)
         ]
+    
     if extra_fields:
         flat_fields += extra_fields
 

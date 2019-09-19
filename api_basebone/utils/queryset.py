@@ -71,7 +71,9 @@ def translate_expand_fields(_model, expand_fields):
         for index, value in enumerate(field_list):
             field = model._meta.get_field(value)
             if check_field_is_reverse(field):
-                result = get_relation_field_related_name(field.related_model, field.remote_field.name)
+                result = get_relation_field_related_name(
+                    field.related_model, field.remote_field.name
+                )
                 if result:
                     field_list[index] = result[0]
             if field.is_relation:

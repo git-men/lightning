@@ -41,4 +41,6 @@ urlpatterns = [
             ('api_basebone.app.client_urls', app_name), namespace='client.app.basebone'
         ),
     ),
+    # 配置API接口处理器
+    path('api/', include(('api_basebone.api.urls', app_name), namespace='api')),
 ]
