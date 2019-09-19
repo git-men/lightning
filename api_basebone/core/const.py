@@ -88,6 +88,9 @@ GMETA_FIELD_CONFIG = 'field_form_config'
 
 此常量供业务内部调用
 """
-GMETA_FIELD_CONFIG_MAP = {
-    'verbose_name': 'displayName'
-}
+GMETA_FIELD_CONFIG_MAP = {'verbose_name': 'displayName'}
+
+"""
+api接口中，条件更新的接口update_by_condition中采用，表示update语句set的列值对
+"""
+SET_FIELDS = 'set_fields'

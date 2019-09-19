@@ -34,8 +34,8 @@ class Api(models.Model):
     OPERATION_UPDATE = 'update'
     OPERATION_REPLACE = 'replace'
     OPERATION_DELETE = 'delete'
-    OPERATION_BATCH_UPDATE = 'batch_update'
-    OPERATION_BATCH_DELETE = 'batch_delete'
+    OPERATION_UPDATE_BY_CONDITION = 'update_by_condition'
+    OPERATION_DELETE_BY_CONDITION = 'delete_by_condition'
     OPERATION_FUNC = 'func'
     OPERATIONS_CHOICES = (
         (OPERATION_LIST, '查看'),
@@ -44,10 +44,12 @@ class Api(models.Model):
         (OPERATION_UPDATE, '全部更新'),
         (OPERATION_REPLACE, '部分更新'),
         (OPERATION_DELETE, '删除'),
-        (OPERATION_BATCH_UPDATE, '批量更新'),
-        (OPERATION_BATCH_DELETE, '批量删除'),
+        (OPERATION_UPDATE_BY_CONDITION, '批量更新'),
+        (OPERATION_DELETE_BY_CONDITION, '批量删除'),
         (OPERATION_FUNC, '云函数'),
     )
+
+    OPERATIONS = set([t[0] for t in OPERATIONS_CHOICES])
 
     MATHOD_GET = 'get'
     MATHOD_POST = 'post'
@@ -62,8 +64,8 @@ class Api(models.Model):
         OPERATION_UPDATE: MATHOD_PUT,
         OPERATION_REPLACE: MATHOD_PATCH,
         OPERATION_DELETE: MATHOD_DELETE,
-        OPERATION_BATCH_UPDATE: MATHOD_PUT,
-        OPERATION_BATCH_DELETE: MATHOD_DELETE,
+        OPERATION_UPDATE_BY_CONDITION: MATHOD_PATCH,
+        OPERATION_DELETE_BY_CONDITION: MATHOD_DELETE,
         OPERATION_FUNC: MATHOD_POST,
     }
 
@@ -100,6 +102,17 @@ class Parameter(models.Model):
     TYPE_PAGE_SIZE = 'PAGE_SIZE'
     TYPE_PAGE_IDX = 'PAGE_IDX'
     TYPE_PK = 'pk'
+    TYPES = (
+        TYPE_STRING,
+        TYPE_INT,
+        TYPE_DECIMAL,
+        TYPE_BOOLEAN,
+        TYPE_PAGE_SIZE,
+        TYPE_PAGE_IDX,
+        TYPE_PK,
+    )
+
+    SPECIAL_TYPES = (TYPE_PAGE_SIZE, TYPE_PAGE_IDX, TYPE_PK)
 
     api = models.ForeignKey(Api, models.PROTECT, verbose_name='api')
     name = models.CharField('参数名', max_length=50)
@@ -110,7 +123,7 @@ class Parameter(models.Model):
 
     def is_special_defined(self):
         """自定义参数，用于特殊用途"""
-        return self.type in (self.TYPE_PAGE_SIZE, self.TYPE_PAGE_IDX, self.TYPE_PK)
+        return self.type in self.SPECIAL_TYPES
 
     def __str__(self):
         return self.name

@@ -49,6 +49,8 @@ from api_basebone.models import Field
 
 from api_basebone.services import api_services
 
+from . import api_param
+
 
 log = logging.getLogger(__name__)
 
@@ -403,6 +405,20 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         result = self.filter_display_fields(request, serializer.data)
         return success_response(result)
 
+    def delete_by_conditon(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        deleted, rows_count = queryset.delete()
+        result = {'deleted': deleted, 'rows_count': rows_count}
+
+        return success_response(result)
+
+    def update_by_conditon(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        set_fields = self.request.data.get(const.SET_FIELDS)
+        count = queryset.update(**set_fields)
+        result = {'count': count}
+        return success_response(result)
+
     def create(self, request, *args, **kwargs):
         """
         这里校验表单和序列化类分开创建
@@ -439,8 +455,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
 
-            action = 'update'
-            serializer = self.get_validate_form(action)(
+            serializer = self.get_validate_form(self.action)(
                 instance, data=request.data, partial=partial
             )
             serializer.is_valid(raise_exception=True)
@@ -660,33 +675,51 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         
         return self.retrieve(request, *args, **kwargs)
 
-    def put_params_into_filters(self, filters, params):
+    def put_params_into_filters(self, request, filters, params):
         for filter in filters:
-            self.put_param_into_one_filter(filter, params)
+            self.put_param_into_one_filter(request, filter, params)
 
-    def put_param_into_one_filter(self, filter, params):
+    def put_param_into_one_filter(self, request, filter, params):
         # if ('children' in filter) and (filter['children']):
         if filter['type'] == Filter.TYPE_CONTAINER:
             children = filter['children']
             for child in children:
-                self.put_param_into_one_filter(child, params)
+                self.put_param_into_one_filter(request, child, params)
         else:
-            if '${' in filter['value']:
-                pat = r'\${([\w\.-]+)}'
-                ls = re.findall(pat, filter['value'])
-                for k in ls:
-                    if not params:
-                        raise exceptions.BusinessException(
-                            error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                            error_data=f'filters设置的参数\'{k}\'为未定义参数',
-                        )
-                    v = params[k]
-                    filter['value'] = filter['value'].replace(f'${{{k}}}', f'{v}')
+            filter['value'] = self.replace_params(request, filter['value'], params)
 
-            key_works = {'$$': '$', '{{': '}', '}}': '}'}
-            for k, v in key_works.items():
-                if k in filter['value']:
-                    filter['value'] = filter['value'].replace(k, v)
+    def replace_params(self, request, s, params):
+        if '${' in s:
+            pat = r'\${([\w\.-]+)}'
+            ls = re.findall(pat, s)
+            for k in ls:
+                if k not in params:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=f'filters设置的参数\'{k}\'为未定义参数',
+                    )
+                v = params[k]
+                s = s.replace(f'${{{k}}}', f'{v}')
+        
+        if '#{' in s:
+            pat = r'#{([\w\.-]+)}'
+            ls = re.findall(pat, s)
+            for k in ls:
+                if k not in api_param.API_SERVER_PARAM:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                        error_data=f'服务端参数\'{k}\'为未定义参数',
+                    )
+                f = api_param.API_SERVER_PARAM[k]
+                v = f(request)
+                s = s.replace(f'#{{{k}}}', f'{v}')
+
+        key_works = {'$$': '$', '{{': '}', '}}': '}', '##': '#'}
+        for k, v in key_works.items():
+            if k in s:
+                s = s.replace(k, v)
+
+        return s
 
     def get_config_expand_fields(self, fields):
         expand_fields = set()
@@ -706,7 +739,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         params = self.get_request_params(request, api.id)
         
         filters = api_services.get_filters_json(api)
-        self.put_params_into_filters(filters, params)
+        self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
         fields = self.get_config_fields(api.id)
@@ -731,6 +764,44 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
 
         return self.list(request, *args, **self.kwargs)
 
+    def run_delete_by_condition_api(self, request, api, *args, **kwargs):
+        data = request.data
+        if hasattr(data, '_mutable'):
+            data._mutable = True
+        
+        params = self.get_request_params(request, api.id)
+        
+        filters = api_services.get_filters_json(api)
+        self.put_params_into_filters(request, filters, params)
+        data[const.FILTER_CONDITIONS] = filters
+
+        if hasattr(data, '_mutable'):
+            data._mutable = False
+
+        return self.delete_by_conditon(request, *args, **self.kwargs)
+
+    def run_update_by_condition_api(self, request, api, *args, **kwargs):
+        data = request.data
+        if hasattr(data, '_mutable'):
+            data._mutable = True
+        
+        params = self.get_request_params(request, api.id)
+
+        fields = self.get_config_fields(api.id)
+        if fields:
+            data[const.SET_FIELDS] = {}
+            for f in fields:
+                data[const.SET_FIELDS][f.name] = self.replace_params(request, f.value, params)
+        
+        filters = api_services.get_filters_json(api)
+        self.put_params_into_filters(request, filters, params)
+        data[const.FILTER_CONDITIONS] = filters
+
+        if hasattr(data, '_mutable'):
+            data._mutable = False
+
+        return self.update_by_conditon(request, *args, **self.kwargs)
+
     # 放在最后
     API_RUNNER_MAP = {
         Api.OPERATION_LIST: run_list_api,
@@ -739,8 +810,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         Api.OPERATION_UPDATE: run_update_api,
         Api.OPERATION_REPLACE: run_replace_api,
         Api.OPERATION_DELETE: run_delete_api,
-        Api.OPERATION_BATCH_UPDATE: None,
-        Api.OPERATION_BATCH_DELETE: None,
+        Api.OPERATION_UPDATE_BY_CONDITION: run_update_by_condition_api,
+        Api.OPERATION_DELETE_BY_CONDITION: run_delete_by_condition_api,
         Api.OPERATION_FUNC: run_func_api,
     }
     
@@ -751,7 +822,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         Api.OPERATION_UPDATE: 'update',
         Api.OPERATION_REPLACE: 'custom_patch',
         Api.OPERATION_DELETE: 'destroy',
-        Api.OPERATION_BATCH_UPDATE: '',
-        Api.OPERATION_BATCH_DELETE: '',
+        Api.OPERATION_UPDATE_BY_CONDITION: 'update_by_conditon',
+        Api.OPERATION_DELETE_BY_CONDITION: 'delete_by_conditon',
         Api.OPERATION_FUNC: 'func',
     }
