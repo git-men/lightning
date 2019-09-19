@@ -70,6 +70,10 @@ def get_expression_value(item, context):
 def build_filter_conditions(filters, context=None):
     """构造过滤器
 
+    return:
+        trans_cons:返回筛选条件（不等于的条件除外）
+        exclude_cons：返回带有不等于的条件
+
     Params:
         filters list 包含字典的列表数据
 
@@ -114,6 +118,79 @@ def build_filter_conditions(filters, context=None):
         reduce(operator.and_, trans_cons) if trans_cons else None,
         reduce(operator.and_, exclude_cons) if exclude_cons else None,
     )
+
+
+def build_filter_conditions2(filters, context=None):
+    """构造过滤器
+    跟build_filter_conditions不同得放的地方在于把返回的两个条件合并
+
+    return:
+        trans_cons:返回筛选条件
+
+    Params:
+        filters list 包含字典的列表数据
+
+        数据示例：
+            [
+                {
+                    field: xxxx,
+                    operator: xxxx,
+                    value: xxxx,
+                }
+            ]
+    """
+    if not filters or not isinstance(filters, list):
+        return None
+
+    if not isinstance(context, dict):
+        context = {}
+
+    trans_cons = []
+    for item in filters:
+        build_conditions_in_item(trans_cons, item, context)
+
+    return reduce(operator.and_, trans_cons) if trans_cons else None
+
+
+def build_conditions_in_item(trans_cons, item, context=None):
+    """依据部分子条件构建过滤器"""
+    if not isinstance(item, dict):
+        return
+
+    if ('children' in item) and item['children']:
+        sub_trans_cons = []
+        children = item.get('children')
+        for child in children:
+            build_conditions_in_item(sub_trans_cons, child, context)
+
+        if not sub_trans_cons:
+            return
+
+        if item['operator'].lower() == 'or':
+            sub_trans_cons = reduce(operator.or_, sub_trans_cons)
+        else:
+            sub_trans_cons = reduce(operator.and_, sub_trans_cons)
+
+        trans_cons.append(sub_trans_cons)
+    else:
+        valid_keys = {"field", "operator"}
+        if not valid_keys.issubset(set(item.keys())):
+            return
+
+        item_value = item.get("value")
+        if "expression" in item:
+            try:
+                item_value = get_expression_value(item, context)
+            except Exception:
+                return
+
+        if item["operator"] in ["!=", "!==", "<>"]:
+            trans_cons.append(~Q(**{item["field"]: item_value}))
+        else:
+            operate = OPERATOR_MAP.get(item["operator"], "")
+            field = item["field"]
+            key = f"{field}{operate}"
+            trans_cons.append(Q(**{key: item_value}))
 
 
 def get_valid_conditions(filters):

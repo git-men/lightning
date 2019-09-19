@@ -1,6 +1,6 @@
 from rest_framework.pagination import (
     _positive_int,
-    PageNumberPagination as OriginPageNumberPagination
+    PageNumberPagination as OriginPageNumberPagination,
 )
 from rest_framework.response import Response
 
@@ -23,7 +23,7 @@ class PageNumberPagination(OriginPageNumberPagination):
                 return _positive_int(
                     request.query_params[self.page_size_query_param],
                     strict=True,
-                    cutoff=self.max_page_size
+                    cutoff=self.max_page_size,
                 )
             except (KeyError, ValueError):
                 return
