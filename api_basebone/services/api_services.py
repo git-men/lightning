@@ -10,6 +10,7 @@ from api_basebone.models import Api, Parameter, Field, Filter
 
 
 def save_api(config):
+    """api配置信息保存到数据库"""
     slug = config.get('slug', '')
     api = Api.objects.filter(slug=slug).first()
     is_create = False
@@ -31,6 +32,7 @@ def save_api(config):
         api.func_name = config['func_name']
     else:
         if api.operation == api.OPERATION_FUNC:
+            """云函数api，却没有函数名"""
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 操作，必须有func_name函数名',
@@ -60,6 +62,7 @@ def save_parameters(api, parameters, is_create):
     for param in parameters:
         param_type = param.get('type')
         if param_type not in Parameter.TYPES:
+            """未定义的参数类型"""
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'type\': {param_type} 不是合法的类型',
@@ -69,6 +72,7 @@ def save_parameters(api, parameters, is_create):
             param_type in (Parameter.TYPE_PAGE_SIZE, Parameter.TYPE_PAGE_IDX)
             and api.operation != Api.OPERATION_LIST
         ):
+            """不是查询操作，不应该定义分页参数"""
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 操作不需要分页参数',
@@ -80,6 +84,7 @@ def save_parameters(api, parameters, is_create):
             Api.OPERATION_REPLACE,
             Api.OPERATION_DELETE,
         ):
+            """修改、删除、详情以外的操作，不需要主键"""
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 操作不需要主键参数',
@@ -91,6 +96,7 @@ def save_parameters(api, parameters, is_create):
             Api.OPERATION_REPLACE,
             Api.OPERATION_DELETE,
         ):
+            """修改、删除、详情，必须有主键"""
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 操作只能有主键参数',

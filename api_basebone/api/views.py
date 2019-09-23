@@ -16,15 +16,10 @@ from api_basebone.core import admin, const, gmeta
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, viewsets
 
-# from rest_framework.decorators import action
-
 from api_basebone.drf.response import success_response
 from api_basebone.drf.pagination import PageNumberPagination
 
 from api_basebone.restful.const import CLIENT_END_SLUG
-
-
-# from api_basebone.services.api_services import API_RUNNER_MAP
 
 from rest_framework.exceptions import PermissionDenied
 
@@ -353,9 +348,12 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return success_response(serializer.data)
 
     def filter_display_fields(self, request, data):
+        """从json数据中筛选，只保留显示的列"""
         display_fields = request.data.get(const.DISPLAY_FIELDS)
         if not display_fields:
+            """没有限制的情况下，显示所有"""
             return data
+        
         display_fields_set = set()
         for field_str in display_fields:
             items = field_str.split('.')
@@ -491,34 +489,34 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         self.perform_destroy(instance)
         return success_response()
 
-    # @action(methods=['POST'], detail=False, url_path='list')
-    def set(self, request, app, model, **kwargs):
-        """获取列表数据"""
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
+    # # @action(methods=['POST'], detail=False, url_path='list')
+    # def set(self, request, app, model, **kwargs):
+    #     """获取列表数据"""
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         response = self.get_paginated_response(serializer.data)
+    #         return success_response(response.data)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return success_response(serializer.data)
 
-    # @action(methods=['POST'], detail=False, url_path='batch')
-    def batch(self, request, app, model, **kwargs):
-        """
-        ## 批量操作
+    # # @action(methods=['POST'], detail=False, url_path='batch')
+    # def batch(self, request, app, model, **kwargs):
+    #     """
+    #     ## 批量操作
 
-        ```python
-        {action: 动作, data: 主键的列表}
-        ```
-        """
-        serializer = batch_actions.BatchActionForm(
-            data=request.data, context=self.get_serializer_context()
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.handle()
-        return success_response()
+    #     ```python
+    #     {action: 动作, data: 主键的列表}
+    #     ```
+    #     """
+    #     serializer = batch_actions.BatchActionForm(
+    #         data=request.data, context=self.get_serializer_context()
+    #     )
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.handle()
+    #     return success_response()
 
     # @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, func_name, params, **kwargs):
@@ -638,16 +636,20 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return params
 
     def run_func_api(self, request, api, *args, **kwargs):
+        """云函数api"""
         parameters = self.get_config_parameters(api.id)
         params = {}
         for p in parameters:
             params[p.name] = self.get_param_value(request, p)
+        
         return self.func(request, api.app, api.model, api.func_name, params, **kwargs)
 
     def run_create_api(self, request, api, *args, **kwargs):
+        """新建操作api"""
         return self.create(request, *args, **kwargs)
 
     def run_update_api(self, request, api, *args, **kwargs):
+        """更新操作api"""
         id = self.get_pk_value(request, api.id)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
@@ -655,13 +657,15 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return self.update(request, *args, **kwargs)
 
     def run_replace_api(self, request, api, *args, **kwargs):
+        """局部更新操作api"""
         id = self.get_pk_value(request, api.id)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
         
-        return self.custom_patch(request, *args, **kwargs)
+        return self.partial_update(request, *args, **kwargs)
 
     def run_delete_api(self, request, api, *args, **kwargs):
+        """删除操作api"""
         id = self.get_pk_value(request, api.id)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
@@ -669,6 +673,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return self.destroy(request, *args, **kwargs)
 
     def run_retrieve_api(self, request, api, *args, **kwargs):
+        """查询详情操作api"""
         id = self.get_pk_value(request, api.id)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
@@ -689,6 +694,9 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
             filter['value'] = self.replace_params(request, filter['value'], params)
 
     def replace_params(self, request, s, params):
+        """参数注入到列值或查询条件"""
+
+        # 用户自定义参数的注入
         if '${' in s:
             pat = r'\${([\w\.-]+)}'
             ls = re.findall(pat, s)
@@ -701,6 +709,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
                 v = params[k]
                 s = s.replace(f'${{{k}}}', f'{v}')
         
+        # 服务器定义参数的注入
         if '#{' in s:
             pat = r'#{([\w\.-]+)}'
             ls = re.findall(pat, s)
@@ -714,6 +723,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
                 v = f(request)
                 s = s.replace(f'#{{{k}}}', f'{v}')
 
+        # 敏感字符双写
         key_works = {'$$': '$', '{{': '}', '}}': '}', '##': '#'}
         for k, v in key_works.items():
             if k in s:
@@ -722,6 +732,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return s
 
     def get_config_expand_fields(self, fields):
+        """依据显示的列，展开属性"""
         expand_fields = set()
         for field in fields:
             nest_fields = field.name.split('.')
@@ -731,6 +742,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return list(expand_fields)
 
     def run_list_api(self, request, api, *args, **kwargs):
+        """查询api"""
         data = request.data
         if hasattr(data, '_mutable'):
             data._mutable = True
@@ -765,6 +777,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return self.list(request, *args, **self.kwargs)
 
     def run_delete_by_condition_api(self, request, api, *args, **kwargs):
+        """按条件删除的api"""
         data = request.data
         if hasattr(data, '_mutable'):
             data._mutable = True
@@ -781,6 +794,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         return self.delete_by_conditon(request, *args, **self.kwargs)
 
     def run_update_by_condition_api(self, request, api, *args, **kwargs):
+        """按条件更新的api"""
         data = request.data
         if hasattr(data, '_mutable'):
             data._mutable = True
