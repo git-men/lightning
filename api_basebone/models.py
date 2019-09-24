@@ -102,22 +102,23 @@ class Parameter(models.Model):
     TYPE_PAGE_SIZE = 'PAGE_SIZE'
     TYPE_PAGE_IDX = 'PAGE_IDX'
     TYPE_PK = 'pk'
-    TYPES = (
-        TYPE_STRING,
-        TYPE_INT,
-        TYPE_DECIMAL,
-        TYPE_BOOLEAN,
-        TYPE_PAGE_SIZE,
-        TYPE_PAGE_IDX,
-        TYPE_PK,
+    TYPES_CHOICES = (
+        (TYPE_STRING, '字符串'),
+        (TYPE_INT, '整数'),
+        (TYPE_DECIMAL, '浮点数'),
+        (TYPE_BOOLEAN, '布尔值'),
+        (TYPE_PAGE_SIZE, '页长'),
+        (TYPE_PAGE_IDX, '页码'),
+        (TYPE_PK, '主键'),
     )
+    TYPES = set([t[0] for t in TYPES_CHOICES])
 
     SPECIAL_TYPES = (TYPE_PAGE_SIZE, TYPE_PAGE_IDX, TYPE_PK)
 
-    api = models.ForeignKey(Api, models.PROTECT, verbose_name='api')
+    api = models.ForeignKey(Api, models.CASCADE, verbose_name='api')
     name = models.CharField('参数名', max_length=50)
     desc = models.CharField('备注', max_length=100)
-    type = models.CharField('参数类型', max_length=100)
+    type = models.CharField('参数类型', max_length=20, choices=TYPES_CHOICES)
     required = models.BooleanField('是否必填', default=True)
     default = models.CharField('默认值', max_length=50, null=True, default='')
 
@@ -133,19 +134,34 @@ class Parameter(models.Model):
         verbose_name_plural = '参数'
 
 
-class Field(models.Model):
+class DisplayField(models.Model):
     '''API的字段'''
 
-    api = models.ForeignKey(Api, models.PROTECT, verbose_name='api')
-    name = models.CharField('字段名', max_length=200)
-    value = models.CharField('赋值', max_length=100)
+    api = models.ForeignKey(Api, models.CASCADE, verbose_name='api')
+    name = models.CharField('字段名', max_length=100)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        verbose_name = 'API的字段'
-        verbose_name_plural = 'API的字段'
+        verbose_name = 'API的查询字段'
+        verbose_name_plural = 'API的查询字段'
+        ordering = ['name']  # 排序很重要，确保同一个分支的列会排在一起，且层级少的排在前面
+
+
+class SetField(models.Model):
+    '''API的字段'''
+
+    api = models.ForeignKey(Api, models.CASCADE, verbose_name='api')
+    name = models.CharField('字段名', max_length=100)
+    value = models.CharField('赋值', max_length=200)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = 'API的赋值字段'
+        verbose_name_plural = 'API的赋值字段'
         ordering = ['name']  # 排序很重要，确保同一个分支的列会排在一起，且层级少的排在前面
 
 

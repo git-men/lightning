@@ -25,7 +25,6 @@ from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.restful.serializers import create_serializer_class
 from api_basebone.restful.serializers import multiple_create_serializer_class
-from api_basebone.restful import batch_actions
 from api_basebone.restful.forms import get_form_class
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.restful.funcs import find_func
@@ -40,7 +39,8 @@ from .user_pip import add_login_user_data
 from api_basebone.models import Api
 from api_basebone.models import Parameter
 from api_basebone.models import Filter
-from api_basebone.models import Field
+from api_basebone.models import DisplayField
+from api_basebone.models import SetField
 
 from api_basebone.services import api_services
 
@@ -345,11 +345,12 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         """获取数据详情"""
         instance = self.get_object()
         serializer = self.get_serializer(instance)
-        return success_response(serializer.data)
-
-    def filter_display_fields(self, request, data):
-        """从json数据中筛选，只保留显示的列"""
         display_fields = request.data.get(const.DISPLAY_FIELDS)
+        result = self.filter_display_fields(serializer.data, display_fields)
+        return success_response(result)
+
+    def filter_display_fields(self, data, display_fields):
+        """从json数据中筛选，只保留显示的列"""
         if not display_fields:
             """没有限制的情况下，显示所有"""
             return data
@@ -360,12 +361,14 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
             for i in range(len(items)):
                 display_fields_set.add('.'.join(items[:i+1]))
 
-        results = []
-        for record in data:
-            display_record = self.filter_sub_display_fields(display_fields_set, record)
-            results.append(display_record)
-
-        return results
+        if isinstance(data, list):
+            results = []
+            for record in data:
+                display_record = self.filter_sub_display_fields(display_fields_set, record)
+                results.append(display_record)
+            return results
+        elif isinstance(data, dict):
+            return self.filter_sub_display_fields(display_fields_set, data)
 
     def filter_sub_display_fields(self, display_fields_set, record, prefix=''):
         display_record = {}
@@ -391,16 +394,17 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        display_fields = request.data.get(const.DISPLAY_FIELDS)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            result = self.filter_display_fields(request, serializer.data)
+            result = self.filter_display_fields(serializer.data, display_fields)
             response = self.get_paginated_response(result)
             return success_response(response.data)
 
         serializer = self.get_serializer(queryset, many=True)
-        result = self.filter_display_fields(request, serializer.data)
+        result = self.filter_display_fields(serializer.data, display_fields)
         return success_response(result)
 
     def delete_by_conditon(self, request, *args, **kwargs):
@@ -569,8 +573,11 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
     def get_config_parameters(self, api_id):
         return Parameter.objects.filter(api__id=api_id).all()
 
-    def get_config_fields(self, api_id):
-        return Field.objects.filter(api__id=api_id).all()
+    def get_config_display_fields(self, api_id):
+        return DisplayField.objects.filter(api__id=api_id).order_by('name').all()
+
+    def get_config_set_fields(self, api_id):
+        return SetField.objects.filter(api__id=api_id).all()
 
     def get_param_value(self, request, parameter):
         value = request.GET.get(parameter.name) or request.POST.get(parameter.name) or parameter.default
@@ -606,6 +613,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
             )
 
     def get_page_param(self, request, api_id):
+        """提取分页参数"""
         parameters = self.get_config_parameters(api_id)
         size = None
         page = None
@@ -644,9 +652,31 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         
         return self.func(request, api.app, api.model, api.func_name, params, **kwargs)
 
+    def filter_response_display(self, api_id, response):
+        """过滤resonse的返回属性"""
+        if 'result' in response.data:
+            display_fields = self.get_config_display_fields(api_id)
+            display_fields = [f.name for f in display_fields]
+            result = self.filter_display_fields(response.data['result'], display_fields)
+            response = success_response(result)
+
+        return response
+
     def run_create_api(self, request, api, *args, **kwargs):
         """新建操作api"""
-        return self.create(request, *args, **kwargs)
+        data = request.data
+        setattr(data, '_mutable', True)
+        params = self.get_request_params(request, api.id)
+        set_fields = self.get_config_set_fields(api.id)
+        new_data = {}
+        for f in set_fields:
+            new_data[f.name] = self.replace_params(request, f.value, params)
+
+        data.update(new_data)
+        setattr(data, '_mutable', False)
+
+        response = self.create(request, *args, **kwargs)
+        return self.filter_response_display(api.id, response)
 
     def run_update_api(self, request, api, *args, **kwargs):
         """更新操作api"""
@@ -654,7 +684,19 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
         
-        return self.update(request, *args, **kwargs)
+        data = request.data
+        setattr(data, '_mutable', True)
+        params = self.get_request_params(request, api.id)
+        set_fields = self.get_config_set_fields(api.id)
+        new_data = {}
+        for f in set_fields:
+            new_data[f.name] = self.replace_params(request, f.value, params)
+
+        data.update(new_data)
+        setattr(data, '_mutable', False)
+        
+        response = self.update(request, *args, **kwargs)
+        return self.filter_response_display(api.id, response)
 
     def run_replace_api(self, request, api, *args, **kwargs):
         """局部更新操作api"""
@@ -662,7 +704,19 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
         
-        return self.partial_update(request, *args, **kwargs)
+        data = request.data
+        setattr(data, '_mutable', True)
+        params = self.get_request_params(request, api.id)
+        set_fields = self.get_config_set_fields(api.id)
+        new_data = {}
+        for f in set_fields:
+            new_data[f.name] = self.replace_params(request, f.value, params)
+
+        data.update(new_data)
+        setattr(data, '_mutable', False)
+        
+        response = self.partial_update(request, *args, **kwargs)
+        return self.filter_response_display(api.id, response)
 
     def run_delete_api(self, request, api, *args, **kwargs):
         """删除操作api"""
@@ -677,6 +731,15 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         id = self.get_pk_value(request, api.id)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
+
+        data = request.data
+        if hasattr(data, '_mutable'):
+            data._mutable = True
+        fields = self.get_config_display_fields(api.id)
+        self.expand_fields = self.get_config_expand_fields(fields)
+        data[const.DISPLAY_FIELDS] = [f.name for f in fields]
+        if hasattr(data, '_mutable'):
+            data._mutable = False
         
         return self.retrieve(request, *args, **kwargs)
 
@@ -754,9 +817,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
-        fields = self.get_config_fields(api.id)
+        fields = self.get_config_display_fields(api.id)
         self.expand_fields = self.get_config_expand_fields(fields)
-        # data['exclude_fields'] = {f'{api.app}__{api.model}': ['id']}
         data[const.DISPLAY_FIELDS] = [f.name for f in fields]
 
         size, page = self.get_page_param(request, api.id)
@@ -801,10 +863,10 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewS
         
         params = self.get_request_params(request, api.id)
 
-        fields = self.get_config_fields(api.id)
-        if fields:
+        set_fields = self.get_config_set_fields(api.id)
+        if set_fields:
             data[const.SET_FIELDS] = {}
-            for f in fields:
+            for f in set_fields:
                 data[const.SET_FIELDS][f.name] = self.replace_params(request, f.value, params)
         
         filters = api_services.get_filters_json(api)

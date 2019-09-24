@@ -74,7 +74,7 @@ class ApiTestCase(TestCase):
                     "model": "api",
                     "operation": "func",
                     "func_name": "show_api",
-                    "parameters": [
+                    "parameter": [
                         {"name": "slug", "type": "string", "required": True, "desc": ""}
                     ],
                 }

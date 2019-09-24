@@ -1,4 +1,5 @@
 from django.db.models import Max
+from django.db import transaction
 
 from api_basebone.core import exceptions
 from api_basebone.restful.serializers import (
@@ -6,44 +7,44 @@ from api_basebone.restful.serializers import (
     multiple_create_serializer_class,
 )
 
-from api_basebone.models import Api, Parameter, Field, Filter
+from api_basebone.models import Api, Parameter, DisplayField, SetField, Filter
 
 
 def save_api(config):
     """api配置信息保存到数据库"""
-    slug = config.get('slug', '')
-    api = Api.objects.filter(slug=slug).first()
-    is_create = False
-    if not api:
-        api = Api()
-        api.slug = slug
-        is_create = True
-    api.app = config.get('app')
-    api.model = config.get('model')
-    api.operation = config.get('operation')
-    if api.operation not in Api.OPERATIONS:
-        raise exceptions.BusinessException(
-            error_code=exceptions.PARAMETER_FORMAT_ERROR,
-            error_data=f'\'operation\': {api.operation} 不是合法的操作',
-        )
-    if ('ordering' in config) and config['ordering']:
-        api.ordering = config['ordering']
-    if ('func_name' in config) and config['func_name']:
-        api.func_name = config['func_name']
-    else:
-        if api.operation == api.OPERATION_FUNC:
-            """云函数api，却没有函数名"""
+    with transaction.atomic():
+        slug = config.get('slug', '')
+        api = Api.objects.filter(slug=slug).first()
+        is_create = False
+        if not api:
+            api = Api()
+            api.slug = slug
+            is_create = True
+        api.app = config.get('app')
+        api.model = config.get('model')
+        api.operation = config.get('operation')
+        if api.operation not in Api.OPERATIONS:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'\'operation\': {api.operation} 操作，必须有func_name函数名',
+                error_data=f'\'operation\': {api.operation} 不是合法的操作',
             )
-    api.save()
+        if ('ordering' in config) and config['ordering']:
+            api.ordering = config['ordering']
+        if ('func_name' in config) and config['func_name']:
+            api.func_name = config['func_name']
+        else:
+            if api.operation == api.OPERATION_FUNC:
+                """云函数api，却没有函数名"""
+                raise exceptions.BusinessException(
+                    error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                    error_data=f'\'operation\': {api.operation} 操作，必须有func_name函数名',
+                )
+        api.save()
 
-    save_parameters(api, config.get('parameters'), is_create)
-
-    save_fields(api, config.get('fields'), is_create)
-
-    save_filters(api, config.get('filters'), is_create)
+        save_parameters(api, config.get('parameter'), is_create)
+        save_display_fields(api, config.get('displayfield'), is_create)
+        save_set_fields(api, config.get('setfield'), is_create)
+        save_filters(api, config.get('filter'), is_create)
 
 
 def save_parameters(api, parameters, is_create):
@@ -53,12 +54,13 @@ def save_parameters(api, parameters, is_create):
     if not parameters:
         return
 
-    if api.operation in (api.OPERATION_CREATE,):
-        raise exceptions.BusinessException(
-            error_code=exceptions.PARAMETER_FORMAT_ERROR,
-            error_data=f'\'operation\': {api.operation} 操作不需要parameter参数',
-        )
+    # if api.operation in (api.OPERATION_CREATE,):
+    #     raise exceptions.BusinessException(
+    #         error_code=exceptions.PARAMETER_FORMAT_ERROR,
+    #         error_data=f'\'operation\': {api.operation} 操作不需要parameter参数',
+    #     )
 
+    pk_count = 0
     for param in parameters:
         param_type = param.get('type')
         if param_type not in Parameter.TYPES:
@@ -78,29 +80,20 @@ def save_parameters(api, parameters, is_create):
                 error_data=f'\'operation\': {api.operation} 操作不需要分页参数',
             )
 
-        if param_type == Parameter.TYPE_PK and api.operation not in (
-            Api.OPERATION_RETRIEVE,
-            Api.OPERATION_UPDATE,
-            Api.OPERATION_REPLACE,
-            Api.OPERATION_DELETE,
-        ):
-            """修改、删除、详情以外的操作，不需要主键"""
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'\'operation\': {api.operation} 操作不需要主键参数',
-            )
-
-        if param_type != Parameter.TYPE_PK and api.operation in (
-            Api.OPERATION_RETRIEVE,
-            Api.OPERATION_UPDATE,
-            Api.OPERATION_REPLACE,
-            Api.OPERATION_DELETE,
-        ):
-            """修改、删除、详情，必须有主键"""
-            raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'\'operation\': {api.operation} 操作只能有主键参数',
-            )
+        if param_type == Parameter.TYPE_PK:
+            if api.operation in (
+                Api.OPERATION_RETRIEVE,
+                Api.OPERATION_UPDATE,
+                Api.OPERATION_REPLACE,
+                Api.OPERATION_DELETE,
+            ):
+                pk_count += 1
+            else:
+                """修改、删除、详情以外的操作，不需要主键"""
+                raise exceptions.BusinessException(
+                    error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                    error_data=f'\'operation\': {api.operation} 操作不需要主键参数',
+                )
 
         param_model = Parameter()
         param_model.api = api
@@ -113,26 +106,75 @@ def save_parameters(api, parameters, is_create):
 
         param_model.save()
 
+    if (pk_count != 1) and api.operation in (
+        Api.OPERATION_RETRIEVE,
+        Api.OPERATION_UPDATE,
+        Api.OPERATION_REPLACE,
+        Api.OPERATION_DELETE,
+    ):
+        """修改、删除、详情，必须有主键"""
+        raise exceptions.BusinessException(
+            error_code=exceptions.PARAMETER_FORMAT_ERROR,
+            error_data=f'\'operation\': {api.operation} 操作有且只能有一个主键参数',
+        )
 
-def save_fields(api, fields, is_create):
+
+def save_display_fields(api, fields, is_create):
     if not is_create:
-        Field.objects.filter(api__id=api.id).delete()
+        DisplayField.objects.filter(api__id=api.id).delete()
 
     if not fields:
         return
 
-    if api.operation not in (api.OPERATION_LIST, api.OPERATION_UPDATE_BY_CONDITION):
+    if api.operation not in (
+        api.OPERATION_LIST,
+        api.OPERATION_RETRIEVE,
+        api.OPERATION_CREATE,
+        api.OPERATION_UPDATE,
+        api.OPERATION_REPLACE,
+    ):
         raise exceptions.BusinessException(
             error_code=exceptions.PARAMETER_FORMAT_ERROR,
-            error_data=f'\'operation\': {api.operation} 操作不需要fields',
+            error_data=f'\'operation\': {api.operation} 操作不需要display-fields',
         )
 
     for field in fields:
-        field_model = Field()
+        field_model = DisplayField()
         field_model.api = api
         if isinstance(field, str):
             field_model.name = field
-        elif isinstance(field, list) and len(field) == 2:
+        elif isinstance(field, dict):
+            field_model.name = field.get('name')
+        else:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data='display-fields的格式不对',
+            )
+        field_model.save()
+
+
+def save_set_fields(api, fields, is_create):
+    if not is_create:
+        SetField.objects.filter(api__id=api.id).delete()
+
+    if not fields:
+        return
+
+    if api.operation not in (
+        api.OPERATION_CREATE,
+        api.OPERATION_UPDATE,
+        api.OPERATION_REPLACE,
+        api.OPERATION_UPDATE_BY_CONDITION,
+    ):
+        raise exceptions.BusinessException(
+            error_code=exceptions.PARAMETER_FORMAT_ERROR,
+            error_data=f'\'operation\': {api.operation} 操作不需要set-fields',
+        )
+
+    for field in fields:
+        field_model = SetField()
+        field_model.api = api
+        if isinstance(field, list) and len(field) == 2:
             field_model.name = field[0]
             field_model.value = field[1]
         elif isinstance(field, dict):
@@ -140,14 +182,19 @@ def save_fields(api, fields, is_create):
             if 'value' in field:
                 field_model.value = field.get('value')
             else:
-                if api.operation == api.OPERATION_UPDATE_BY_CONDITION:
+                if api.operation in (
+                    api.OPERATION_CREATE,
+                    api.OPERATION_UPDATE,
+                    api.OPERATION_REPLACE,
+                    api.OPERATION_UPDATE_BY_CONDITION,
+                ):
                     raise exceptions.BusinessException(
                         error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=f'\'operation\': {api.operation} 操作，必须有列值fields.value',
+                        error_data=f'\'operation\': {api.operation} 操作，必须有列值set-fields.value',
                     )
         else:
             raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data='fields的格式不对'
+                error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data='set-fields的格式不对'
             )
         field_model.save()
 
@@ -157,10 +204,18 @@ def save_filters(api, filters, is_create):
         Filter.objects.filter(api__id=api.id).delete()
 
     if not filters:
-        if api.operation == api.OPERATION_DELETE_BY_CONDITION:
+        if api.operation in (
+            api.OPERATION_DELETE_BY_CONDITION,
+            api.OPERATION_UPDATE_BY_CONDITION,
+        ):
+            if api.operation == api.OPERATION_DELETE_BY_CONDITION:
+                action = '删除'
+            else:
+                action = '更新'
+
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'\'operation\': {api.operation} 操作不允许无条件删除，必须有filters条件',
+                error_data=f'\'operation\': {api.operation} 操作不允许无条件{action}，必须有filters条件',
             )
         return
 
@@ -212,7 +267,7 @@ def save_one_filter(api, filter, parent=None):
 
 def show_api(slug):
     api = Api.objects.filter(slug=slug).first()
-    expand_fields = ['parameter_set', 'field_set']
+    expand_fields = ['parameter_set', 'displayfield_set', 'setfield_set']
     serializer_class = multiple_create_serializer_class(Api, expand_fields)
     serializer = serializer_class(api)
     result = serializer.data
@@ -226,8 +281,7 @@ def show_api(slug):
     #     result['fields'] = field_param
 
     filter_result = get_filters_json(api)
-    if filter_result:
-        result['filter'] = filter_result
+    result['filter'] = filter_result
 
     return result
 
