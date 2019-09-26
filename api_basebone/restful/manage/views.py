@@ -2,15 +2,10 @@ import copy
 import json
 import logging
 
-import requests
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.http import HttpResponse
-from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
@@ -18,59 +13,28 @@ from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.drf.response import success_response
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
-from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.funcs import find_func
 from api_basebone.restful.mixins import (
     ActionLogMixin,
     CheckValidateMixin,
     GroupStatisticsMixin,
     StatisticsMixin,
 )
-from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.restful.serializers import (
     create_serializer_class,
     get_export_serializer_class,
     multiple_create_serializer_class,
 )
 
-from api_basebone.restful.funcs import find_func
-
 from api_basebone.utils import meta, get_app, module as basebone_module
-from api_basebone.utils.operators import build_filter_conditions, get_valid_conditions
-from api_basebone.utils.gmeta import get_gmeta_config_by_key
-from api_basebone.signals import post_bsm_create
-from api_basebone.utils import get_app, meta
-from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.utils.operators import build_filter_conditions2
+from api_basebone.restful.mixins import FormMixin
+from api_basebone.restful.viewsets import BSMModelViewSet
+
+from api_basebone.services import rest_services
 
 from .user_pip import add_login_user_data
 
 log = logging.getLogger(__name__)
-
-
-class FormMixin(object):
-    """表单处理集合"""
-
-    def get_create_form(self):
-        """获取创建数据的验证表单"""
-        return get_form_class(self.model, 'create', end=self.end_slug)
-
-    def get_update_form(self):
-        """获取更新数据的验证表单"""
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_partial_update_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_custom_patch_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_validate_form(self, action):
-        """获取验证表单"""
-        return getattr(self, 'get_{}_form'.format(action))()
-
-    def get_bsm_model_admin(self):
-        """获取 BSM Admin 模块"""
-        return meta.get_bsm_model_admin(self.model)
 
 
 class QuerySetMixin:
@@ -198,7 +162,7 @@ class QuerySetMixin:
             self.basebone_check_distinct_queryset(
                 list({item['field'] for item in filter_conditions})
             )
-            cons, excludes = build_filter_conditions(
+            cons = build_filter_conditions2(
                 filter_conditions, context={'user': self.request.user}
             )
 
@@ -206,8 +170,6 @@ class QuerySetMixin:
                 for item in cons.children:
                     query_params = {item[0]: item[1]}
                     queryset = queryset.filter(**query_params)
-            if excludes:
-                queryset = queryset.exclude(excludes)
             return queryset
         return queryset
 
@@ -472,7 +434,7 @@ class CommonManageViewSet(
     GenericViewMixin,
     StatisticsMixin,
     GroupStatisticsMixin,
-    viewsets.ModelViewSet,
+    BSMModelViewSet,
 ):
     """通用的管理接口视图"""
 
@@ -481,29 +443,29 @@ class CommonManageViewSet(
 
     end_slug = MANAGE_END_SLUG
 
-    def perform_create(self, serializer):
-        return serializer.save()
+    # def perform_create(self, serializer):
+    #     return serializer.save()
 
-    def perform_update(self, serializer):
-        return serializer.save()
+    # def perform_update(self, serializer):
+    #     return serializer.save()
 
-    def retrieve(self, request, *args, **kwargs):
-        """获取数据详情"""
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(serializer.data)
+    # def retrieve(self, request, *args, **kwargs):
+    #     """获取数据详情"""
+    #     instance = self.get_object()
+    #     serializer = self.get_serializer(instance)
+    #     return success_response(serializer.data)
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+    # def list(self, request, *args, **kwargs):
+    #     queryset = self.filter_queryset(self.get_queryset())
 
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         response = self.get_paginated_response(serializer.data)
+    #         return success_response(response.data)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return success_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         """
@@ -511,82 +473,33 @@ class CommonManageViewSet(
 
         原因：序列化类有可能嵌套
         """
-        with transaction.atomic():
-            forward_relation_hand(self.model, request.data)
-            serializer = self.get_validate_form(self.action)(
-                data=request.data, context=self.get_serializer_context()
-            )
-            serializer.is_valid(raise_exception=True)
-            instance = self.perform_create(serializer)
-            # 如果有联合查询，单个对象创建后并没有联合查询
-            instance = self.get_queryset().filter(id=instance.id).first()
-            serializer = self.get_serializer(instance)
-            reverse_relation_hand(self.model, request.data, instance, detail=False)
-
-            log.debug(
-                'sending Post Save signal with: model: %s, instance: %s',
-                self.model,
-                instance,
-            )
-            post_bsm_create.send(sender=self.model, instance=instance, create=True)
-        return success_response(serializer.data)
+        return rest_services.manage_create(self, request)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-
-        with transaction.atomic():
-            forward_relation_hand(self.model, request.data)
-
-            partial = kwargs.pop('partial', False)
-            instance = self.get_object()
-            serializer = self.get_validate_form(self.action)(
-                instance,
-                data=request.data,
-                partial=partial,
-                context=self.get_serializer_context(),
-            )
-            serializer.is_valid(raise_exception=True)
-
-            instance = self.perform_update(serializer)
-            serializer = self.get_serializer(instance)
-
-            if getattr(instance, '_prefetched_objects_cache', None):
-                instance._prefetched_objects_cache = {}
-
-            reverse_relation_hand(self.model, request.data, instance)
-
-        with transaction.atomic():
-            log.debug(
-                'sending Post Update signal with: model: %s, instance: %s',
-                self.model,
-                instance,
-            )
-            post_bsm_create.send(sender=self.model, instance=instance, create=False)
-        return success_response(serializer.data)
+        # partial = kwargs.pop('partial', False)
+        return rest_services.manage_update(self, request, False)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
+        # kwargs['partial'] = True
+        return rest_services.manage_update(self, request, True)
 
-    def destroy(self, request, *args, **kwargs):
-        """删除数据"""
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return success_response()
+    @action(methods=['put'], detail=True, url_path='patch')
+    def custom_patch(self, request, *args, **kwargs):
+        # kwargs['partial'] = True
+        return rest_services.manage_update(self, request, True)
 
-    @action(methods=['POST'], detail=False, url_path='list')
-    def set(self, request, app, model, **kwargs):
-        """获取列表数据"""
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
+    # def destroy(self, request, *args, **kwargs):
+    #     """删除数据"""
+    #     instance = self.get_object()
+    #     self.perform_destroy(instance)
+    #     return success_response()
 
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+    # @action(methods=['POST'], detail=False, url_path='list')
+    # def set(self, request, app, model, **kwargs):
+    #     """获取列表数据"""
+    #     return self.list(request, app, model, **kwargs)
 
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
@@ -606,11 +519,6 @@ class CommonManageViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
-
-    @action(methods=['put'], detail=True, url_path='patch')
-    def custom_patch(self, request, *args, **kwargs):
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
 
     @action(methods=['get', 'post'], detail=False, url_path='export/file')
     def export_file(self, request, *args, **kwargs):
@@ -669,37 +577,10 @@ class CommonManageViewSet(
     def func(self, request, app, model, **kwargs):
         """云函数, 由客户端直接调用的服务函数
         """
-
         data = request.data
         func_name = data.get('func_name', None) or request.GET.get('func_name', None)
         params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
-        # import ipdb; ipdb.set_trace()
-        func, options = find_func(app, model, func_name)
-        if not func:
-            raise exceptions.BusinessException(
-                error_code=exceptions.FUNCTION_NOT_FOUNT,
-                error_data=f'no such func: {func_name} found',
-            )
-        if options.get('login_required', False):
-            if not request.user.is_authenticated:
-                raise PermissionDenied()
-        if options.get('staff_required', False):
-            if not request.user.is_staff:
-                raise PermissionDenied()
-        if options.get('superuser_required', False):
-            if not request.user.is_superuser:
-                raise PermissionDenied()
+        return rest_services.manage_func(
+            self, request.user, app, model, func_name, params
+        )
 
-        view_context = {'view': self}
-        params['view_context'] = view_context
-        result = func(request.user, **params)
-
-        # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
-        if isinstance(result, requests.Response):
-            response = HttpResponse(result, result.headers.get('Content-Type', None))
-            if 'Content-disposition' in result.headers:
-                response['Content-disposition'] = result.headers.get('Content-disposition')
-            return response
-        if isinstance(result, list) or isinstance(result, dict):
-            return success_response(result)
-        return success_response()

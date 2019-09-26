@@ -1,19 +1,13 @@
 import copy
 import json
 import logging
-import requests
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import DatabaseError, transaction
-from django.http import HttpResponse
 
-from rest_framework import permissions, viewsets
+from rest_framework import permissions
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
-
-from api_basebone.app.account.forms import UserCreateUpdateForm
 
 from api_basebone.core import admin, exceptions, const, gmeta
 
@@ -22,20 +16,18 @@ from api_basebone.drf.pagination import PageNumberPagination
 
 from api_basebone.restful import batch_actions
 from api_basebone.restful.const import CLIENT_END_SLUG
-from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
+from api_basebone.restful.mixins import FormMixin
 from api_basebone.restful.serializers import (
     create_serializer_class,
     multiple_create_serializer_class,
 )
-from api_basebone.restful.funcs import find_func
 
 from api_basebone.utils import meta, get_app
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
-from api_basebone.utils.operators import build_filter_conditions
-from api_basebone.signals import post_bsm_create
+from api_basebone.utils.operators import build_filter_conditions2
 
-from .user_pip import add_login_user_data
+from api_basebone.restful.viewsets import BSMModelViewSet
+from api_basebone.services import rest_services
 
 log = logging.getLogger(__name__)
 
@@ -45,32 +37,6 @@ exposed_apis = {}
 def register_api(app, exposed_data):
     for model, data in exposed_data.items():
         exposed_apis[f'{app}__{model}'] = data
-
-
-class FormMixin(object):
-    """表单处理集合"""
-
-    def get_create_form(self):
-        """获取创建数据的验证表单"""
-        return get_form_class(self.model, 'create', end=self.end_slug)
-
-    def get_update_form(self):
-        """获取更新数据的验证表单"""
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_partial_update_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_custom_patch_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_validate_form(self, action):
-        """获取验证表单"""
-        return getattr(self, 'get_{}_form'.format(action))()
-
-    def get_bsm_model_admin(self):
-        """获取 BSM Admin 模块"""
-        return meta.get_bsm_model_admin(self.model)
 
 
 class QuerySetMixin:
@@ -128,11 +94,9 @@ class QuerySetMixin:
 
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
         if filter_conditions:
-            cons, exclude = build_filter_conditions(filter_conditions)
+            cons = build_filter_conditions2(filter_conditions)
             if cons:
                 queryset = queryset.filter(cons)
-            if exclude:
-                queryset = queryset.exclude(exclude)
         return queryset
 
     def get_queryset_by_exclude_conditions(self, queryset):
@@ -153,7 +117,7 @@ class QuerySetMixin:
 
         conditions = self.request.data.get(const.EXCLUDE_CONDITIONS)
         if conditions:
-            cons, _ = build_filter_conditions(conditions)
+            cons = build_filter_conditions2(conditions)
             if cons:
                 return queryset.exclude(cons)
         return queryset
@@ -359,9 +323,7 @@ class GenericViewMixin:
         return serializer_class
 
 
-class CommonManageViewSet(
-    FormMixin, QuerySetMixin, GenericViewMixin, viewsets.ModelViewSet
-):
+class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, BSMModelViewSet):
     """通用的管理接口视图"""
 
     permission_classes = (permissions.IsAuthenticated,)
@@ -369,28 +331,28 @@ class CommonManageViewSet(
 
     end_slug = CLIENT_END_SLUG
 
-    def perform_create(self, serializer):
-        return serializer.save()
+    # def perform_create(self, serializer):
+    #     return serializer.save()
 
-    def perform_update(self, serializer):
-        return serializer.save()
+    # def perform_update(self, serializer):
+    #     return serializer.save()
 
-    def retrieve(self, request, *args, **kwargs):
-        """获取数据详情"""
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(serializer.data)
+    # def retrieve(self, request, *args, **kwargs):
+    #     """获取数据详情"""
+    #     instance = self.get_object()
+    #     serializer = self.get_serializer(instance)
+    #     return success_response(serializer.data)
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+    # def list(self, request, *args, **kwargs):
+    #     queryset = self.filter_queryset(self.get_queryset())
 
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         response = self.get_paginated_response(serializer.data)
+    #         return success_response(response.data)
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return success_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         """
@@ -398,84 +360,33 @@ class CommonManageViewSet(
 
         原因：序列化类有可能嵌套
         """
-
-        with transaction.atomic():
-            add_login_user_data(self, request.data)
-            forward_relation_hand(self.model, request.data)
-            serializer = self.get_validate_form(self.action)(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            instance = self.perform_create(serializer)
-            reverse_relation_hand(self.model, request.data, instance, detail=False)
-            instance = self.get_queryset().get(id=instance.id)
-
-            # with transaction.atomic():
-            log.debug(
-                'sending Post Save signal with: model: %s, instance: %s',
-                self.model,
-                instance,
-            )
-            post_bsm_create.send(sender=self.model, instance=instance, create=True)
-            # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
-            serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
-            return success_response(serializer.data)
+        return rest_services.client_create(self, request)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-        with transaction.atomic():
-            add_login_user_data(self, request.data)
-            forward_relation_hand(self.model, request.data)
-
-            partial = kwargs.pop('partial', False)
-            instance = self.get_object()
-
-            serializer = self.get_validate_form(self.action)(
-                instance, data=request.data, partial=partial
-            )
-            serializer.is_valid(raise_exception=True)
-            instance = self.perform_update(serializer)
-
-            reverse_relation_hand(self.model, request.data, instance)
-            instance = self.get_queryset().get(id=instance.id)
-
-            # with transaction.atomic():
-            log.debug(
-                'sending Post Update signal with: model: %s, instance: %s',
-                self.model,
-                instance,
-            )
-            post_bsm_create.send(sender=self.model, instance=instance, create=False)
-
-            serializer = self.get_serializer(self.get_queryset().get(id=instance.id))
-            return success_response(serializer.data)
+        # partial = kwargs.pop('partial', False)
+        return rest_services.client_update(self, request, False)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
+        # kwargs['partial'] = True
+        return rest_services.client_update(self, request, True)
 
     @action(methods=['put'], detail=True, url_path='patch')
     def custom_patch(self, request, *args, **kwargs):
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
+        # kwargs['partial'] = True
+        return rest_services.client_update(self, request, True)
 
-    def destroy(self, request, *args, **kwargs):
-        """删除数据"""
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return success_response()
+    # def destroy(self, request, *args, **kwargs):
+    #     """删除数据"""
+    #     instance = self.get_object()
+    #     self.perform_destroy(instance)
+    #     return success_response()
 
-    @action(methods=['POST'], detail=False, url_path='list')
-    def set(self, request, app, model, **kwargs):
-        """获取列表数据"""
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+    # @action(methods=['POST'], detail=False, url_path='list')
+    # def set(self, request, app, model, **kwargs):
+    #     """获取列表数据"""
+    #     return self.list(request, app, model, **kwargs)
 
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
@@ -497,32 +408,10 @@ class CommonManageViewSet(
     def func(self, request, app, model, **kwargs):
         """云函数, 由客户端直接调用的服务函数
         """
-
         data = request.data
         func_name = data.get('func_name', None) or request.GET.get('func_name', None)
         params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
+        return rest_services.client_func(
+            self, request.user, app, model, func_name, params
+        )
 
-        func, options = find_func(app, model, func_name)
-        if not func:
-            raise exceptions.BusinessException(
-                error_code=exceptions.FUNCTION_NOT_FOUNT,
-                error_data=f'no such func: {func_name} found',
-            )
-
-        if options.get('login_required', False):
-            if not request.user.is_authenticated:
-                raise PermissionDenied()
-
-        view_context = {'view': self}
-        params['view_context'] = view_context
-
-        result = func(request.user, **params)
-        # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
-        if isinstance(result, requests.Response):
-            return HttpResponse(result, result.headers.get('Content-Type', None))
-        if isinstance(result, (list, dict)):
-            return success_response(result)
-        if isinstance(result, self.model):
-            serializer = self.get_serializer(result)
-            return success_response(serializer.data)
-        return success_response()

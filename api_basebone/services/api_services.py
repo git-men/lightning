@@ -272,14 +272,6 @@ def show_api(slug):
     serializer = serializer_class(api)
     result = serializer.data
 
-    # result_param = show_parameters(api)
-    # if result_param:
-    #     result['parameters'] = result_param
-
-    # field_param = show_fields(api)
-    # if field_param:
-    #     result['fields'] = field_param
-
     filter_result = get_filters_json(api)
     result['filter'] = filter_result
 
@@ -292,18 +284,6 @@ def queryset_to_json(queryset, expand_fields, exclude_fields):
     )
     serializer = serializer_class(queryset, many=True)
     return serializer.data
-
-
-# def show_parameters(api):
-#     expand_fields = []
-#     queryset = Parameter.objects.filter(api__id=api.id)
-#     return queryset_to_json(queryset, expand_fields)
-
-
-# def show_fields(api):
-#     expand_fields = []
-#     queryset = Field.objects.filter(api__id=api.id)
-#     return queryset_to_json(queryset, expand_fields)
 
 
 def get_filters_json(api):
