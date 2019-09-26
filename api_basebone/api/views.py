@@ -4,6 +4,7 @@ import copy
 import re
 
 from django.apps import apps
+from rest_framework.viewsets import ModelViewSet
 
 from api_basebone.core import exceptions
 
@@ -25,7 +26,7 @@ from api_basebone.utils import meta
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.restful.mixins import FormMixin
 
-from api_basebone.restful.viewsets import BSMModelViewSet
+# from api_basebone.restful.viewsets import BSMModelViewSet
 from api_basebone.restful.client.views import QuerySetMixin
 
 from api_basebone.models import Api
@@ -197,13 +198,19 @@ class GenericViewMixin:
         return serializer_class
 
 
-class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, BSMModelViewSet):
+class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
     """"""
 
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = PageNumberPagination
 
     end_slug = CLIENT_END_SLUG
+
+    def perform_create(self, serializer):
+        return serializer.save()
+
+    def perform_update(self, serializer):
+        return serializer.save()
 
     def api(self, request, *args, **kwargs):
         slug = kwargs.get('pk')

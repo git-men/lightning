@@ -331,29 +331,6 @@ class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, BSMModelVi
 
     end_slug = CLIENT_END_SLUG
 
-    # def perform_create(self, serializer):
-    #     return serializer.save()
-
-    # def perform_update(self, serializer):
-    #     return serializer.save()
-
-    # def retrieve(self, request, *args, **kwargs):
-    #     """获取数据详情"""
-    #     instance = self.get_object()
-    #     serializer = self.get_serializer(instance)
-    #     return success_response(serializer.data)
-
-    # def list(self, request, *args, **kwargs):
-    #     queryset = self.filter_queryset(self.get_queryset())
-
-    #     page = self.paginate_queryset(queryset)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         response = self.get_paginated_response(serializer.data)
-    #         return success_response(response.data)
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     return success_response(serializer.data)
-
     def create(self, request, *args, **kwargs):
         """
         这里校验表单和序列化类分开创建
@@ -376,17 +353,6 @@ class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, BSMModelVi
     def custom_patch(self, request, *args, **kwargs):
         # kwargs['partial'] = True
         return rest_services.client_update(self, request, True)
-
-    # def destroy(self, request, *args, **kwargs):
-    #     """删除数据"""
-    #     instance = self.get_object()
-    #     self.perform_destroy(instance)
-    #     return success_response()
-
-    # @action(methods=['POST'], detail=False, url_path='list')
-    # def set(self, request, app, model, **kwargs):
-    #     """获取列表数据"""
-    #     return self.list(request, app, model, **kwargs)
 
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
