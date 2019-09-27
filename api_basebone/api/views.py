@@ -221,7 +221,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
                 error_data=f'没有\'{slug}\'这一api',
             )
 
-        if request.method.lower() != api.method.lower():
+        if not api.method_equal(request.method):
             raise exceptions.BusinessException(
                 error_code=exceptions.THIS_ACTION_IS_NOT_AUTHENTICATE,
                 error_data=f'{request.method}此种请求不允许访问\"{slug}\"',

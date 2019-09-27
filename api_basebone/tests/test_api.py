@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from member.models import User
 
 from api_basebone.core import exceptions
+from api_basebone.services import api_services
 
 
 class ApiTestCase(TestCase):
@@ -43,6 +44,18 @@ class ApiTestCase(TestCase):
             content_type='application/json',
         ).json()
         self.assertEqual(exceptions.PARAMETER_FORMAT_ERROR, result['error_code'])
+
+        config = {
+            "slug": "show_api",
+            "app": "api_basebone",
+            "model": "api",
+            "operation": "xxxxxx",
+        }
+
+        with self.assertRaisesMessage(
+            exceptions.BusinessException, exceptions.PARAMETER_FORMAT_ERROR
+        ):
+            api_services.save_api(config)
 
     def test_func(self):
         # 不给函数名

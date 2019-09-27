@@ -84,6 +84,9 @@ class Api(models.Model):
         '''API提交的方法'''
         return self.METHOD_MAP.get(self.operation, '')
 
+    def method_equal(self, method):
+        return method.lower() == self.method.lower()
+
     def get_order_by_fields(self):
         return self.ordering.split(',')
 
