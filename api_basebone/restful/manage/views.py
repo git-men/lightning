@@ -436,7 +436,9 @@ class CommonManageViewSet(
     GroupStatisticsMixin,
     BSMModelViewSet,
 ):
-    """通用的管理接口视图"""
+    """通用的管理接口视图
+    list,set,retrieve,destroy的实现提到父类BSMModelViewSet
+    """
 
     permission_classes = (IsAdminUser,)
     pagination_class = PageNumberPagination

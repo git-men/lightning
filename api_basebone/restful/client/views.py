@@ -324,7 +324,9 @@ class GenericViewMixin:
 
 
 class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, BSMModelViewSet):
-    """通用的管理接口视图"""
+    """通用的管理接口视图
+    list,set,retrieve,destroy的实现提到父类BSMModelViewSet
+    """
 
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = PageNumberPagination
