@@ -231,15 +231,6 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         api_runnser = self.API_RUNNER_MAP.get(api.operation)
         return api_runnser(self, request, api, *args, **kwargs)
 
-    def get_config_parameters(self, api_id):
-        return Parameter.objects.filter(api__id=api_id).all()
-
-    def get_config_display_fields(self, api_id):
-        return DisplayField.objects.filter(api__id=api_id).order_by('name').all()
-
-    def get_config_set_fields(self, api_id):
-        return SetField.objects.filter(api__id=api_id).all()
-
     def get_param_value(self, request, parameter):
         value = request.GET.get(parameter.name) or request.POST.get(parameter.name) or parameter.default
         if ((value is None) or (value == '')) and (parameter.required):
@@ -256,7 +247,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         return value
 
     def get_pk_value(self, request, api_id):
-        parameters = self.get_config_parameters(api_id)
+        parameters = api_services.get_config_parameters(api_id)
         for p in parameters:
             if p.type == Parameter.TYPE_PK:
                 id = self.get_param_value(request, p)
@@ -275,7 +266,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def get_page_param(self, request, api_id):
         """提取分页参数"""
-        parameters = self.get_config_parameters(api_id)
+        parameters = api_services.get_config_parameters(api_id)
         size = None
         page = None
         for p in parameters:
@@ -297,7 +288,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         return size, page
 
     def get_request_params(self, request, api_id):
-        parameters = self.get_config_parameters(api_id)
+        parameters = api_services.get_config_parameters(api_id)
         params = {}
         for p in parameters:
             if not p.is_special_defined():
@@ -306,7 +297,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_func_api(self, request, api, *args, **kwargs):
         """云函数api"""
-        parameters = self.get_config_parameters(api.id)
+        parameters = api_services.get_config_parameters(api.id)
         params = {}
         for p in parameters:
             params[p.name] = self.get_param_value(request, p)
@@ -316,7 +307,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
     def filter_response_display(self, api_id, response):
         """过滤resonse的返回属性"""
         if 'result' in response.data:
-            display_fields = self.get_config_display_fields(api_id)
+            display_fields = api_services.get_config_display_fields(api_id)
             display_fields = [f.name for f in display_fields]
             result = rest_services.filter_display_fields(response.data['result'], display_fields)
             response = success_response(result)
@@ -329,7 +320,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         if hasattr(data, '_mutable'):
             data._mutable = True
         params = self.get_request_params(request, api_id)
-        set_fields = self.get_config_set_fields(api_id)
+        set_fields = api_services.get_config_set_fields(api_id)
         new_data = {}
         for f in set_fields:
             new_data[f.name] = self.replace_params(request, f.value, params)
@@ -378,7 +369,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
 
-        fields = self.get_config_display_fields(api.id)
+        fields = api_services.get_config_display_fields(api.id)
         self.expand_fields = self.get_config_expand_fields(fields)
         display_fields = [f.name for f in fields]
         
@@ -473,7 +464,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         if hasattr(data, '_mutable'):
             data._mutable = False
 
-        fields = self.get_config_display_fields(api.id)
+        fields = api_services.get_config_display_fields(api.id)
         self.expand_fields = self.get_config_expand_fields(fields)
         display_fields = [f.name for f in fields]
         return rest_services.display(self, display_fields)
@@ -510,7 +501,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         if hasattr(data, '_mutable'):
             data._mutable = False
 
-        set_fields = self.get_config_set_fields(api.id)
+        set_fields = api_services.get_config_set_fields(api.id)
         set_fields_map = {}
         for f in set_fields:
             set_fields_map[f.name] = self.replace_params(request, f.value, params)
@@ -529,7 +520,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         Api.OPERATION_DELETE_BY_CONDITION: run_delete_by_condition_api,
         Api.OPERATION_FUNC: run_func_api,
     }
-    
+
     API_ACTION_MAP = {
         Api.OPERATION_LIST: 'list',
         Api.OPERATION_RETRIEVE: 'retrieve',

@@ -1,6 +1,10 @@
+from api_basebone.services import api_services
+
+APP = 'api_basebone'
+
 show_api = {
-    "slug": "show_api",
-    "app": "api_basebone",
+    "slug": f"{APP}__show_api",
+    "app": APP,
     "model": "api",
     "operation": "func",
     "func_name": "show_api",
@@ -8,3 +12,5 @@ show_api = {
 }
 
 API_CONFIGS = [show_api]
+
+api_services.load_api_data(APP, API_CONFIGS)

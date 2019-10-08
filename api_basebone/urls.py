@@ -43,4 +43,8 @@ urlpatterns = [
     ),
     # 配置API接口处理器
     path('api/', include(('api_basebone.api.urls', app_name), namespace='api')),
+    # 配置API接口帮助文档配置
+    path(
+        'api_doc/', include(('api_basebone.api.doc_urls', app_name), namespace='api_doc')
+    ),
 ]

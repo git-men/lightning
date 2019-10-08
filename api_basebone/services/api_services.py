@@ -1,13 +1,15 @@
+import logging
 from django.db.models import Max
 from django.db import transaction
+from django.apps import apps
 
 from api_basebone.core import exceptions
-from api_basebone.restful.serializers import (
-    # create_serializer_class,
-    multiple_create_serializer_class,
-)
+from api_basebone.export.fields import get_model_field_config
+from api_basebone.restful.serializers import multiple_create_serializer_class
 
 from api_basebone.models import Api, Parameter, DisplayField, SetField, Filter
+
+log = logging.getLogger(__name__)
 
 
 def save_api(config):
@@ -28,6 +30,8 @@ def save_api(config):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 不是合法的操作',
             )
+        if ('summary' in config) and config['summary']:
+            api.summary = config['summary']
         if ('ordering' in config) and config['ordering']:
             api.ordering = config['ordering']
         if ('func_name' in config) and config['func_name']:
@@ -266,6 +270,8 @@ def save_one_filter(api, filter, parent=None):
 
 
 def show_api(slug):
+    if API_DATA is None:
+        load_api_data()
     api = Api.objects.filter(slug=slug).first()
     expand_fields = ['parameter_set', 'displayfield_set', 'setfield_set']
     serializer_class = multiple_create_serializer_class(Api, expand_fields)
@@ -298,3 +304,84 @@ def get_filters_json(api):
             expand_fields.append(expand_fields[-1] + '.children')
     queryset = Filter.objects.filter(api__id=api.id, parent__isnull=True)
     return queryset_to_json(queryset, expand_fields, exclude_fields)
+
+
+def get_all_api():
+    return Api.objects.all()
+
+
+def get_config_parameters(api_id):
+    return Parameter.objects.filter(api__id=api_id).all()
+
+
+def get_config_display_fields(api_id):
+    return DisplayField.objects.filter(api__id=api_id).order_by('name').all()
+
+
+def get_config_set_fields(api_id):
+    return SetField.objects.filter(api__id=api_id).all()
+
+
+def get_api_models():
+    apis = get_all_api()
+    models = set()
+    for api in apis:
+        app = api.app
+        model_name = api.model
+        model = apps.get_model(app, model_name)
+        if model in models:
+            continue
+        models.add(model)
+        add_api_ref_models(models, model)
+
+    return list(models)
+
+
+def add_api_ref_models(models, model_class):
+    field_configs = get_model_field_config(model_class)
+    for model_name, d in field_configs.items():
+        for f in d['fields']:
+            if f['type'] in ('ref', 'mref'):
+                refs = f['ref'].split('__')
+                if len(refs) < 2:
+                    continue
+                app = refs[0]
+                model_name = refs[1]
+                model_class = apps.get_model(app, model_name)
+                if model_class in models:
+                    continue
+                models.add(model_class)
+                add_api_ref_models(models, model_class)
+
+
+# API_DATA[app][slug]
+API_DATA = None
+
+
+def load_api_data(app, configs):
+    global API_DATA
+    if API_DATA is None:
+        API_DATA = {}
+
+    API_DATA[app] = {}
+    for config in configs:
+        if 'slug' in config:
+            API_DATA[app][config['slug']] = config
+            log.info('loaded api data：%s', config['slug'])
+
+
+# def load_api_config_module():
+#     export_apps = getattr(settings, 'BSM_EXPORT_APPS', None)
+
+#     for app in export_apps:
+#         try:
+#             app_config = apps.get_app_config(app)
+#             module = app_config.module
+#             try:
+#                 importlib.import_module(module.__package__ + '.api_config')
+#                 log.info('loaded app api：%s', app)
+#             # except Exception as e:
+#             except Exception:
+#                 continue
+#         except Exception as e:
+#             log.error('加载 API 异常： %s', e)

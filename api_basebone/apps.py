@@ -12,3 +12,5 @@ class ApiBaseboneConfig(AppConfig):
         import api_basebone.bsm.functions  # 注册所有云函数
 
         register_api(self.name, exposed)
+
+        import api_basebone.api_config

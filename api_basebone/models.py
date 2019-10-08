@@ -75,6 +75,8 @@ class Api(models.Model):
     operation = models.CharField('操作', max_length=20, choices=OPERATIONS_CHOICES)
     ordering = models.CharField('排序', max_length=50, blank=True, default='')
     func_name = models.CharField('云函数名称', max_length=50, blank=True, default='')
+    summary = models.TextField('api说明', default='')
+    demo = models.TextField('api返回格式范例', default='')
 
     def __str__(self):
         return self.slug

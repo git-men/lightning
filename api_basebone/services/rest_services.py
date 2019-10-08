@@ -286,7 +286,7 @@ def delete_by_conditon(genericAPIView):
     """按查询条件删除"""
     queryset = genericAPIView.filter_queryset(genericAPIView.get_queryset())
     deleted, rows_count = queryset.delete()
-    result = {'deleted': deleted, 'rows_count': rows_count}
+    result = {'deleted': deleted}
 
     return success_response(result)
 

@@ -33,7 +33,7 @@ class ApiRouter(SimpleRouter):
             },
             name='{basename}-detail',
             detail=True,
-            initkwargs={'suffix': 'Instance'},
+            initkwargs={},
         ),
         # Dynamically generated detail routes. Generated using
         # @action(detail=True) decorator on methods of the viewset.
