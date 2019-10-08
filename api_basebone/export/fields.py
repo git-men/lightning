@@ -200,6 +200,7 @@ class FieldConfig:
         base = self._get_common_field_params(field, data_type)
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+        base['refField'] = field.remote_field.name
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -208,6 +209,7 @@ class FieldConfig:
         base = self._get_common_field_params(field, data_type)
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+        base['refField'] = field.remote_field.name
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -263,6 +265,7 @@ def get_model_field_config(model):
 
             reverse_config['displayName'] = model_verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+            reverse_config['refField'] = field.name
             reverse_config.update(field_config_instance.reset_field_config(item))
             config.append(reverse_config)
 
