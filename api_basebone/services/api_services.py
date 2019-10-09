@@ -322,10 +322,21 @@ def get_config_set_fields(api_id):
     return SetField.objects.filter(api__id=api_id).all()
 
 
-def get_api_models():
+def get_api_schema_models():
     apis = get_all_api()
     models = set()
     for api in apis:
+        has_display_fields = DisplayField.objects.filter(api__id=api.id).exists()
+        if has_display_fields:
+            '''有查询属性的不需要schema'''
+            continue
+        if api.operation in (
+                Api.OPERATION_UPDATE_BY_CONDITION,
+                Api.OPERATION_DELETE_BY_CONDITION,
+                Api.OPERATION_FUNC,
+                Api.OPERATION_DELETE):
+            '''不返回schema对象的也不需要'''
+            continue
         app = api.app
         model_name = api.model
         model = apps.get_model(app, model_name)

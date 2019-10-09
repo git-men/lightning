@@ -25,7 +25,6 @@ MODEL_TYPE_TO_SWAGGER = {
     'datetime': 'string',
     'image': 'string',
     'file': 'string',
-    'ref': 'ref',
 }
 
 
@@ -57,7 +56,7 @@ class ApiDocViewSet(viewsets.GenericViewSet):
     def get_schema(self):
         '''获取 schema 配置'''
         schemas = {}
-        models = api_services.get_api_models()
+        models = api_services.get_api_schema_models()
         for model in models:
             field_configs = get_model_field_config(model)
             for model_name, d in field_configs.items():
