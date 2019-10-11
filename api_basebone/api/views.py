@@ -326,8 +326,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
             new_data[f.name] = self.replace_params(request, f.value, params)
         data.clear()
         data.update(new_data)
-        if hasattr(data, '_mutable'):
-            data._mutable = False
+        # if hasattr(data, '_mutable'):
+        #     data._mutable = False
 
     def run_create_api(self, request, api, *args, **kwargs):
         """新建操作api"""
@@ -461,8 +461,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         request.query_params.clear()
         request.query_params.update(self.kwargs)
         request.query_params._mutable = False
-        if hasattr(data, '_mutable'):
-            data._mutable = False
+        # if hasattr(data, '_mutable'):
+        #     data._mutable = False
 
         fields = api_services.get_config_display_fields(api.id)
         self.expand_fields = self.get_config_expand_fields(fields)
@@ -481,8 +481,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
-        if hasattr(data, '_mutable'):
-            data._mutable = False
+        # if hasattr(data, '_mutable'):
+        #     data._mutable = False
 
         return rest_services.delete_by_conditon(self)
 
@@ -498,8 +498,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
-        if hasattr(data, '_mutable'):
-            data._mutable = False
+        # if hasattr(data, '_mutable'):
+        #     data._mutable = False
 
         set_fields = api_services.get_config_set_fields(api.id)
         set_fields_map = {}
