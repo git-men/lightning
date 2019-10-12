@@ -239,7 +239,15 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
                 error_data=f'{parameter.name}参数为必填',
             )
         if parameter.type == Parameter.TYPE_BOOLEAN:
-            value = bool(value)
+            if isinstance(value, str):
+                if value.lower() == 'true':
+                    value = True
+                elif value.lower() == 'false':
+                    value = False
+                else:
+                    value = bool(eval(value))
+            else:
+                value = bool(eval(value))
         elif parameter.type in (Parameter.TYPE_INT, Parameter.TYPE_PAGE_IDX, Parameter.TYPE_PAGE_SIZE):
             value = int(value)
         elif parameter.type == Parameter.TYPE_DECIMAL:
