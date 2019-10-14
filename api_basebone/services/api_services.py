@@ -30,11 +30,13 @@ def save_api(config):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 不是合法的操作',
             )
-        if ('summary' in config) and config['summary']:
+        if 'summary' in config:
             api.summary = config['summary']
-        if ('ordering' in config) and config['ordering']:
+        if 'ordering' in config:
             api.ordering = config['ordering']
-        if ('func_name' in config) and config['func_name']:
+        if 'expand_fields' in config:
+            api.expand_fields = config['expand_fields']
+        if 'func_name' in config:
             api.func_name = config['func_name']
         else:
             if api.operation == api.OPERATION_FUNC:

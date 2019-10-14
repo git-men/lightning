@@ -73,7 +73,8 @@ class Api(models.Model):
     app = models.CharField('app名字', max_length=50)
     model = models.CharField('数据模型名字', max_length=50)
     operation = models.CharField('操作', max_length=20, choices=OPERATIONS_CHOICES)
-    ordering = models.CharField('排序', max_length=50, blank=True, default='')
+    ordering = models.CharField('排序', max_length=500, blank=True, default='')
+    expand_fields = models.CharField('展开字段', max_length=500, blank=True, default='')
     func_name = models.CharField('云函数名称', max_length=50, blank=True, default='')
     summary = models.TextField('api说明', default='')
     demo = models.TextField('api返回格式范例', default='')
@@ -86,11 +87,19 @@ class Api(models.Model):
         '''API提交的方法'''
         return self.METHOD_MAP.get(self.operation, '')
 
+    @property
+    def expand_fields_set(self):
+        '''展开字段的集合'''
+        return set(self.expand_fields.replace(' ', '').split(','))
+
     def method_equal(self, method):
         return method.lower() == self.method.lower()
 
     def get_order_by_fields(self):
-        return self.ordering.split(',')
+        if self.ordering:
+            return self.ordering.replace(' ', '').split(',')
+        else:
+            return []
 
     class Meta:
         verbose_name = 'Api接口模型'
@@ -104,6 +113,7 @@ class Parameter(models.Model):
     TYPE_INT = 'int'
     TYPE_DECIMAL = 'decimal'
     TYPE_BOOLEAN = 'boolean'
+    TYPE_JSON = 'json'
     TYPE_PAGE_SIZE = 'PAGE_SIZE'
     TYPE_PAGE_IDX = 'PAGE_IDX'
     TYPE_PK = 'pk'
@@ -112,6 +122,7 @@ class Parameter(models.Model):
         (TYPE_INT, '整数'),
         (TYPE_DECIMAL, '浮点数'),
         (TYPE_BOOLEAN, '布尔值'),
+        (TYPE_JSON, 'json格式'),
         (TYPE_PAGE_SIZE, '页长'),
         (TYPE_PAGE_IDX, '页码'),
         (TYPE_PK, '主键'),

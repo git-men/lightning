@@ -2,6 +2,7 @@ import logging
 import decimal
 import copy
 import re
+import json
 
 from django.apps import apps
 from rest_framework.viewsets import ModelViewSet
@@ -9,7 +10,8 @@ from rest_framework.viewsets import ModelViewSet
 from api_basebone.core import exceptions
 
 
-from api_basebone.core import admin, const, gmeta
+from api_basebone.core import const, gmeta
+from api_basebone.core import admin
 
 from django.contrib.auth import get_user_model
 from rest_framework import permissions
@@ -32,8 +34,8 @@ from api_basebone.restful.client.views import QuerySetMixin
 from api_basebone.models import Api
 from api_basebone.models import Parameter
 from api_basebone.models import Filter
-from api_basebone.models import DisplayField
-from api_basebone.models import SetField
+# from api_basebone.models import DisplayField
+# from api_basebone.models import SetField
 
 from api_basebone.services import api_services
 from api_basebone.services import rest_services
@@ -65,8 +67,10 @@ class GenericViewMixin:
         result = super().perform_authentication(request)
 
         meta.load_custom_admin_module()
-        self.get_expand_fields()
-        self._get_data_with_tree(request)
+        # self.get_expand_fields()
+        self.tree_data = None
+        self.expand_fields = None
+        # self._get_data_with_tree(request)
 
         return result
 
@@ -160,9 +164,9 @@ class GenericViewMixin:
         expand_fields = self.expand_fields
         if not expand_fields:
             return self._get_queryset(objects.all())
-
         expand_fields = self.translate_expand_fields(expand_fields)
         field_list = [item.replace('.', '__') for item in expand_fields]
+        print('get_queryset:' + str(field_list))
         return self._get_queryset(objects.all().prefetch_related(*field_list))
 
     def get_serializer_class(self, expand_fields=None):
@@ -252,6 +256,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
             value = int(value)
         elif parameter.type == Parameter.TYPE_DECIMAL:
             value = decimal.Decimal(value)
+        elif parameter.type == Parameter.TYPE_JSON:
+            value = json.loads(value)
         return value
 
     def get_pk_value(self, request, api_id):
@@ -378,7 +384,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         self.kwargs = kwargs
 
         fields = api_services.get_config_display_fields(api.id)
-        self.expand_fields = self.get_config_expand_fields(fields)
+        self.expand_fields = self.get_config_expand_fields(api, fields)
         display_fields = [f.name for f in fields]
         
         return rest_services.retrieve(self, display_fields)
@@ -403,28 +409,47 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         if '${' in s:
             pat = r'\${([\w\.-]+)}'
             ls = re.findall(pat, s)
-            for k in ls:
+            if len(ls) == 1 and s == f'${{{ls[0]}}}':
+                k = ls[0]
                 if k not in params:
                     raise exceptions.BusinessException(
                         error_code=exceptions.PARAMETER_FORMAT_ERROR,
                         error_data=f'filters设置的参数\'{k}\'为未定义参数',
                     )
-                v = params[k]
-                s = s.replace(f'${{{k}}}', f'{v}')
+                return params[k]
+            else:
+                for k in ls:
+                    if k not in params:
+                        raise exceptions.BusinessException(
+                            error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                            error_data=f'filters设置的参数\'{k}\'为未定义参数',
+                        )
+                    v = params[k]
+                    s = s.replace(f'${{{k}}}', f'{v}')
         
         # 服务器定义参数的注入
         if '#{' in s:
             pat = r'#{([\w\.-]+)}'
             ls = re.findall(pat, s)
-            for k in ls:
+            if len(ls) == 1 and s == f'#{{{ls[0]}}}':
+                k = ls[0]
                 if k not in api_param.API_SERVER_PARAM:
                     raise exceptions.BusinessException(
                         error_code=exceptions.PARAMETER_FORMAT_ERROR,
                         error_data=f'服务端参数\'{k}\'为未定义参数',
                     )
                 f = api_param.API_SERVER_PARAM[k]
-                v = f(request)
-                s = s.replace(f'#{{{k}}}', f'{v}')
+                return f(request)
+            else:
+                for k in ls:
+                    if k not in api_param.API_SERVER_PARAM:
+                        raise exceptions.BusinessException(
+                            error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                            error_data=f'服务端参数\'{k}\'为未定义参数',
+                        )
+                    f = api_param.API_SERVER_PARAM[k]
+                    v = f(request)
+                    s = s.replace(f'#{{{k}}}', f'{v}')
 
         # 敏感字符双写
         key_works = {'$$': '$', '{{': '}', '}}': '}', '##': '#'}
@@ -434,9 +459,9 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
         return s
 
-    def get_config_expand_fields(self, fields):
+    def get_config_expand_fields(self, api, fields):
         """依据显示的列，展开属性"""
-        expand_fields = set()
+        expand_fields = api.expand_fields_set
         for field in fields:
             nest_fields = field.name.split('.')
             if len(nest_fields) > 1:
@@ -449,7 +474,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         data = request.data
         if hasattr(data, '_mutable'):
             data._mutable = True
-        data[const.ORDER_BY_FIELDS] = api.get_order_by_fields()
+        if api.get_order_by_fields():
+            data[const.ORDER_BY_FIELDS] = api.get_order_by_fields()
         
         params = self.get_request_params(request, api.id)
         
@@ -473,7 +499,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         #     data._mutable = False
 
         fields = api_services.get_config_display_fields(api.id)
-        self.expand_fields = self.get_config_expand_fields(fields)
+        self.expand_fields = self.get_config_expand_fields(api, fields)
         display_fields = [f.name for f in fields]
         return rest_services.display(self, display_fields)
 
