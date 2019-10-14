@@ -147,18 +147,19 @@ class GroupStatisticsMixin:
             'TruncHour': TruncHour,
             None: F,
         }
-        methods = {'sum': Sum, 'count': partial(Count, distinct=True)}
+        methods = {'sum': Sum, 'count': Count}
         group_method = request.data.get('group_method', None)
         group_by = request.data.get('group_by')
         fields = request.data.get('fields')
         result = (
             self.get_queryset()
-            .annotate(group=group_functions[group_method](group_by))
-            .values('group')
+            # 正佳的项目用了group，为了防止污染命名空间，改为__group__，但保留group的兼容
+            .annotate(__group__=group_functions[group_method](group_by), group=F('__group__'))
+            .values('__group__', 'group')
             .annotate(
-                **{key: methods[value['method']](value['field']) for key, value in fields.items()}
+                **{key: methods[value['method']](value['field'], **value.get('params', {})) for key, value in fields.items()}
             )
-            .order_by('group')
+            .order_by('__group__')
         )
 
         return success_response(result)
