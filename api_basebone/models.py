@@ -90,7 +90,10 @@ class Api(models.Model):
     @property
     def expand_fields_set(self):
         '''展开字段的集合'''
-        return set(self.expand_fields.replace(' ', '').split(','))
+        if self.expand_fields:
+            return set(self.expand_fields.replace(' ', '').split(','))
+        else:
+            return set()
 
     def method_equal(self, method):
         return method.lower() == self.method.lower()
@@ -99,7 +102,7 @@ class Api(models.Model):
         if self.ordering:
             return self.ordering.replace(' ', '').split(',')
         else:
-            return []
+            return set()
 
     class Meta:
         verbose_name = 'Api接口模型'
