@@ -166,7 +166,6 @@ class GenericViewMixin:
             return self._get_queryset(objects.all())
         expand_fields = self.translate_expand_fields(expand_fields)
         field_list = [item.replace('.', '__') for item in expand_fields]
-        print('get_queryset:' + str(field_list))
         return self._get_queryset(objects.all().prefetch_related(*field_list))
 
     def get_serializer_class(self, expand_fields=None):

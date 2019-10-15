@@ -22,6 +22,11 @@ def save_api(config):
             api = Api()
             api.slug = slug
             is_create = True
+        else:
+            if api.config == str(config):
+                '''配置信息没改'''
+                return False
+        api.config = str(config)
         api.app = config.get('app')
         api.model = config.get('model')
         api.operation = config.get('operation')
@@ -51,6 +56,7 @@ def save_api(config):
         save_display_fields(api, config.get('displayfield'), is_create)
         save_set_fields(api, config.get('setfield'), is_create)
         save_filters(api, config.get('filter'), is_create)
+        return True
 
 
 def save_parameters(api, parameters, is_create):
@@ -333,10 +339,11 @@ def get_api_schema_models():
             '''有查询属性的不需要schema'''
             continue
         if api.operation in (
-                Api.OPERATION_UPDATE_BY_CONDITION,
-                Api.OPERATION_DELETE_BY_CONDITION,
-                Api.OPERATION_FUNC,
-                Api.OPERATION_DELETE):
+            Api.OPERATION_UPDATE_BY_CONDITION,
+            Api.OPERATION_DELETE_BY_CONDITION,
+            Api.OPERATION_FUNC,
+            Api.OPERATION_DELETE,
+        ):
             '''不返回schema对象的也不需要'''
             continue
         app = api.app

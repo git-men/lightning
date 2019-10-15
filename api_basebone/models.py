@@ -78,6 +78,7 @@ class Api(models.Model):
     func_name = models.CharField('云函数名称', max_length=50, blank=True, default='')
     summary = models.TextField('api说明', default='')
     demo = models.TextField('api返回格式范例', default='')
+    config = models.TextField('配置json数据', default='')
 
     def __str__(self):
         return self.slug

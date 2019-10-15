@@ -27,6 +27,7 @@ class Command(BaseCommand):
 
         error_num = 0
         success_num = 0
+        change_num = 0
         for app in export_apps:
             try:
                 app_config = apps.get_app_config(app)
@@ -45,9 +46,11 @@ class Command(BaseCommand):
                     slug = ''
                     try:
                         slug = config['slug']
-                        api_services.save_api(config)
+                        is_change = api_services.save_api(config)
                         success_num += 1
-                        print(f'loaded api：{slug}')
+                        if is_change:
+                            change_num += 1
+                        print(f'loaded api：{slug},{is_change}')
                     except Exception as api_error:
                         error_num += 1
                         print(f'api {slug} 异常:' + str(api_error))
@@ -56,4 +59,4 @@ class Command(BaseCommand):
             except Exception as e:
                 print('上传 API 异常： {}'.format(str(e)))
 
-        print(f'{success_num}个API上传成功，{error_num}个API 异常')
+        print(f'{success_num}个API上传成功，{change_num}个变更，{error_num}个API 异常')
