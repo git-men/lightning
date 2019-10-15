@@ -292,6 +292,16 @@ def show_api(slug):
     return result
 
 
+def list_api():
+    apis = Api.objects.all()
+    results = []
+    for api in apis:
+        r = show_api(api.slug)
+        results.append(r)
+
+    return results
+
+
 def queryset_to_json(queryset, expand_fields, exclude_fields):
     serializer_class = multiple_create_serializer_class(
         queryset.model, expand_fields=expand_fields, exclude_fields=exclude_fields

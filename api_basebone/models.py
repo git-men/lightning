@@ -109,6 +109,9 @@ class Api(models.Model):
         verbose_name = 'Api接口模型'
         verbose_name_plural = 'Api接口模型'
 
+    class GMeta:
+        exclude_fields = ['config']
+
 
 class Parameter(models.Model):
     '''参数'''
