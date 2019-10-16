@@ -1,6 +1,6 @@
 from functools import partial
 
-from django.db.models import Sum, Count, Value, F
+from django.db.models import Sum, Count, Value, F, Avg, Max, Min
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncHour
 
 from rest_framework.decorators import action
@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from api_basebone.core import admin, exceptions
 from api_basebone.drf.response import success_response
 from api_basebone.restful import const
+from api_basebone.restful.serializers import get_model_exclude_fields
 from api_basebone.utils.meta import get_all_relation_fields
 from api_basebone.models import AdminLog
 from api_basebone.settings import settings as basebone_settings
@@ -147,21 +148,40 @@ class GroupStatisticsMixin:
             'TruncHour': TruncHour,
             None: F,
         }
-        methods = {'sum': Sum, 'count': Count}
-        group_method = request.data.get('group_method', None)
-        group_by = request.data.get('group_by')
+        methods = {
+            'sum': Sum,
+            'Sum': Sum,
+            'count': Count,
+            'Count': Count,
+            'Avg': Avg,
+            'Max': Max,
+            'Min': Min,
+            None: F,
+        }
+
+        if 'group' in request.data:
+            group = request.data.get('group')
+        else:
+            # 正佳的项目用了group_method和group_by的方式
+            group_method = request.data.get('group_method', None)
+            group_by = request.data.get('group_by')
+            group = {'group': {'method': group_method, 'field': group_by}}
+
+        group_kwargs = {k: group_functions[v.get('method', None)](v['field']) for k, v in group.items()}
+
         fields = request.data.get('fields')
         result = (
             self.get_queryset()
-            # 正佳的项目用了group，为了防止污染命名空间，改为__group__，但保留group的兼容
-            .annotate(__group__=group_functions[group_method](group_by), group=F('__group__'))
-            .values('__group__', 'group')
+            # 正佳的项目用了group的方式
+            .annotate(**group_kwargs).values(*group_kwargs.keys())
             .annotate(
-                **{key: methods[value['method']](value['field'], **value.get('params', {})) for key, value in fields.items()}
+                **{key: methods[value.get('method', None)](value['field'], **value.get('params', {})) for key, value in fields.items()
+                   # 排除exclude_fields
+                   if value['field'] not in get_model_exclude_fields(self.model, None)}
             )
-            .order_by('__group__')
+            .order_by(*group_kwargs.keys())
         )
-
+        # TODO 考虑使用DRF来序列化查询结果
         return success_response(result)
 
 
