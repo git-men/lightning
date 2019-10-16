@@ -236,7 +236,10 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def get_param_value(self, request, parameter):
         value = request.GET.get(parameter.name) or request.POST.get(parameter.name) or parameter.default
-        if ((value is None) or (value == '')) and (parameter.required):
+        if (value is None) and parameter.default:
+            value = parameter.default
+        # if ((value is None) or (value == '')) and (parameter.required):
+        if (value is None) and (parameter.required):
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'{parameter.name}参数为必填',
@@ -252,7 +255,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
             else:
                 value = bool(eval(value))
         elif parameter.type in (Parameter.TYPE_INT, Parameter.TYPE_PAGE_IDX, Parameter.TYPE_PAGE_SIZE):
-            value = int(value)
+            if value:
+                value = int(value)
         elif parameter.type == Parameter.TYPE_DECIMAL:
             value = decimal.Decimal(value)
         elif parameter.type == Parameter.TYPE_JSON:
@@ -282,23 +286,27 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         parameters = api_services.get_config_parameters(api_id)
         size = None
         page = None
+        page_query_param = 'page'
+        size_query_param = 'size'
         for p in parameters:
             if p.type == Parameter.TYPE_PAGE_SIZE:
                 size = self.get_param_value(request, p)
-                if not size:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=f'没有\'{p.name}\'这一页长参数',
-                    )
+                size_query_param = p.name
+                # if not size:
+                #     raise exceptions.BusinessException(
+                #         error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                #         error_data=f'没有\'{p.name}\'这一页长参数',
+                #     )
             elif p.type == Parameter.TYPE_PAGE_IDX:
                 page = self.get_param_value(request, p)
-                if not page:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=f'没有\'{p.name}\'这一页码参数',
-                    )
+                page_query_param = p.name
+                # if not page:
+                #     raise exceptions.BusinessException(
+                #         error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                #         error_data=f'没有\'{p.name}\'这一页码参数',
+                #     )
 
-        return size, page
+        return size, page, size_query_param, page_query_param
 
     def get_request_params(self, request, api_id):
         parameters = api_services.get_config_parameters(api_id)
@@ -489,13 +497,13 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
-        size, page = self.get_page_param(request, api.id)
+        size, page, size_query_param, page_query_param = self.get_page_param(request, api.id)
 
         self.kwargs = {}
         if size:
-            self.kwargs['size'] = size
+            self.kwargs[size_query_param] = size
         if page:
-            self.kwargs['page'] = page
+            self.kwargs[page_query_param] = page
 
         request.query_params._mutable = True
         request.query_params.clear()
@@ -507,6 +515,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         fields = api_services.get_config_display_fields(api.id)
         self.expand_fields = self.get_config_expand_fields(api, fields)
         display_fields = [f.name for f in fields]
+        self.pagination_class.page_size_query_param = size_query_param
+        self.pagination_class.page_query_param = page_query_param
         return rest_services.display(self, display_fields)
 
     def run_delete_by_condition_api(self, request, api, *args, **kwargs):
