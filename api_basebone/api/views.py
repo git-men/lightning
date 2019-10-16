@@ -67,10 +67,10 @@ class GenericViewMixin:
         result = super().perform_authentication(request)
 
         meta.load_custom_admin_module()
-        # self.get_expand_fields()
-        self.tree_data = None
-        self.expand_fields = None
-        # self._get_data_with_tree(request)
+        self.get_expand_fields()
+        # self.tree_data = None
+        # self.expand_fields = None
+        self._get_data_with_tree(request)
 
         return result
 
@@ -317,11 +317,9 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         
         return rest_services.client_func(self, request.user, api.app, api.model, api.func_name, params)
 
-    def filter_response_display(self, api_id, response):
+    def filter_response_display(self, display_fields, response):
         """过滤resonse的返回属性"""
         if 'result' in response.data:
-            display_fields = api_services.get_config_display_fields(api_id)
-            display_fields = [f.name for f in display_fields]
             result = rest_services.filter_display_fields(response.data['result'], display_fields)
             response = success_response(result)
 
@@ -345,8 +343,11 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
     def run_create_api(self, request, api, *args, **kwargs):
         """新建操作api"""
         self.make_set_data(request, api.id)
+        display_fields = api_services.get_config_display_fields(api.id)
+        self.expand_fields = self.get_config_expand_fields(api, display_fields)
+        display_fields = [f.name for f in display_fields]
         response = rest_services.client_create(self, request)
-        return self.filter_response_display(api.id, response)
+        return self.filter_response_display(display_fields, response)
 
     def run_update_api(self, request, api, *args, **kwargs):
         """更新操作api"""
@@ -355,8 +356,11 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         self.kwargs = kwargs
         self.make_set_data(request, api.id)
         
+        display_fields = api_services.get_config_display_fields(api.id)
+        self.expand_fields = self.get_config_expand_fields(api, display_fields)
+        display_fields = [f.name for f in display_fields]
         response = rest_services.client_update(self, request, False)
-        return self.filter_response_display(api.id, response)
+        return self.filter_response_display(display_fields, response)
 
     def run_replace_api(self, request, api, *args, **kwargs):
         """局部更新操作api"""
@@ -365,8 +369,11 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         self.kwargs = kwargs
         self.make_set_data(request, api.id)
         
+        display_fields = api_services.get_config_display_fields(api.id)
+        self.expand_fields = self.get_config_expand_fields(api, display_fields)
+        display_fields = [f.name for f in display_fields]
         response = rest_services.client_update(self, request, True)
-        return self.filter_response_display(api.id, response)
+        return self.filter_response_display(display_fields, response)
 
     def run_delete_api(self, request, api, *args, **kwargs):
         """删除操作api"""
