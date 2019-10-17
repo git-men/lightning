@@ -1,6 +1,6 @@
 from django.db.models.query import QuerySet
 from django.db.models import Manager
-from .operators import build_filter_conditions
+from .operators import build_filter_conditions2
 from ..restful.serializers import multiple_create_serializer_class
 
 
@@ -10,11 +10,16 @@ __all__ = ['filter', 'serialize']
 def filter_queryset(queryset, filters=None):
     if not filter:
         return queryset
-    cons, exclude = build_filter_conditions(filters)
+    cons = build_filter_conditions2(filters)
     if cons:
         queryset = queryset.filter(cons)
-    if exclude:
-        queryset = queryset.exclude(exclude)
+    # if exclude:
+    #     queryset = queryset.exclude(exclude)
+    # cons, exclude = build_filter_conditions(filters)
+    # if cons:
+    #     queryset = queryset.filter(cons)
+    # if exclude:
+    #     queryset = queryset.exclude(exclude)
 
     return queryset
 
@@ -96,7 +101,7 @@ def serialize_queryset(data, action='list', expand_fields=None):
         expand_fields = translate_expand_fields(model, expand_fields)
         pass
     serializer_class = multiple_create_serializer_class(
-        model, expand_fields, action=action,
+        model, expand_fields, action=action
     )
     serializer = serializer_class(data, many=many)
     return serializer.data

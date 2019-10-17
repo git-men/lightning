@@ -282,9 +282,13 @@ def show_api(slug):
         load_api_data()
     api = Api.objects.filter(slug=slug).first()
     expand_fields = ['parameter_set', 'displayfield_set', 'setfield_set']
-    serializer_class = multiple_create_serializer_class(Api, expand_fields)
+    exclude_fields = ['id']
+    serializer_class = multiple_create_serializer_class(Api, expand_fields=expand_fields, exclude_fields=exclude_fields)
     serializer = serializer_class(api)
     result = serializer.data
+
+    result['displayfield'] = [f['name'] for f in result['displayfield']]
+    result['setfield'] = [[f['name'], f['value']] for f in result['setfield']]
 
     filter_result = get_filters_json(api)
     result['filter'] = filter_result
@@ -314,7 +318,7 @@ def get_filters_json(api):
     max_layer = Filter.objects.filter(api__id=api.id).aggregate(max=Max('layer'))['max']
     max_layer = max_layer or 0
     expand_fields = []
-    exclude_fields = []
+    exclude_fields = ['id']
     for i in range(max_layer):
         if i == 0:
             expand_fields.append('children')
