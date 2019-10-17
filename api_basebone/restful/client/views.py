@@ -76,7 +76,6 @@ class QuerySetMixin:
         """结果集支持排序"""
         fields = self.request.data.get(const.ORDER_BY_FIELDS)
         if isinstance(fields, list) and fields:
-            print('get_queryset_by_order_by:' + str(fields))
             return queryset.order_by(*fields)
         return queryset
 
