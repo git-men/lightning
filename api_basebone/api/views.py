@@ -246,9 +246,11 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
             )
         if parameter.type == Parameter.TYPE_BOOLEAN:
             if isinstance(value, str):
-                if value.lower() == 'true':
+                value = value.replace(' ', '')
+                value = value.lower()
+                if value == 'true':
                     value = True
-                elif value.lower() == 'false':
+                elif value == 'false':
                     value = False
                 else:
                     value = bool(eval(value))
