@@ -58,15 +58,15 @@ class Api(models.Model):
     MATHOD_PATCH = 'patch'
 
     METHOD_MAP = {
-        OPERATION_LIST: MATHOD_GET,
-        OPERATION_RETRIEVE: MATHOD_GET,
-        OPERATION_CREATE: MATHOD_POST,
-        OPERATION_UPDATE: MATHOD_PUT,
-        OPERATION_REPLACE: MATHOD_PATCH,
-        OPERATION_DELETE: MATHOD_DELETE,
-        OPERATION_UPDATE_BY_CONDITION: MATHOD_PATCH,
-        OPERATION_DELETE_BY_CONDITION: MATHOD_DELETE,
-        OPERATION_FUNC: MATHOD_POST,
+        OPERATION_LIST: (MATHOD_GET,),
+        OPERATION_RETRIEVE: (MATHOD_GET,),
+        OPERATION_CREATE: (MATHOD_POST,),
+        OPERATION_UPDATE: (MATHOD_PUT,),
+        OPERATION_REPLACE: (MATHOD_PATCH, MATHOD_PUT),
+        OPERATION_DELETE: (MATHOD_DELETE,),
+        OPERATION_UPDATE_BY_CONDITION: (MATHOD_PATCH, MATHOD_PUT),
+        OPERATION_DELETE_BY_CONDITION: (MATHOD_DELETE,),
+        OPERATION_FUNC: (MATHOD_POST,),
     }
 
     slug = models.SlugField('接口标识', max_length=50, unique=True)
@@ -86,7 +86,7 @@ class Api(models.Model):
     @property
     def method(self):
         '''API提交的方法'''
-        return self.METHOD_MAP.get(self.operation, '')
+        return self.METHOD_MAP.get(self.operation)
 
     @property
     def expand_fields_set(self):
@@ -97,7 +97,8 @@ class Api(models.Model):
             return set()
 
     def method_equal(self, method):
-        return method.lower() == self.method.lower()
+        print('method_equal:' + method.lower() + ',' + str(self.method))
+        return method.lower() in self.method
 
     def get_order_by_fields(self):
         if self.ordering:
