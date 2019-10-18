@@ -97,7 +97,6 @@ class Api(models.Model):
             return set()
 
     def method_equal(self, method):
-        print('method_equal:' + method.lower() + ',' + str(self.method))
         return method.lower() in self.method
 
     def get_order_by_fields(self):
@@ -145,6 +144,7 @@ class Parameter(models.Model):
     type = models.CharField('参数类型', max_length=20, choices=TYPES_CHOICES)
     required = models.BooleanField('是否必填', default=True)
     default = models.CharField('默认值', max_length=50, null=True, default='')
+    is_array = models.BooleanField('是否数组', default=False)
 
     def is_special_defined(self):
         """自定义参数，用于特殊用途"""

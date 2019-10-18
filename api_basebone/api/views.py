@@ -244,26 +244,38 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'{parameter.name}参数为必填',
             )
-        if parameter.type == Parameter.TYPE_BOOLEAN:
-            if isinstance(value, str):
-                value = value.replace(' ', '')
-                value = value.lower()
-                if value == 'true':
-                    value = True
-                elif value == 'false':
-                    value = False
+        if parameter.is_array:
+            items = json.loads(value)
+        else:
+            items = [value]
+
+        params = []
+        for item in items:
+            if parameter.type == Parameter.TYPE_BOOLEAN:
+                if isinstance(item, str):
+                    item = item.replace(' ', '')
+                    item = item.lower()
+                    if item == 'true':
+                        item = True
+                    elif item == 'false':
+                        item = False
+                    else:
+                        item = bool(eval(item))
                 else:
-                    value = bool(eval(value))
-            else:
-                value = bool(eval(value))
-        elif parameter.type in (Parameter.TYPE_INT, Parameter.TYPE_PAGE_IDX, Parameter.TYPE_PAGE_SIZE):
-            if value:
-                value = int(value)
-        elif parameter.type == Parameter.TYPE_DECIMAL:
-            value = decimal.Decimal(value)
-        elif parameter.type == Parameter.TYPE_JSON:
-            value = json.loads(value)
-        return value
+                    item = bool(eval(item))
+            elif parameter.type in (Parameter.TYPE_INT, Parameter.TYPE_PAGE_IDX, Parameter.TYPE_PAGE_SIZE):
+                if item:
+                    item = int(item)
+            elif parameter.type == Parameter.TYPE_DECIMAL:
+                item = decimal.Decimal(item)
+            elif parameter.type == Parameter.TYPE_JSON:
+                item = json.loads(item)
+            params.append(item)
+        
+        if parameter.is_array:
+            return params
+        else:
+            return params[0]
 
     def get_pk_value(self, request, api_id):
         parameters = api_services.get_config_parameters(api_id)

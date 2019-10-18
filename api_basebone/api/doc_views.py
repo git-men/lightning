@@ -1,6 +1,7 @@
 import json
 
 from django.apps import apps
+from django.conf import settings
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -36,6 +37,7 @@ API_PARAM_TYPE_TO_SWAGGER = {
     Parameter.TYPE_PK: 'string',
     Parameter.TYPE_PAGE_IDX: 'integer',
     Parameter.TYPE_PAGE_SIZE: 'integer',
+    Parameter.TYPE_JSON: 'string',
 }
 
 
@@ -85,7 +87,8 @@ class ApiDocViewSet(viewsets.GenericViewSet):
                     if 'default' in f:
                         p['default'] = f['default']
                     properties[f['name']] = p
-                schema['required'] = required
+                if required:
+                    schema['required'] = required
         return schemas
 
     def get_params(self, api):
@@ -97,14 +100,18 @@ class ApiDocViewSet(viewsets.GenericViewSet):
                 type = API_PARAM_TYPE_TO_SWAGGER[param_model.type]
             else:
                 type = 'string'
+
             param = {
                 'name': param_model.name,
                 'in': 'query',
                 'description': param_model.desc,
                 'required': param_model.required,
                 'style': 'form',
-                'schema': {'type': type},
             }
+            if param_model.is_array:
+                param['schema'] = {'type': 'array', "items": {"type": type}}
+            else:
+                param['schema'] = {'type': type}
             params.append(param)
         return params
 
@@ -227,10 +234,10 @@ class ApiDocViewSet(viewsets.GenericViewSet):
 
     def get_paths(self):
         ''''''
+
         paths = {}
         for api in api_services.get_all_api():
             path = {}
-            paths[f'/api/{api.slug}'] = {api.method: path}
             path['summary'] = api.summary
             path['operationId'] = api.slug
             path['parameters'] = self.get_params(api)
@@ -241,6 +248,8 @@ class ApiDocViewSet(viewsets.GenericViewSet):
                     'content': {'application/json': response},
                 }
             }
+            for method in api.method:
+                paths[f'/api/{api.slug}'] = {method: path}
         return paths
 
     @action(detail=False, url_path='doc')

@@ -48,26 +48,21 @@ class QuerySetMixin:
         - 如果用户是超级用户，则不做任何过滤
         - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
         """
-        print('########get_queryset_by_filter_user:' + str(self.model))
         user = self.request.user
         if user and user.is_staff and user.is_superuser:
             return queryset
 
         # 检测模型中是否有字段引用了用户模型
         has_user_field = meta.get_related_model_field(self.model, get_user_model())
-        print('########get_queryset_by_filter_user1:' + str(has_user_field))
         if has_user_field:
             # 如果有，则读取模型中 GMeta 中的配置
             # FIXME: 注意，这里和管理端的处理逻辑暂时是不同的
             user_field_name = get_gmeta_config_by_key(
                 self.model, gmeta.GMETA_CLIENT_USER_FIELD
             )
-            print('########get_queryset_by_filter_user2:' + str(user_field_name))
             filter_by_login_user = get_gmeta_config_by_key(
                 self.model, gmeta.GMETA_CLIENT_FILTER_BY_LOGIN_USER
             )
-            print('########get_queryset_by_filter_user3:' + str(filter_by_login_user))
-            print('########get_queryset_by_filter_user4:' + str(user.id))
             if user_field_name and filter_by_login_user:
                 return queryset.filter(**{user_field_name: user})
         return queryset

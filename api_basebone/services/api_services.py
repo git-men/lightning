@@ -22,10 +22,10 @@ def save_api(config):
             api = Api()
             api.slug = slug
             is_create = True
-        else:
-            if api.config == str(config):
-                '''配置信息没改'''
-                return False
+        # else:
+        #     if api.config == str(config):
+        #         '''配置信息没改'''
+        #         return False
         api.config = str(config)
         api.app = config.get('app')
         api.model = config.get('model')
@@ -73,6 +73,7 @@ def save_parameters(api, parameters, is_create):
     #     )
 
     pk_count = 0
+    print('is_array3:' + str(parameters))
     for param in parameters:
         param_type = param.get('type')
         if param_type not in Parameter.TYPES:
@@ -113,6 +114,11 @@ def save_parameters(api, parameters, is_create):
         param_model.desc = param.get('desc')
         param_model.type = param_type
         param_model.required = param.get('required')
+        
+        print('is_array2:' + str(param))
+        if 'is_array' in param:
+            print('is_array:' + str(param.get('is_array')))
+            param_model.is_array = param.get('is_array')
         if 'default' in param:
             param_model.default = param.get('default')
 
@@ -363,6 +369,8 @@ def get_api_schema_models():
         app = api.app
         model_name = api.model
         model = apps.get_model(app, model_name)
+        if model is None:
+            continue
         if model in models:
             continue
         models.add(model)
