@@ -65,9 +65,9 @@ def save_api(config):
                 )
         api.save()
 
-        save_parameters(api, config.get('parameter'), is_create)
+        param_list = save_parameters(api, config.get('parameter'), is_create)
         save_display_fields(api, config.get('displayfield'), is_create)
-        save_set_fields(api, config.get('setfield'), is_create, model_class, config.get('parameter'))
+        save_set_fields(api, config.get('setfield'), is_create, model_class, param_list)
         save_filters(api, config.get('filter'), is_create)
         return True
 
@@ -86,6 +86,7 @@ def save_parameters(api, parameters, is_create):
     #     )
 
     pk_count = 0
+    model_list = []
     for param in parameters:
         param_type = param.get('type')
         if param_type not in Parameter.TYPES:
@@ -133,6 +134,7 @@ def save_parameters(api, parameters, is_create):
             param_model.default = param.get('default')
 
         param_model.save()
+        model_list.append(param_model)
 
     if (pk_count != 1) and api.operation in (
         Api.OPERATION_RETRIEVE,
@@ -145,6 +147,8 @@ def save_parameters(api, parameters, is_create):
             error_code=exceptions.PARAMETER_FORMAT_ERROR,
             error_data=f'\'operation\': {api.operation} 操作有且只能有一个主键参数',
         )
+
+    return model_list
 
 
 def save_display_fields(api, fields, is_create):
@@ -181,7 +185,7 @@ def save_display_fields(api, fields, is_create):
         field_model.save()
 
 
-def save_set_fields(api, fields, is_create, model_class, parameters):
+def save_set_fields(api, fields, is_create, model_class, param_list):
     if not is_create:
         SetField.objects.filter(api__id=api.id).delete()
 
@@ -203,7 +207,7 @@ def save_set_fields(api, fields, is_create, model_class, parameters):
             return
 
     if not fields:
-        fields = [[p.get('name'), '${{{}}}'.format(p.get('name'))] for p in parameters]
+        fields = [[p.name, f'${{{p.name}}}'] for p in param_list if not p.is_special_defined()]
 
     meta_filed_names = [f.name for f in model_class._meta.get_fields()]
     for field in fields:
@@ -232,9 +236,9 @@ def save_set_fields(api, fields, is_create, model_class, parameters):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data='set-fields的格式不对'
             )
 
-        if field.name not in meta_filed_names:
+        if field_model.name not in meta_filed_names:
             raise exceptions.BusinessException(
-                error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data=f'{api.app}__{api.model} 没有属性{field.name}'
+                error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data=f'{api.app}__{api.model} 没有属性{field_model.name}'
             )
         field_model.save()
 
