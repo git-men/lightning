@@ -29,6 +29,13 @@ def save_api(config):
         api.config = str(config)
         api.app = config.get('app')
         api.model = config.get('model')
+        try:
+            apps.get_model(api.app, api.model)
+        except LookupError:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data=f'{api.app}__{api.model} 不是有效的model',
+            )
         api.operation = config.get('operation')
         if api.operation not in Api.OPERATIONS:
             raise exceptions.BusinessException(
@@ -38,9 +45,15 @@ def save_api(config):
         if 'summary' in config:
             api.summary = config['summary']
         if 'ordering' in config:
-            api.ordering = config['ordering']
+            if isinstance(config['ordering'], list):
+                api.ordering = ",".join(config['ordering'])
+            else:
+                api.ordering = config['ordering']
         if 'expand_fields' in config:
-            api.expand_fields = config['expand_fields']
+            if isinstance(config['expand_fields'], list):
+                api.expand_fields = ",".join(config['expand_fields'])
+            else:
+                api.expand_fields = config['expand_fields']
         if 'func_name' in config:
             api.func_name = config['func_name']
         else:
