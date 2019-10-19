@@ -30,7 +30,7 @@ def save_api(config):
         api.app = config.get('app')
         api.model = config.get('model')
         try:
-            apps.get_model(api.app, api.model)
+            model_class = apps.get_model(api.app, api.model)
         except LookupError:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
@@ -67,7 +67,7 @@ def save_api(config):
 
         save_parameters(api, config.get('parameter'), is_create)
         save_display_fields(api, config.get('displayfield'), is_create)
-        save_set_fields(api, config.get('setfield'), is_create)
+        save_set_fields(api, config.get('setfield'), is_create, model_class, config.get('parameter'))
         save_filters(api, config.get('filter'), is_create)
         return True
 
@@ -86,7 +86,6 @@ def save_parameters(api, parameters, is_create):
     #     )
 
     pk_count = 0
-    print('is_array3:' + str(parameters))
     for param in parameters:
         param_type = param.get('type')
         if param_type not in Parameter.TYPES:
@@ -128,9 +127,7 @@ def save_parameters(api, parameters, is_create):
         param_model.type = param_type
         param_model.required = param.get('required')
         
-        print('is_array2:' + str(param))
         if 'is_array' in param:
-            print('is_array:' + str(param.get('is_array')))
             param_model.is_array = param.get('is_array')
         if 'default' in param:
             param_model.default = param.get('default')
@@ -184,12 +181,12 @@ def save_display_fields(api, fields, is_create):
         field_model.save()
 
 
-def save_set_fields(api, fields, is_create):
+def save_set_fields(api, fields, is_create, model_class, parameters):
     if not is_create:
         SetField.objects.filter(api__id=api.id).delete()
 
-    if not fields:
-        return
+    # if not fields:
+    #     return
 
     if api.operation not in (
         api.OPERATION_CREATE,
@@ -197,11 +194,18 @@ def save_set_fields(api, fields, is_create):
         api.OPERATION_REPLACE,
         api.OPERATION_UPDATE_BY_CONDITION,
     ):
-        raise exceptions.BusinessException(
-            error_code=exceptions.PARAMETER_FORMAT_ERROR,
-            error_data=f'\'operation\': {api.operation} 操作不需要set-fields',
-        )
+        if fields:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data=f'\'operation\': {api.operation} 操作不需要set-fields',
+            )
+        else:
+            return
 
+    if not fields:
+        fields = [[p.get('name'), '${{{}}}'.format(p.get('name'))] for p in parameters]
+
+    meta_filed_names = [f.name for f in model_class._meta.get_fields()]
     for field in fields:
         field_model = SetField()
         field_model.api = api
@@ -226,6 +230,11 @@ def save_set_fields(api, fields, is_create):
         else:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data='set-fields的格式不对'
+            )
+
+        if field.name not in meta_filed_names:
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data=f'{api.app}__{api.model} 没有属性{field.name}'
             )
         field_model.save()
 
