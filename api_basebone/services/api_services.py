@@ -351,6 +351,16 @@ def format_api_config(api_config):
     api_config['displayfield'] = [f['name'] for f in api_config['displayfield']]
     api_config['setfield'] = [[f['name'], f['value']] for f in api_config['setfield']]
 
+    if api_config['ordering']:
+        api_config['ordering'] = api_config['ordering'].replace(' ', '').split(',')
+    else:
+        api_config['ordering'] = []
+        
+    if api_config['expand_fields']:
+        api_config['expand_fields'] = api_config['expand_fields'].replace(' ', '').split(',')
+    else:
+        api_config['expand_fields'] = []
+
     format_param_config(api_config['parameter'])
     format_filter_config(api_config['filter'])
 
@@ -364,13 +374,21 @@ def format_param_config(params):
                 
 
 def format_filter_config(filters):
-    exclude_keys = ['id', 'api']
+    if not filters:
+        return
+
     for f in filters:
+        exclude_keys = ['id', 'api', 'layer', 'parent', 'type']
+        if f['type'] == Filter.TYPE_CONTAINER:
+            exclude_keys.extend(['field', 'value'])
+        else:
+            exclude_keys.extend(['children'])
+
         for ek in exclude_keys:
             if ek in f:
                 del f[ek]
 
-        if ('children' in f) and f['children']:
+        if ('children' in f):
             format_filter_config(f['children'])
             
 
