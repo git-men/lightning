@@ -137,17 +137,34 @@ class StatisticsMixin:
 class GroupStatisticsMixin:
     """获取统计数据"""
 
-    @action(methods=['post'], detail=False, url_path='group_statistics')
-    def group_statistics(self, request, *args, **kwargs):
-        """
-        分组统计
-        """
+    def get_group(self):
+        request = self.request
+        if 'group' in request.data:
+            group = request.data.get('group')
+        else:
+            # 正佳的项目用了group_method和group_by的方式
+            group_method = request.data.get('group_method', None)
+            group_by = request.data.get('group_by')
+            group = {'group': {'method': group_method, 'field': group_by}}
+
         group_functions = {
             'TruncDay': TruncDay,
             'TruncMonth': TruncMonth,
             'TruncHour': TruncHour,
             None: F,
         }
+
+        # TODO 解决重名的方法，例如供应商名称传过来的是'agency.name'，那么SQL应该同时group by agency_id 和 agency__name，而不单单是agency__name
+        return {k: group_functions[v.get('method', None)](v['field']) for k, v in group.items()}
+
+    def get_queryset_by_filter_conditions(self, queryset):
+        return super().get_queryset_by_filter_conditions(queryset.annotate(**self.get_group()))
+
+    @action(methods=['post'], detail=False, url_path='group_statistics')
+    def group_statistics(self, request, *args, **kwargs):
+        """
+        分组统计
+        """
         methods = {
             'sum': Sum,
             'Sum': Sum,
@@ -159,17 +176,8 @@ class GroupStatisticsMixin:
             None: F,
         }
 
-        if 'group' in request.data:
-            group = request.data.get('group')
-        else:
-            # 正佳的项目用了group_method和group_by的方式
-            group_method = request.data.get('group_method', None)
-            group_by = request.data.get('group_by')
-            group = {'group': {'method': group_method, 'field': group_by}}
-
-        group_kwargs = {k: group_functions[v.get('method', None)](v['field']) for k, v in group.items()}
-
         fields = request.data.get('fields')
+        group_kwargs = self.get_group()
         result = (
             self.get_queryset()
             # 正佳的项目用了group的方式

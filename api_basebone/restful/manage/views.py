@@ -401,11 +401,11 @@ class GenericViewMixin:
 class CommonManageViewSet(
     FormMixin,
     CheckValidateMixin,
+    GroupStatisticsMixin,
     QuerySetMixin,
     ActionLogMixin,
     GenericViewMixin,
     StatisticsMixin,
-    GroupStatisticsMixin,
     viewsets.ModelViewSet,
 ):
     """通用的管理接口视图"""
