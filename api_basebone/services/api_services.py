@@ -314,18 +314,22 @@ def show_api(slug):
         load_api_data()
     api = Api.objects.filter(slug=slug).first()
     expand_fields = ['parameter_set', 'displayfield_set', 'setfield_set']
-    exclude_fields = ['id']
-    serializer_class = multiple_create_serializer_class(Api, expand_fields=expand_fields, exclude_fields=exclude_fields)
+    # exclude_fields = ['id']
+    serializer_class = multiple_create_serializer_class(Api, expand_fields=expand_fields)
     serializer = serializer_class(api)
-    result = serializer.data
+    config = serializer.data
 
-    result['displayfield'] = [f['name'] for f in result['displayfield']]
-    result['setfield'] = [[f['name'], f['value']] for f in result['setfield']]
+    # exclude_fields = ['id', 'api']
+    # for param in result['parameter']:
+    #     for ef in exclude_fields:
+    #         if ef in param:
+    #             del param[ef]
 
-    filter_result = get_filters_json(api)
-    result['filter'] = filter_result
+    filter_config = get_filters_json(api)
+    config['filter'] = filter_config
+    format_api_config(config)
 
-    return result
+    return config
 
 
 def list_api():
@@ -337,6 +341,38 @@ def list_api():
 
     return results
 
+
+def format_api_config(api_config):
+    exclude_keys = ['id']
+    for k in exclude_keys:
+        if k in api_config:
+            del api_config[k]
+
+    api_config['displayfield'] = [f['name'] for f in api_config['displayfield']]
+    api_config['setfield'] = [[f['name'], f['value']] for f in api_config['setfield']]
+
+    format_param_config(api_config['parameter'])
+    format_filter_config(api_config['filter'])
+
+
+def format_param_config(params):
+    exclude_keys = ['id', 'api']
+    for param in params:
+        for ek in exclude_keys:
+            if ek in param:
+                del param[ek]
+                
+
+def format_filter_config(filters):
+    exclude_keys = ['id', 'api']
+    for f in filters:
+        for ek in exclude_keys:
+            if ek in f:
+                del f[ek]
+
+        if ('children' in f) and f['children']:
+            format_filter_config(f['children'])
+            
 
 def queryset_to_json(queryset, expand_fields, exclude_fields):
     serializer_class = multiple_create_serializer_class(
@@ -438,18 +474,4 @@ def load_api_data(app, configs):
             log.info('loaded api data：%s', config['slug'])
 
 
-# def load_api_config_module():
-#     export_apps = getattr(settings, 'BSM_EXPORT_APPS', None)
 
-#     for app in export_apps:
-#         try:
-#             app_config = apps.get_app_config(app)
-#             module = app_config.module
-#             try:
-#                 importlib.import_module(module.__package__ + '.api_config')
-#                 log.info('loaded app api：%s', app)
-#             # except Exception as e:
-#             except Exception:
-#                 continue
-#         except Exception as e:
-#             log.error('加载 API 异常： %s', e)
