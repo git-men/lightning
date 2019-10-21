@@ -158,7 +158,9 @@ class GroupStatisticsMixin:
         return {k: group_functions[v.get('method', None)](v['field']) for k, v in group.items()}
 
     def get_queryset_by_filter_conditions(self, queryset):
-        return super().get_queryset_by_filter_conditions(queryset.annotate(**self.get_group()))
+        if self.action == 'group_statistics':
+            queryset = queryset.annotate(**self.get_group())
+        return super().get_queryset_by_filter_conditions(queryset)
 
     @action(methods=['post'], detail=False, url_path='group_statistics')
     def group_statistics(self, request, *args, **kwargs):
