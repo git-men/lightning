@@ -332,8 +332,11 @@ def show_api(slug):
     return config
 
 
-def list_api():
-    apis = Api.objects.all()
+def list_api(app=None):
+    if app:
+        apis = Api.objects.filter(app=app).all()
+    else:
+        apis = Api.objects.all()
     results = []
     for api in apis:
         r = show_api(api.slug)

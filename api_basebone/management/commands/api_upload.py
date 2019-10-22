@@ -1,4 +1,7 @@
-import importlib
+# import importlib
+import os
+import json
+
 from django.conf import settings
 from django.apps import apps
 
@@ -31,18 +34,25 @@ class Command(BaseCommand):
         for app in export_apps:
             try:
                 app_config = apps.get_app_config(app)
-                module = app_config.module
-                try:
-                    api_config = importlib.import_module(
-                        module.__package__ + '.api_config'
-                    )
-                except Exception:
-                    continue  # 没有api_config
-                if not hasattr(api_config, 'API_CONFIGS'):
+                # module = app_config.module
+                path = app_config.module.__path__[0] + '/api_config.json'
+                if not os.path.isfile(path):
                     print(f"{app}没有API_CONFIGS")
                     continue
+                with open(path, 'r', encoding='utf-8') as f:
+                    s = f.read()
+                    api_config_list = json.loads(s)
+                # try:
+                #     # api_config = importlib.import_module(
+                #     #     module.__package__ + '.api_config'
+                #     # )
+                # except Exception:
+                #     continue  # 没有api_config
+                # if not hasattr(api_config, 'API_CONFIGS'):
+                #     print(f"{app}没有API_CONFIGS")
+                #     continue
                 print(f'-------------------开始上传 app：{app} 的api配置 ------------------')
-                for config in api_config.API_CONFIGS:
+                for config in api_config_list:
                     slug = ''
                     try:
                         slug = config['slug']

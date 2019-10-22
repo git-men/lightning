@@ -11,8 +11,8 @@ def show_api(user, slug, **kwargs):
 
 
 @bsm_func(staff_required=True, name='list_api', model=Api)
-def list_api(user, **kwargs):
-    return api_services.list_api()
+def list_api(user, app=None, **kwargs):
+    return api_services.list_api(app)
 
 
 @bsm_func(staff_required=True, name='api_save', model=Api)
