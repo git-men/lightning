@@ -270,6 +270,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
                 item = decimal.Decimal(item)
             elif parameter.type == Parameter.TYPE_JSON:
                 item = json.loads(item)
+            elif parameter.type == Parameter.TYPE_OBJECT:
+                item = json.loads(item)
             params.append(item)
         
         if parameter.is_array:

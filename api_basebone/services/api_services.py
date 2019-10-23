@@ -72,8 +72,8 @@ def save_api(config):
         return True
 
 
-def save_parameters(api, parameters, is_create):
-    if not is_create:
+def save_parameters(api, parameters, is_create, parent=None):
+    if (not parent) and (not is_create):
         Parameter.objects.filter(api__id=api.id).delete()
 
     if not parameters:
@@ -105,6 +105,7 @@ def save_parameters(api, parameters, is_create):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 操作不需要分页参数',
             )
+            
 
         if param_type == Parameter.TYPE_PK:
             if api.operation in (
@@ -120,9 +121,21 @@ def save_parameters(api, parameters, is_create):
                     error_code=exceptions.PARAMETER_FORMAT_ERROR,
                     error_data=f'\'operation\': {api.operation} 操作不需要主键参数',
                 )
+        
+        if parent and (param_type in Parameter.SPECIAL_TYPES):
+            raise exceptions.BusinessException(
+                error_code=exceptions.PARAMETER_FORMAT_ERROR,
+                error_data='复杂数据类型不允许包含主键、分页等特殊类型',
+            )
+
 
         param_model = Parameter()
         param_model.api = api
+        if parent:
+            param_model.parent = parent
+            param_model.layer = parent.layer + 1
+        else:
+            param_model.layer = 0
         param_model.name = param.get('name')
         param_model.desc = param.get('desc')
         param_model.type = param_type
@@ -134,6 +147,8 @@ def save_parameters(api, parameters, is_create):
             param_model.default = param.get('default')
 
         param_model.save()
+        if 'children' in param:
+            save_parameters(api, param['children'], is_create, param_model)
         model_list.append(param_model)
 
     if (pk_count != 1) and api.operation in (
@@ -313,7 +328,7 @@ def show_api(slug):
     if API_DATA is None:
         load_api_data()
     api = Api.objects.filter(slug=slug).first()
-    expand_fields = ['parameter_set', 'displayfield_set', 'setfield_set']
+    expand_fields = ['displayfield_set', 'setfield_set']
     # exclude_fields = ['id']
     serializer_class = multiple_create_serializer_class(Api, expand_fields=expand_fields)
     serializer = serializer_class(api)
@@ -325,8 +340,8 @@ def show_api(slug):
     #         if ef in param:
     #             del param[ef]
 
-    filter_config = get_filters_json(api)
-    config['filter'] = filter_config
+    config['filter'] = get_filters_json(api)
+    config['parameter'] = get_param_json(api)
     format_api_config(config)
 
     return config
@@ -369,11 +384,17 @@ def format_api_config(api_config):
 
 
 def format_param_config(params):
-    exclude_keys = ['id', 'api']
+    exclude_keys = ['id', 'api', 'layer', 'parent']
     for param in params:
         for ek in exclude_keys:
             if ek in param:
                 del param[ek]
+
+        if ('children' in param):
+            if param['children']:
+                format_param_config(param['children'])
+            else:
+                del param['children']
                 
 
 def format_filter_config(filters):
@@ -406,14 +427,22 @@ def queryset_to_json(queryset, expand_fields, exclude_fields):
 def get_filters_json(api):
     max_layer = Filter.objects.filter(api__id=api.id).aggregate(max=Max('layer'))['max']
     max_layer = max_layer or 0
-    expand_fields = []
-    exclude_fields = ['id']
-    for i in range(max_layer):
-        if i == 0:
-            expand_fields.append('children')
-        else:
-            expand_fields.append(expand_fields[-1] + '.children')
+    expand = ['children' for i in range(max_layer)]
+    expand = ".".join(expand)
+    expand_fields = [expand]
+    exclude_fields = []
     queryset = Filter.objects.filter(api__id=api.id, parent__isnull=True)
+    return queryset_to_json(queryset, expand_fields, exclude_fields)
+
+
+def get_param_json(api):
+    max_layer = Parameter.objects.filter(api__id=api.id).aggregate(max=Max('layer'))['max']
+    max_layer = max_layer or 0
+    expand = ['children' for i in range(max_layer)]
+    expand = ".".join(expand)
+    expand_fields = [expand]
+    exclude_fields = []
+    queryset = Parameter.objects.filter(api__id=api.id, parent__isnull=True)
     return queryset_to_json(queryset, expand_fields, exclude_fields)
 
 
@@ -422,7 +451,7 @@ def get_all_api():
 
 
 def get_config_parameters(api_id):
-    return Parameter.objects.filter(api__id=api_id).all()
+    return Parameter.objects.filter(api__id=api_id, parent__isnull=True).all()
 
 
 def get_config_display_fields(api_id):

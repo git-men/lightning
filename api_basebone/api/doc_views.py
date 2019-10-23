@@ -38,6 +38,7 @@ API_PARAM_TYPE_TO_SWAGGER = {
     Parameter.TYPE_PAGE_IDX: 'integer',
     Parameter.TYPE_PAGE_SIZE: 'integer',
     Parameter.TYPE_JSON: 'string',
+    Parameter.TYPE_OBJECT: 'object',
 }
 
 
@@ -91,28 +92,55 @@ class ApiDocViewSet(viewsets.GenericViewSet):
                     schema['required'] = required
         return schemas
 
-    def get_params(self, api):
+    def get_params(self, api, parent=None):
         ''''''
         params = []
+        if parent:
+            param_config_list = parent['children']
+            params = {}
+        else:
+            param_config_list = api_services.get_param_json(api)
+            params = []
         global API_PARAM_TYPE_TO_SWAGGER
-        for param_model in api_services.get_config_parameters(api.id):
-            if param_model.type in API_PARAM_TYPE_TO_SWAGGER:
-                type = API_PARAM_TYPE_TO_SWAGGER[param_model.type]
+        for param_config in param_config_list:
+            if param_config['type'] in API_PARAM_TYPE_TO_SWAGGER:
+                type = API_PARAM_TYPE_TO_SWAGGER[param_config['type']]
             else:
                 type = 'string'
 
-            param = {
-                'name': param_model.name,
-                'in': 'query',
-                'description': param_model.desc,
-                'required': param_model.required,
-                'style': 'form',
-            }
-            if param_model.is_array:
-                param['schema'] = {'type': 'array', "items": {"type": type}}
+            if parent:
+                name = param_config['name']
+                if param_config['is_array']:
+                    param = {'type': 'array', "items": {"type": type}}
+                    if ('children' in param_config) and param_config['children']:
+                        param["items"]['properties'] = self.get_params(
+                            api, param_config
+                        )
+                else:
+                    param = {'type': type}
+                    if ('children' in param_config) and param_config['children']:
+                        param['properties'] = self.get_params(api, param_config)
+                params[name] = param
             else:
-                param['schema'] = {'type': type}
-            params.append(param)
+                param = {
+                    'name': param_config['name'],
+                    'in': 'query',
+                    'description': param_config['desc'],
+                    'required': param_config['required'],
+                    'style': 'form',
+                }
+                if param_config['is_array']:
+                    param['schema'] = {'type': 'array', "items": {"type": type}}
+                    if ('children' in param_config) and param_config['children']:
+                        param['schema']["items"]['properties'] = self.get_params(
+                            api, param_config
+                        )
+                else:
+                    param['schema'] = {'type': type}
+                    if ('children' in param_config) and param_config['children']:
+                        param['schema']['properties'] = self.get_params(api, param_config)
+
+                params.append(param)
         return params
 
     def filter_display_fields(self, api, display_fields):

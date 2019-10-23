@@ -42,16 +42,18 @@ class Command(BaseCommand):
                 api_list = api_services.list_api(app)
                 if not api_list:
                     continue
-                print(f'-------------------开始上传 app：{app} 的api配置 ------------------')
+                print(f'-------------------开始导出 app：{app} 的api配置 ------------------')
                 api_config_list = []
                 for api_config in api_list:
                     api_config_list.append(api_config)
 
-                api_json = json.dumps(api_config_list, ensure_ascii=False, indent=4)
+                api_json = json.dumps(
+                    api_config_list, ensure_ascii=False, indent=4, sort_keys=True
+                )
                 with open(path, 'w', encoding='utf-8') as f:
                     f.write(api_json)
                     success_list.append(app)
-                print(f'------------------- 上传 api 配置完成 ----------------------------')
+                print(f'------------------- 导出 api 配置完成 ----------------------------')
             except Exception as e:
                 error_list.append(app)
                 print('导出 API 异常： {}'.format(traceback.format_exc()))

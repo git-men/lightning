@@ -121,6 +121,7 @@ class Parameter(models.Model):
     TYPE_DECIMAL = 'decimal'
     TYPE_BOOLEAN = 'boolean'
     TYPE_JSON = 'json'
+    TYPE_OBJECT = 'object'
     TYPE_PAGE_SIZE = 'PAGE_SIZE'
     TYPE_PAGE_IDX = 'PAGE_IDX'
     TYPE_PK = 'pk'
@@ -130,6 +131,7 @@ class Parameter(models.Model):
         (TYPE_DECIMAL, '浮点数'),
         (TYPE_BOOLEAN, '布尔值'),
         (TYPE_JSON, 'json格式'),
+        (TYPE_OBJECT, '复杂类型'),
         (TYPE_PAGE_SIZE, '页长'),
         (TYPE_PAGE_IDX, '页码'),
         (TYPE_PK, '主键'),
@@ -145,6 +147,11 @@ class Parameter(models.Model):
     required = models.BooleanField('是否必填', default=True)
     default = models.CharField('默认值', max_length=50, null=True, default='')
     is_array = models.BooleanField('是否数组', default=False)
+
+    parent = models.ForeignKey(
+        'self', models.CASCADE, null=True, verbose_name='parent', related_name="children"
+    )
+    layer = models.IntegerField('嵌套层数', default=0)
 
     def is_special_defined(self):
         """自定义参数，用于特殊用途"""
