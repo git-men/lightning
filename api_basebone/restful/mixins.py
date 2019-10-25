@@ -182,10 +182,9 @@ class GroupStatisticsMixin:
         group_kwargs = self.get_group()
         result = (
             self.get_queryset()
-            # 正佳的项目用了group的方式
-            .annotate(**group_kwargs).values(*group_kwargs.keys())
+            .values(*group_kwargs.keys())
             .annotate(
-                **{key: methods[value.get('method', None)](value['field'], **value.get('params', {})) for key, value in fields.items()
+                **{key: methods[value.get('method', None)](value['field'], distinct=value.get('distinct', False)) for key, value in fields.items()
                    # 排除exclude_fields
                    if value['field'] not in get_model_exclude_fields(self.model, None)}
             )

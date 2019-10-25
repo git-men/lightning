@@ -36,6 +36,7 @@ from api_basebone.restful.serializers import (
 from api_basebone.signals import post_bsm_create
 from api_basebone.utils import get_app, meta
 from api_basebone.utils.operators import build_filter_conditions
+from api_basebone.utils import queryset as queryset_utils
 
 from .user_pip import add_login_user_data
 
@@ -356,9 +357,7 @@ class GenericViewMixin:
             field_list = [item.replace('.', '__') for item in expand_fields]
             queryset = queryset.prefetch_related(*field_list)
 
-        annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
-        if annotated_fields:
-            queryset = queryset.annotate(**{name: field['annotation'] for name, field in annotated_fields.items()})
+        queryset = queryset_utils.annotate(queryset)
 
         queryset = self._get_queryset(queryset)
 

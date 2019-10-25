@@ -1,10 +1,12 @@
 from django.db.models.query import QuerySet
 from django.db.models import Manager
 from .operators import build_filter_conditions
+from ..export.fields import get_attr_in_gmeta_class
+from ..core import gmeta
 from ..restful.serializers import multiple_create_serializer_class
 
 
-__all__ = ['filter', 'serialize']
+__all__ = ['filter', 'serialize', 'annotate']
 
 
 def filter_queryset(queryset, filters=None):
@@ -97,6 +99,14 @@ def serialize_queryset(data, action='list', expand_fields=None):
     return serializer.data
 
 
+def annotate_queryset(queryset):
+    annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    if annotated_fields:
+        return queryset.annotate(**{name: field['annotation'] for name, field in annotated_fields.items()})
+    return queryset
+
+
 # alias
 filter = filter_queryset
 serialize = serialize_queryset
+annotate = annotate_queryset
