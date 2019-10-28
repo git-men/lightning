@@ -1,8 +1,10 @@
 import logging
+import json
 from django.db.models import Max
 from django.db import transaction
 from django.apps import apps
 
+from api_basebone.api.cache import api_cache
 from api_basebone.core import exceptions
 from api_basebone.export.fields import get_model_field_config
 from api_basebone.restful.serializers import multiple_create_serializer_class
@@ -69,6 +71,9 @@ def save_api(config):
         save_display_fields(api, config.get('displayfield'), is_create)
         save_set_fields(api, config.get('setfield'), is_create, model_class, param_list)
         save_filters(api, config.get('filter'), is_create)
+
+        api_cache.delete_api_config(slug)
+
         return True
 
 
@@ -105,7 +110,6 @@ def save_parameters(api, parameters, is_create, parent=None):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data=f'\'operation\': {api.operation} 操作不需要分页参数',
             )
-            
 
         if param_type == Parameter.TYPE_PK:
             if api.operation in (
@@ -127,7 +131,6 @@ def save_parameters(api, parameters, is_create, parent=None):
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
                 error_data='复杂数据类型不允许包含主键、分页等特殊类型',
             )
-
 
         param_model = Parameter()
         param_model.api = api
@@ -327,7 +330,17 @@ def save_one_filter(api, filter, parent=None):
 def show_api(slug):
     if API_DATA is None:
         load_api_data()
+
+    config = api_cache.get_api_config(slug)
+    if config:
+        config = json.loads(config)
+        return config
     api = Api.objects.filter(slug=slug).first()
+    if not api:
+        raise exceptions.BusinessException(
+            error_code=exceptions.OBJECT_NOT_FOUND,
+            error_data=f'找不到对应的api：{slug}'
+        )
     expand_fields = ['displayfield_set', 'setfield_set']
     # exclude_fields = ['id']
     serializer_class = multiple_create_serializer_class(Api, expand_fields=expand_fields)
@@ -343,7 +356,7 @@ def show_api(slug):
     config['filter'] = get_filters_json(api)
     config['parameter'] = get_param_json(api)
     format_api_config(config)
-
+    api_cache.set_api_config(slug, json.dumps(config))
     return config
 
 
@@ -427,10 +440,13 @@ def queryset_to_json(queryset, expand_fields, exclude_fields):
 def get_filters_json(api):
     max_layer = Filter.objects.filter(api__id=api.id).aggregate(max=Max('layer'))['max']
     max_layer = max_layer or 0
-    expand = ['children' for i in range(max_layer)]
-    expand = ".".join(expand)
-    expand_fields = [expand]
     exclude_fields = []
+    expand_fields = []
+    for i in range(max_layer):
+        if i == 0:
+            expand_fields.append('children')
+        else:
+            expand_fields.append(expand_fields[-1] + '.children')
     queryset = Filter.objects.filter(api__id=api.id, parent__isnull=True)
     return queryset_to_json(queryset, expand_fields, exclude_fields)
 
@@ -438,10 +454,13 @@ def get_filters_json(api):
 def get_param_json(api):
     max_layer = Parameter.objects.filter(api__id=api.id).aggregate(max=Max('layer'))['max']
     max_layer = max_layer or 0
-    expand = ['children' for i in range(max_layer)]
-    expand = ".".join(expand)
-    expand_fields = [expand]
     exclude_fields = []
+    expand_fields = []
+    for i in range(max_layer):
+        if i == 0:
+            expand_fields.append('children')
+        else:
+            expand_fields.append(expand_fields[-1] + '.children')
     queryset = Parameter.objects.filter(api__id=api.id, parent__isnull=True)
     return queryset_to_json(queryset, expand_fields, exclude_fields)
 
