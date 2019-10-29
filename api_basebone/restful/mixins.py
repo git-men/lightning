@@ -1,5 +1,6 @@
 from functools import partial
 
+import pytz
 from django.db.models import Sum, Count, Value, F, Avg, Max, Min
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncHour
 
@@ -148,9 +149,9 @@ class GroupStatisticsMixin:
             group = {'group': {'method': group_method, 'field': group_by}}
 
         group_functions = {
-            'TruncDay': TruncDay,
-            'TruncMonth': TruncMonth,
-            'TruncHour': TruncHour,
+            'TruncDay': partial(TruncDay, tzinfo=pytz.UTC),
+            'TruncMonth': partial(TruncMonth, tzinfo=pytz.UTC),
+            'TruncHour': partial(TruncHour, tzinfo=pytz.UTC),
             None: F,
         }
 
