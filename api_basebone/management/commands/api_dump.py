@@ -5,7 +5,7 @@ from django.conf import settings
 from django.apps import apps
 
 from django.core.management.base import BaseCommand
-from api_basebone.services import api_services
+from api_basebone.api.driver import db
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class Command(BaseCommand):
             export_apps = getattr(settings, 'BSM_EXPORT_APPS', None) + getattr(
                 settings, 'INTERNAL_APPS', None
             )
-            print("export_apps:" + str(export_apps))
+            export_apps = list(set(export_apps))
 
         error_list = []
         success_list = []
@@ -39,7 +39,7 @@ class Command(BaseCommand):
             try:
                 app_config = apps.get_app_config(app)
                 path = app_config.module.__path__[0] + '/api_config.json'
-                api_list = api_services.list_api(app)
+                api_list = db.list_api_config(app)
                 if not api_list:
                     continue
                 print(f'-------------------开始导出 app：{app} 的api配置 ------------------')

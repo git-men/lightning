@@ -10,6 +10,7 @@ from rest_framework.viewsets import ModelViewSet
 from api_basebone.core import exceptions
 
 
+from api_basebone.api import const as api_const
 from api_basebone.core import const, gmeta
 from api_basebone.core import admin
 
@@ -31,9 +32,10 @@ from api_basebone.restful.mixins import FormMixin
 # from api_basebone.restful.viewsets import BSMModelViewSet
 from api_basebone.restful.client.views import QuerySetMixin
 
-from api_basebone.models import Api
-from api_basebone.models import Parameter
-from api_basebone.models import Filter
+# from api_basebone import models
+# from api_basebone.models import Api
+# from api_basebone.models import Parameter
+# from api_basebone.models import Filter
 # from api_basebone.models import DisplayField
 # from api_basebone.models import SetField
 
@@ -85,10 +87,10 @@ class GenericViewMixin:
 
         self.expand_fields = None
         if self.action in ['list']:
-            fields = self.request.query_params.get(const.EXPAND_FIELDS)
+            fields = self.request.query_params.get(api_const.EXPAND_FIELDS)
             self.expand_fields = fields.split(',') if fields else None
         elif self.action in ['retrieve', 'set', 'func']:
-            self.expand_fields = self.request.data.get(const.EXPAND_FIELDS)
+            self.expand_fields = self.request.data.get(api_const.EXPAND_FIELDS)
             # 详情的展开字段和列表的展开字段分开处理
             if not self.expand_fields and self.action == 'retrieve':
                 # 对于详情的展开，直接读取 admin 中的配置
@@ -217,7 +219,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def api(self, request, *args, **kwargs):
         slug = kwargs.get('pk')
-        api = Api.objects.filter(slug=slug).first()
+        # api = Api.objects.filter(slug=slug).first()
+        api = api_services.get_api_po(slug)
         if not api:
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
@@ -238,11 +241,10 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         value = request.GET.get(parameter.name) or request.POST.get(parameter.name) or parameter.default
         if (value is None) and parameter.default:
             value = parameter.default
-        # if ((value is None) or (value == '')) and (parameter.required):
         if (value is None) and (parameter.required):
             raise exceptions.BusinessException(
                 error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                error_data=f'{parameter.name}参数为必填',
+                error_data='{}参数为必填'.format(parameter.name),
             )
         if parameter.is_array:
             items = json.loads(value)
@@ -251,7 +253,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
         params = []
         for item in items:
-            if parameter.type == Parameter.TYPE_BOOLEAN:
+            param_type = parameter.type
+            if param_type == api_const.TYPE_BOOLEAN:
                 if isinstance(item, str):
                     item = item.replace(' ', '')
                     item = item.lower()
@@ -263,15 +266,17 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
                         item = bool(eval(item))
                 else:
                     item = bool(eval(item))
-            elif parameter.type in (Parameter.TYPE_INT, Parameter.TYPE_PAGE_IDX, Parameter.TYPE_PAGE_SIZE):
+            elif param_type in (api_const.TYPE_INT, api_const.TYPE_PAGE_IDX, api_const.TYPE_PAGE_SIZE):
                 if item:
                     item = int(item)
-            elif parameter.type == Parameter.TYPE_DECIMAL:
+            elif param_type == api_const.TYPE_DECIMAL:
                 item = decimal.Decimal(item)
-            elif parameter.type == Parameter.TYPE_JSON:
-                item = json.loads(item)
-            elif parameter.type == Parameter.TYPE_OBJECT:
-                item = json.loads(item)
+            elif param_type == api_const.TYPE_JSON:
+                if isinstance(item, str):
+                    item = json.loads(item)
+            elif param_type == api_const.TYPE_OBJECT:
+                if isinstance(item, str):
+                    item = json.loads(item)
             params.append(item)
         
         if parameter.is_array:
@@ -279,17 +284,17 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         else:
             return params[0]
 
-    def get_pk_value(self, request, api_id):
-        parameters = api_services.get_config_parameters(api_id)
+    def get_pk_value(self, request, api):
+        parameters = api.parameter
         for p in parameters:
-            if p.type == Parameter.TYPE_PK:
+            if p.type == api_const.TYPE_PK:
                 id = self.get_param_value(request, p)
                 if id:
                     return id
                 else:
                     raise exceptions.BusinessException(
                         error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                        error_data=f'没有\'{p.name}\'这一pk参数',
+                        error_data='没有\'{}\'这一pk参数'.format(p['name']),
                     )
         else:
             raise exceptions.BusinessException(
@@ -297,44 +302,38 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
                 error_data='api没有配置pk参数',
             )
 
-    def get_page_param(self, request, api_id):
+    def get_page_param(self, request, api):
         """提取分页参数"""
-        parameters = api_services.get_config_parameters(api_id)
+        parameters = api.parameter
         size = None
         page = None
         page_query_param = 'page'
         size_query_param = 'size'
         for p in parameters:
-            if p.type == Parameter.TYPE_PAGE_SIZE:
+            if p.type == api_const.TYPE_PAGE_SIZE:
                 size = self.get_param_value(request, p)
                 size_query_param = p.name
-                # if not size:
-                #     raise exceptions.BusinessException(
-                #         error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                #         error_data=f'没有\'{p.name}\'这一页长参数',
-                #     )
-            elif p.type == Parameter.TYPE_PAGE_IDX:
+            elif p.type == api_const.TYPE_PAGE_IDX:
                 page = self.get_param_value(request, p)
                 page_query_param = p.name
-                # if not page:
-                #     raise exceptions.BusinessException(
-                #         error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                #         error_data=f'没有\'{p.name}\'这一页码参数',
-                #     )
 
         return size, page, size_query_param, page_query_param
 
-    def get_request_params(self, request, api_id):
-        parameters = api_services.get_config_parameters(api_id)
+    # def is_special_defined(self, type):
+    #     """自定义参数，用于特殊用途"""
+    #     return type in const.SPECIAL_TYPES
+
+    def get_request_params(self, request, api):
+        parameters = api.parameter
         params = {}
         for p in parameters:
             if not p.is_special_defined():
-                params[p.name] = self.get_param_value(request, p)
+                params[p['name']] = self.get_param_value(request, p)
         return params
 
     def run_func_api(self, request, api, *args, **kwargs):
         """云函数api"""
-        parameters = api_services.get_config_parameters(api.id)
+        parameters = api.parameter
         params = {}
         for p in parameters:
             params[p.name] = self.get_param_value(request, p)
@@ -349,13 +348,13 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
         return response
 
-    def make_set_data(self, request, api_id):
+    def make_set_data(self, request, api):
         """往request注入修改的参数和数据"""
         data = request.data
         if hasattr(data, '_mutable'):
             data._mutable = True
-        params = self.get_request_params(request, api_id)
-        set_fields = api_services.get_config_set_fields(api_id)
+        params = self.get_request_params(request, api)
+        set_fields = api.setfield
         new_data = {}
         for f in set_fields:
             new_data[f.name] = self.replace_params(request, f.value, params)
@@ -366,8 +365,8 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_create_api(self, request, api, *args, **kwargs):
         """新建操作api"""
-        self.make_set_data(request, api.id)
-        display_fields = api_services.get_config_display_fields(api.id)
+        self.make_set_data(request, api)
+        display_fields = api.displayfield
         self.expand_fields = self.get_config_expand_fields(api, display_fields)
         display_fields = [f.name for f in display_fields]
         response = rest_services.client_create(self, request)
@@ -375,12 +374,12 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_update_api(self, request, api, *args, **kwargs):
         """更新操作api"""
-        id = self.get_pk_value(request, api.id)
+        id = self.get_pk_value(request, api)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
-        self.make_set_data(request, api.id)
+        self.make_set_data(request, api)
         
-        display_fields = api_services.get_config_display_fields(api.id)
+        display_fields = api.displayfield
         self.expand_fields = self.get_config_expand_fields(api, display_fields)
         display_fields = [f.name for f in display_fields]
         response = rest_services.client_update(self, request, False)
@@ -388,12 +387,12 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_replace_api(self, request, api, *args, **kwargs):
         """局部更新操作api"""
-        id = self.get_pk_value(request, api.id)
+        id = self.get_pk_value(request, api)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
-        self.make_set_data(request, api.id)
+        self.make_set_data(request, api)
         
-        display_fields = api_services.get_config_display_fields(api.id)
+        display_fields = api.displayfield
         self.expand_fields = self.get_config_expand_fields(api, display_fields)
         display_fields = [f.name for f in display_fields]
         response = rest_services.client_update(self, request, True)
@@ -401,7 +400,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_delete_api(self, request, api, *args, **kwargs):
         """删除操作api"""
-        id = self.get_pk_value(request, api.id)
+        id = self.get_pk_value(request, api)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
         
@@ -409,11 +408,11 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_retrieve_api(self, request, api, *args, **kwargs):
         """查询详情操作api"""
-        id = self.get_pk_value(request, api.id)
+        id = self.get_pk_value(request, api)
         kwargs[self.lookup_field] = id
         self.kwargs = kwargs
 
-        fields = api_services.get_config_display_fields(api.id)
+        fields = api.displayfield
         self.expand_fields = self.get_config_expand_fields(api, fields)
         display_fields = [f.name for f in fields]
         
@@ -425,7 +424,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def put_param_into_one_filter(self, request, filter, params):
         # if ('children' in filter) and (filter['children']):
-        if filter['type'] == Filter.TYPE_CONTAINER:
+        if filter['type'] == api_const.FILTER_TYPE_CONTAINER:
             children = filter['children']
             for child in children:
                 self.put_param_into_one_filter(request, child, params)
@@ -507,13 +506,13 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         if api.get_order_by_fields():
             data[const.ORDER_BY_FIELDS] = api.get_order_by_fields()
         
-        params = self.get_request_params(request, api.id)
+        params = self.get_request_params(request, api)
         
-        filters = api_services.get_filters_json(api)
+        filters = [f.toDict() for f in api.filter]
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
-        size, page, size_query_param, page_query_param = self.get_page_param(request, api.id)
+        size, page, size_query_param, page_query_param = self.get_page_param(request, api)
 
         self.kwargs = {}
         if size:
@@ -528,7 +527,7 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         # if hasattr(data, '_mutable'):
         #     data._mutable = False
 
-        fields = api_services.get_config_display_fields(api.id)
+        fields = api.displayfield
         self.expand_fields = self.get_config_expand_fields(api, fields)
         display_fields = [f.name for f in fields]
         self.pagination_class.page_size_query_param = size_query_param
@@ -541,9 +540,9 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
         if hasattr(data, '_mutable'):
             data._mutable = True
         
-        params = self.get_request_params(request, api.id)
+        params = self.get_request_params(request, api)
         
-        filters = api_services.get_filters_json(api)
+        filters = [f.toDict() for f in api.filter]
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
@@ -554,20 +553,20 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     def run_update_by_condition_api(self, request, api, *args, **kwargs):
         """按条件更新的api"""
-        params = self.get_request_params(request, api.id)
+        params = self.get_request_params(request, api)
 
         data = request.data
         if hasattr(data, '_mutable'):
             data._mutable = True
         
-        filters = api_services.get_filters_json(api)
+        filters = [f.toDict() for f in api.filter]
         self.put_params_into_filters(request, filters, params)
         data[const.FILTER_CONDITIONS] = filters
 
         # if hasattr(data, '_mutable'):
         #     data._mutable = False
 
-        set_fields = api_services.get_config_set_fields(api.id)
+        set_fields = api.setfield
         set_fields_map = {}
         for f in set_fields:
             set_fields_map[f.name] = self.replace_params(request, f.value, params)
@@ -576,25 +575,25 @@ class ApiViewSet(FormMixin, QuerySetMixin, GenericViewMixin, ModelViewSet):
 
     # 放在最后
     API_RUNNER_MAP = {
-        Api.OPERATION_LIST: run_list_api,
-        Api.OPERATION_RETRIEVE: run_retrieve_api,
-        Api.OPERATION_CREATE: run_create_api,
-        Api.OPERATION_UPDATE: run_update_api,
-        Api.OPERATION_REPLACE: run_replace_api,
-        Api.OPERATION_DELETE: run_delete_api,
-        Api.OPERATION_UPDATE_BY_CONDITION: run_update_by_condition_api,
-        Api.OPERATION_DELETE_BY_CONDITION: run_delete_by_condition_api,
-        Api.OPERATION_FUNC: run_func_api,
+        api_const.OPERATION_LIST: run_list_api,
+        api_const.OPERATION_RETRIEVE: run_retrieve_api,
+        api_const.OPERATION_CREATE: run_create_api,
+        api_const.OPERATION_UPDATE: run_update_api,
+        api_const.OPERATION_REPLACE: run_replace_api,
+        api_const.OPERATION_DELETE: run_delete_api,
+        api_const.OPERATION_UPDATE_BY_CONDITION: run_update_by_condition_api,
+        api_const.OPERATION_DELETE_BY_CONDITION: run_delete_by_condition_api,
+        api_const.OPERATION_FUNC: run_func_api,
     }
 
     API_ACTION_MAP = {
-        Api.OPERATION_LIST: 'list',
-        Api.OPERATION_RETRIEVE: 'retrieve',
-        Api.OPERATION_CREATE: 'create',
-        Api.OPERATION_UPDATE: 'update',
-        Api.OPERATION_REPLACE: 'custom_patch',
-        Api.OPERATION_DELETE: 'destroy',
-        Api.OPERATION_UPDATE_BY_CONDITION: 'update_by_conditon',
-        Api.OPERATION_DELETE_BY_CONDITION: 'delete_by_conditon',
-        Api.OPERATION_FUNC: 'func',
+        api_const.OPERATION_LIST: 'list',
+        api_const.OPERATION_RETRIEVE: 'retrieve',
+        api_const.OPERATION_CREATE: 'create',
+        api_const.OPERATION_UPDATE: 'update',
+        api_const.OPERATION_REPLACE: 'custom_patch',
+        api_const.OPERATION_DELETE: 'destroy',
+        api_const.OPERATION_UPDATE_BY_CONDITION: 'update_by_conditon',
+        api_const.OPERATION_DELETE_BY_CONDITION: 'delete_by_conditon',
+        api_const.OPERATION_FUNC: 'func',
     }

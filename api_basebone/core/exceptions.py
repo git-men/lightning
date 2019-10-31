@@ -16,6 +16,7 @@ MODEL_EXPORT_IS_NOT_SUPPORT = '10011'
 BSM_NOT_STATISTICS_CONFIG = '10012'
 BSM_CAN_NOT_FIND_ADMIN = '10013'
 USER_NOT_HAVE_ENOUGH_PERM = '10014'
+CAN_NOT_SAVE_API = '10015'
 
 ERROR_PHRASES = {
     PARAMETER_FORMAT_ERROR: '参数格式错误',
@@ -34,6 +35,7 @@ ERROR_PHRASES = {
     BSM_NOT_STATISTICS_CONFIG: '没有配置任何统计配置',
     BSM_CAN_NOT_FIND_ADMIN: '没有找到模型对应的 admin 模块',
     USER_NOT_HAVE_ENOUGH_PERM: '此模型用户没有权限进行操作',
+    CAN_NOT_SAVE_API: '当前模式不支持API在线编辑',
 }
 
 
@@ -52,7 +54,9 @@ class BusinessException(Exception):
 
     def __init__(self, error_code=None, error_message=None, error_data='', error_app=''):
 
-        self.error_code = error_code if error_code is not None else self.default_error_code
+        self.error_code = (
+            error_code if error_code is not None else self.default_error_code
+        )
 
         if error_message is not None:
             self.error_message = error_message

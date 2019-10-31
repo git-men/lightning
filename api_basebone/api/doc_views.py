@@ -1,7 +1,6 @@
 import json
 
 from django.apps import apps
-from django.conf import settings
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -9,8 +8,7 @@ from rest_framework.response import Response
 
 from api_basebone.export.fields import get_model_field_config
 from api_basebone.utils.meta import load_custom_admin_module
-from api_basebone.models import Api
-from api_basebone.models import Parameter
+from api_basebone.api import const
 from api_basebone.services import api_services
 
 MODEL_TYPE_TO_SWAGGER = {
@@ -30,15 +28,15 @@ MODEL_TYPE_TO_SWAGGER = {
 
 
 API_PARAM_TYPE_TO_SWAGGER = {
-    Parameter.TYPE_STRING: 'string',
-    Parameter.TYPE_BOOLEAN: 'boolean',
-    Parameter.TYPE_INT: 'integer',
-    Parameter.TYPE_DECIMAL: 'number',
-    Parameter.TYPE_PK: 'string',
-    Parameter.TYPE_PAGE_IDX: 'integer',
-    Parameter.TYPE_PAGE_SIZE: 'integer',
-    Parameter.TYPE_JSON: 'string',
-    Parameter.TYPE_OBJECT: 'object',
+    const.TYPE_STRING: 'string',
+    const.TYPE_BOOLEAN: 'boolean',
+    const.TYPE_INT: 'integer',
+    const.TYPE_DECIMAL: 'number',
+    const.TYPE_PK: 'string',
+    const.TYPE_PAGE_IDX: 'integer',
+    const.TYPE_PAGE_SIZE: 'integer',
+    const.TYPE_JSON: 'string',
+    const.TYPE_OBJECT: 'object',
 }
 
 
@@ -96,48 +94,46 @@ class ApiDocViewSet(viewsets.GenericViewSet):
         ''''''
         params = []
         if parent:
-            param_config_list = parent['children']
+            param_config_list = parent.children
             params = {}
         else:
-            param_config_list = api_services.get_param_json(api)
+            param_config_list = api.parameter
             params = []
         global API_PARAM_TYPE_TO_SWAGGER
         for param_config in param_config_list:
-            if param_config['type'] in API_PARAM_TYPE_TO_SWAGGER:
-                type = API_PARAM_TYPE_TO_SWAGGER[param_config['type']]
+            if param_config.type in API_PARAM_TYPE_TO_SWAGGER:
+                type = API_PARAM_TYPE_TO_SWAGGER[param_config.type]
             else:
                 type = 'string'
 
             if parent:
-                name = param_config['name']
-                if param_config['is_array']:
+                name = param_config.name
+                if param_config.is_array:
                     param = {'type': 'array', "items": {"type": type}}
-                    if ('children' in param_config) and param_config['children']:
-                        param["items"]['properties'] = self.get_params(
-                            api, param_config
-                        )
+                    if hasattr(param_config, 'children') and param_config.children:
+                        param["items"]['properties'] = self.get_params(api, param_config)
                 else:
                     param = {'type': type}
-                    if ('children' in param_config) and param_config['children']:
+                    if hasattr(param_config, 'children') and param_config.children:
                         param['properties'] = self.get_params(api, param_config)
                 params[name] = param
             else:
                 param = {
-                    'name': param_config['name'],
+                    'name': param_config.name,
                     'in': 'query',
-                    'description': param_config['desc'],
-                    'required': param_config['required'],
+                    'description': param_config.desc,
+                    'required': param_config.required,
                     'style': 'form',
                 }
-                if param_config['is_array']:
+                if param_config.is_array:
                     param['schema'] = {'type': 'array', "items": {"type": type}}
-                    if ('children' in param_config) and param_config['children']:
+                    if hasattr(param_config, 'children') and param_config.children:
                         param['schema']["items"]['properties'] = self.get_params(
                             api, param_config
                         )
                 else:
                     param['schema'] = {'type': type}
-                    if ('children' in param_config) and param_config['children']:
+                    if hasattr(param_config, 'children') and param_config.children:
                         param['schema']['properties'] = self.get_params(api, param_config)
 
                 params.append(param)
@@ -220,8 +216,8 @@ class ApiDocViewSet(viewsets.GenericViewSet):
 
         model_name = f'{api.app}__{api.model}'
         result = {}
-        if api.operation in (Api.OPERATION_LIST,):
-            display_fields = api_services.get_config_display_fields(api.id)
+        if api.operation in (const.OPERATION_LIST,):
+            display_fields = api.displayfield
             display_fields = [f.name for f in display_fields]
             result['type'] = 'array'
             if display_fields:
@@ -229,28 +225,28 @@ class ApiDocViewSet(viewsets.GenericViewSet):
             else:
                 result['items'] = {'$ref': f'#/components/schemas/{model_name}'}
         elif api.operation in (
-            Api.OPERATION_RETRIEVE,
-            Api.OPERATION_CREATE,
-            Api.OPERATION_UPDATE,
-            Api.OPERATION_REPLACE,
+            const.OPERATION_RETRIEVE,
+            const.OPERATION_CREATE,
+            const.OPERATION_UPDATE,
+            const.OPERATION_REPLACE,
         ):
-            display_fields = api_services.get_config_display_fields(api.id)
+            display_fields = api.displayfield
             display_fields = [f.name for f in display_fields]
             if display_fields:
                 result = self.filter_display_fields(api, display_fields)
             else:
                 result = {'$ref': f'#/components/schemas/{model_name}'}
-        elif api.operation in (Api.OPERATION_UPDATE_BY_CONDITION,):
+        elif api.operation in (const.OPERATION_UPDATE_BY_CONDITION,):
             result = {'type': 'object', 'properties': {'count': {'type': 'integer'}}}
-        elif api.operation in (Api.OPERATION_DELETE_BY_CONDITION,):
+        elif api.operation in (const.OPERATION_DELETE_BY_CONDITION,):
             result = {'type': 'object', 'properties': {'deleted': {'type': 'integer'}}}
-        elif api.operation in (Api.OPERATION_FUNC,):
+        elif api.operation in (const.OPERATION_FUNC,):
             if api.demo:
                 try:
                     result = json.loads(api.demo)
                 except:
                     pass  # 默认格式
-        elif api.operation in (Api.OPERATION_DELETE,):
+        elif api.operation in (const.OPERATION_DELETE,):
             pass  # 默认格式
         else:
             pass  # 默认格式
@@ -264,7 +260,7 @@ class ApiDocViewSet(viewsets.GenericViewSet):
         ''''''
 
         paths = {}
-        for api in api_services.get_all_api():
+        for api in api_services.get_all_api_po():
             path = {}
             path['summary'] = api.summary
             path['operationId'] = api.slug

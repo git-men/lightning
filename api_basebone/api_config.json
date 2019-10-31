@@ -4,26 +4,12 @@
         "demo": "",
         "displayfield": [
             "app",
-            "filter.children.children.children.field",
-            "filter.children.children.children.id",
-            "filter.children.children.field",
-            "filter.children.children.id",
-            "filter.children.field",
-            "filter.children.id",
-            "filter.field",
-            "filter.id",
             "id",
             "model",
-            "operation"
+            "slug"
         ],
         "expand_fields": [],
-        "filter": [
-            {
-                "field": "slug",
-                "operator": "contains",
-                "value": "${slug}"
-            }
-        ],
+        "filter": [],
         "func_name": "",
         "model": "api",
         "operation": "list",
@@ -46,14 +32,6 @@
                 "name": "size",
                 "required": true,
                 "type": "PAGE_SIZE"
-            },
-            {
-                "default": "",
-                "desc": "",
-                "is_array": false,
-                "name": "slug",
-                "required": true,
-                "type": "string"
             }
         ],
         "setfield": [],

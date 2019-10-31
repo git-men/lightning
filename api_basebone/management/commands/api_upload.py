@@ -6,7 +6,7 @@ from django.conf import settings
 from django.apps import apps
 
 from django.core.management.base import BaseCommand
-from api_basebone.services import api_services
+from api_basebone.api.driver import db
 
 
 class Command(BaseCommand):
@@ -26,7 +26,10 @@ class Command(BaseCommand):
         if app:
             export_apps = [app]
         else:
-            export_apps = getattr(settings, 'BSM_EXPORT_APPS', None)
+            export_apps = getattr(settings, 'BSM_EXPORT_APPS', None) + getattr(
+                settings, 'INTERNAL_APPS', None
+            )
+            export_apps = list(set(export_apps))
 
         error_num = 0
         success_num = 0
@@ -56,7 +59,7 @@ class Command(BaseCommand):
                     slug = ''
                     try:
                         slug = config['slug']
-                        is_change = api_services.save_api(config)
+                        is_change = db.save_api(config)
                         success_num += 1
                         if is_change:
                             change_num += 1

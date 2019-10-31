@@ -1,0 +1,953 @@
+[
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "get_qr_code",
+        "model": "friend",
+        "operation": "func",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "scene",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "page",
+                "required": true,
+                "type": "string"
+            }
+        ],
+        "setfield": [],
+        "slug": "get_qr_code",
+        "summary": "云函数生成二维码"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [
+            "id",
+            "start_time",
+            "status",
+            "user.id",
+            "user.nick_name",
+            "user.username"
+        ],
+        "expand_fields": [],
+        "filter": [
+            {
+                "children": [
+                    {
+                        "field": "status",
+                        "operator": "eq",
+                        "value": "0"
+                    },
+                    {
+                        "children": [
+                            {
+                                "field": "status",
+                                "operator": "eq",
+                                "value": "0"
+                            },
+                            {
+                                "children": [
+                                    {
+                                        "field": "status",
+                                        "operator": "eq",
+                                        "value": "0"
+                                    },
+                                    {
+                                        "field": "status",
+                                        "operator": "eq",
+                                        "value": "1"
+                                    }
+                                ],
+                                "operator": "OR"
+                            }
+                        ],
+                        "operator": "OR"
+                    }
+                ],
+                "operator": "OR"
+            },
+            {
+                "children": [
+                    {
+                        "field": "grade1",
+                        "operator": "eq",
+                        "value": "${grade}"
+                    },
+                    {
+                        "field": "grade2",
+                        "operator": "eq",
+                        "value": "${grade}"
+                    }
+                ],
+                "operator": "OR"
+            },
+            {
+                "field": "user__id",
+                "operator": "eq",
+                "value": "#{user_id}"
+            }
+        ],
+        "func_name": "",
+        "model": "room",
+        "operation": "list",
+        "ordering": [
+            "-start_time",
+            "-id"
+        ],
+        "parameter": [
+            {
+                "default": "1",
+                "desc": "",
+                "is_array": false,
+                "name": "page",
+                "required": true,
+                "type": "PAGE_IDX"
+            },
+            {
+                "default": "10",
+                "desc": "",
+                "is_array": false,
+                "name": "size",
+                "required": true,
+                "type": "PAGE_SIZE"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "grade",
+                "required": true,
+                "type": "int"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "status",
+                "required": true,
+                "type": "int"
+            },
+            {
+                "children": [
+                    {
+                        "children": [
+                            {
+                                "default": "",
+                                "desc": "",
+                                "is_array": false,
+                                "name": "a1",
+                                "required": true,
+                                "type": "int"
+                            },
+                            {
+                                "default": "",
+                                "desc": "",
+                                "is_array": false,
+                                "name": "a2",
+                                "required": true,
+                                "type": "int"
+                            }
+                        ],
+                        "default": "",
+                        "desc": "",
+                        "is_array": false,
+                        "name": "a",
+                        "required": true,
+                        "type": "object"
+                    },
+                    {
+                        "children": [
+                            {
+                                "default": "",
+                                "desc": "",
+                                "is_array": false,
+                                "name": "b1",
+                                "required": true,
+                                "type": "int"
+                            },
+                            {
+                                "default": "",
+                                "desc": "",
+                                "is_array": false,
+                                "name": "b2",
+                                "required": true,
+                                "type": "int"
+                            }
+                        ],
+                        "default": "",
+                        "desc": "",
+                        "is_array": false,
+                        "name": "b",
+                        "required": true,
+                        "type": "object"
+                    }
+                ],
+                "default": "",
+                "desc": "",
+                "is_array": true,
+                "name": "test",
+                "required": true,
+                "type": "object"
+            }
+        ],
+        "setfield": [],
+        "slug": "list_room",
+        "summary": "复杂条件查询比赛场次"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [
+            "answer1",
+            "answer2",
+            "answer3",
+            "answer4",
+            "content",
+            "id",
+            "option1",
+            "option2",
+            "option3",
+            "option4"
+        ],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "create",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "content",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "type",
+                "required": true,
+                "type": "int"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "grade",
+                "required": true,
+                "type": "int"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option1",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer1",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option2",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer2",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option3",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer3",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option4",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer4",
+                "required": true,
+                "type": "boolean"
+            }
+        ],
+        "setfield": [
+            [
+                "answer1",
+                "${answer1}"
+            ],
+            [
+                "answer2",
+                "${answer2}"
+            ],
+            [
+                "answer3",
+                "${answer3}"
+            ],
+            [
+                "answer4",
+                "${answer4}"
+            ],
+            [
+                "content",
+                "${content}"
+            ],
+            [
+                "grade",
+                "${grade}"
+            ],
+            [
+                "option1",
+                "${option1}"
+            ],
+            [
+                "option2",
+                "${option2}"
+            ],
+            [
+                "option3",
+                "${option3}"
+            ],
+            [
+                "option4",
+                "${option4}"
+            ],
+            [
+                "type",
+                "${type}"
+            ]
+        ],
+        "slug": "create_question",
+        "summary": "新建题目"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [
+            "answer1",
+            "answer2",
+            "answer3",
+            "answer4",
+            "content",
+            "id",
+            "option1",
+            "option2",
+            "option3",
+            "option4"
+        ],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "update",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "id",
+                "is_array": false,
+                "name": "id",
+                "required": true,
+                "type": "pk"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "content",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "type",
+                "required": true,
+                "type": "int"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "grade",
+                "required": true,
+                "type": "int"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option1",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer1",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option2",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer2",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option3",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer3",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option4",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer4",
+                "required": true,
+                "type": "boolean"
+            }
+        ],
+        "setfield": [
+            [
+                "answer1",
+                "${answer1}"
+            ],
+            [
+                "answer2",
+                "${answer2}"
+            ],
+            [
+                "answer3",
+                "${answer3}"
+            ],
+            [
+                "answer4",
+                "${answer4}"
+            ],
+            [
+                "content",
+                "${content}"
+            ],
+            [
+                "grade",
+                "${grade}"
+            ],
+            [
+                "option1",
+                "${option1}"
+            ],
+            [
+                "option2",
+                "${option2}"
+            ],
+            [
+                "option3",
+                "${option3}"
+            ],
+            [
+                "option4",
+                "${option4}"
+            ],
+            [
+                "type",
+                "${type}"
+            ]
+        ],
+        "slug": "update_question",
+        "summary": "修改题目"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [
+            "answer1",
+            "answer2",
+            "answer3",
+            "answer4",
+            "content",
+            "id",
+            "option1",
+            "option2",
+            "option3",
+            "option4"
+        ],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "replace",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "id",
+                "is_array": false,
+                "name": "id",
+                "required": true,
+                "type": "pk"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "content",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option1",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer1",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option2",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer2",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option3",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer3",
+                "required": true,
+                "type": "boolean"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option4",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer4",
+                "required": true,
+                "type": "boolean"
+            }
+        ],
+        "setfield": [
+            [
+                "answer1",
+                "${answer1}"
+            ],
+            [
+                "answer2",
+                "${answer2}"
+            ],
+            [
+                "answer3",
+                "${answer3}"
+            ],
+            [
+                "answer4",
+                "${answer4}"
+            ],
+            [
+                "content",
+                "${content}"
+            ],
+            [
+                "option1",
+                "${option1}"
+            ],
+            [
+                "option2",
+                "${option2}"
+            ],
+            [
+                "option3",
+                "${option3}"
+            ],
+            [
+                "option4",
+                "${option4}"
+            ]
+        ],
+        "slug": "replace_question",
+        "summary": "部分修改题目"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "delete",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "id",
+                "is_array": false,
+                "name": "id",
+                "required": true,
+                "type": "pk"
+            }
+        ],
+        "setfield": [],
+        "slug": "delete_question",
+        "summary": "删除题目"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [
+            "answer1",
+            "answer2",
+            "answer3",
+            "answer4",
+            "content",
+            "id",
+            "option1",
+            "option2",
+            "option3",
+            "option4"
+        ],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "retrieve",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "id",
+                "is_array": false,
+                "name": "id",
+                "required": true,
+                "type": "pk"
+            }
+        ],
+        "setfield": [],
+        "slug": "retrieve_question",
+        "summary": "题目详情"
+    },
+    {
+        "app": "api_basebone",
+        "demo": "",
+        "displayfield": [
+            "app",
+            "id",
+            "model",
+            "slug"
+        ],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "",
+        "model": "api",
+        "operation": "list",
+        "ordering": [
+            "-id"
+        ],
+        "parameter": [
+            {
+                "default": "1",
+                "desc": "",
+                "is_array": false,
+                "name": "page",
+                "required": true,
+                "type": "PAGE_IDX"
+            },
+            {
+                "default": "10",
+                "desc": "",
+                "is_array": false,
+                "name": "size",
+                "required": true,
+                "type": "PAGE_SIZE"
+            }
+        ],
+        "setfield": [],
+        "slug": "list_api",
+        "summary": "查询api"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [
+            {
+                "field": "grade",
+                "operator": "eq",
+                "value": "${grade}"
+            }
+        ],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "delete_by_condition",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "grade",
+                "required": true,
+                "type": "int"
+            }
+        ],
+        "setfield": [],
+        "slug": "delete_questionbank_by_condition",
+        "summary": "按条件删除题库"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [
+            {
+                "field": "option1",
+                "operator": "eq",
+                "value": "${option1}"
+            }
+        ],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "update_by_condition",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "option1",
+                "required": true,
+                "type": "string"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer1",
+                "required": true,
+                "type": "boolean"
+            }
+        ],
+        "setfield": [
+            [
+                "answer1",
+                "${answer1}"
+            ],
+            [
+                "option1",
+                "${option1}"
+            ]
+        ],
+        "slug": "update_questionbank_by_condition",
+        "summary": "按条件更新题库"
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [
+            {
+                "field": "user",
+                "operator": "eq",
+                "value": "#{user_id}"
+            }
+        ],
+        "func_name": "",
+        "model": "room",
+        "operation": "update_by_condition",
+        "ordering": [],
+        "parameter": [],
+        "setfield": [
+            [
+                "user",
+                "#{user_id}"
+            ]
+        ],
+        "slug": "update_room_by_condition",
+        "summary": "按条件更新题库（服务端变量）"
+    },
+    {
+        "app": "api_basebone",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [],
+        "func_name": "show_api",
+        "model": "api",
+        "operation": "func",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "slug",
+                "required": true,
+                "type": "string"
+            }
+        ],
+        "setfield": [],
+        "slug": "show_api",
+        "summary": ""
+    },
+    {
+        "app": "game",
+        "demo": "",
+        "displayfield": [],
+        "expand_fields": [],
+        "filter": [
+            {
+                "field": "answer1",
+                "operator": "=",
+                "value": "${answer1}"
+            }
+        ],
+        "func_name": "",
+        "model": "questionbank",
+        "operation": "list",
+        "ordering": [],
+        "parameter": [
+            {
+                "default": "1",
+                "desc": "",
+                "is_array": false,
+                "name": "page",
+                "required": true,
+                "type": "PAGE_IDX"
+            },
+            {
+                "default": "10",
+                "desc": "",
+                "is_array": false,
+                "name": "size",
+                "required": true,
+                "type": "PAGE_SIZE"
+            },
+            {
+                "default": "",
+                "desc": "",
+                "is_array": false,
+                "name": "answer1",
+                "required": true,
+                "type": "boolean"
+            }
+        ],
+        "setfield": [],
+        "slug": "list_question",
+        "summary": "查询题目"
+    }
+]

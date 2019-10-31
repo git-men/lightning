@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.db import models
 from api_basebone.core.fields import JSONField
+from api_basebone.api import const
 
 
 logger = logging.getLogger('django')
@@ -28,51 +29,51 @@ class AdminLog(models.Model):
 class Api(models.Model):
     '''Api接口模型'''
 
-    OPERATION_LIST = 'list'
-    OPERATION_RETRIEVE = 'retrieve'
-    OPERATION_CREATE = 'create'
-    OPERATION_UPDATE = 'update'
-    OPERATION_REPLACE = 'replace'
-    OPERATION_DELETE = 'delete'
-    OPERATION_UPDATE_BY_CONDITION = 'update_by_condition'
-    OPERATION_DELETE_BY_CONDITION = 'delete_by_condition'
-    OPERATION_FUNC = 'func'
-    OPERATIONS_CHOICES = (
-        (OPERATION_LIST, '查看'),
-        (OPERATION_RETRIEVE, '详情'),
-        (OPERATION_CREATE, '新建'),
-        (OPERATION_UPDATE, '全部更新'),
-        (OPERATION_REPLACE, '部分更新'),
-        (OPERATION_DELETE, '删除'),
-        (OPERATION_UPDATE_BY_CONDITION, '批量更新'),
-        (OPERATION_DELETE_BY_CONDITION, '批量删除'),
-        (OPERATION_FUNC, '云函数'),
-    )
+    # OPERATION_LIST = 'list'
+    # OPERATION_RETRIEVE = 'retrieve'
+    # OPERATION_CREATE = 'create'
+    # OPERATION_UPDATE = 'update'
+    # OPERATION_REPLACE = 'replace'
+    # OPERATION_DELETE = 'delete'
+    # OPERATION_UPDATE_BY_CONDITION = 'update_by_condition'
+    # OPERATION_DELETE_BY_CONDITION = 'delete_by_condition'
+    # OPERATION_FUNC = 'func'
+    # OPERATIONS_CHOICES = (
+    #     (OPERATION_LIST, '查看'),
+    #     (OPERATION_RETRIEVE, '详情'),
+    #     (OPERATION_CREATE, '新建'),
+    #     (OPERATION_UPDATE, '全部更新'),
+    #     (OPERATION_REPLACE, '部分更新'),
+    #     (OPERATION_DELETE, '删除'),
+    #     (OPERATION_UPDATE_BY_CONDITION, '批量更新'),
+    #     (OPERATION_DELETE_BY_CONDITION, '批量删除'),
+    #     (OPERATION_FUNC, '云函数'),
+    # )
 
-    OPERATIONS = set([t[0] for t in OPERATIONS_CHOICES])
+    # OPERATIONS = set([t[0] for t in OPERATIONS_CHOICES])
 
-    MATHOD_GET = 'get'
-    MATHOD_POST = 'post'
-    MATHOD_PUT = 'put'
-    MATHOD_DELETE = 'delete'
-    MATHOD_PATCH = 'patch'
+    # MATHOD_GET = 'get'
+    # MATHOD_POST = 'post'
+    # MATHOD_PUT = 'put'
+    # MATHOD_DELETE = 'delete'
+    # MATHOD_PATCH = 'patch'
 
-    METHOD_MAP = {
-        OPERATION_LIST: (MATHOD_GET,),
-        OPERATION_RETRIEVE: (MATHOD_GET,),
-        OPERATION_CREATE: (MATHOD_POST,),
-        OPERATION_UPDATE: (MATHOD_PUT,),
-        OPERATION_REPLACE: (MATHOD_PATCH, MATHOD_PUT),
-        OPERATION_DELETE: (MATHOD_DELETE,),
-        OPERATION_UPDATE_BY_CONDITION: (MATHOD_PATCH, MATHOD_PUT),
-        OPERATION_DELETE_BY_CONDITION: (MATHOD_DELETE,),
-        OPERATION_FUNC: (MATHOD_POST,),
-    }
+    # METHOD_MAP = {
+    #     OPERATION_LIST: (MATHOD_GET,),
+    #     OPERATION_RETRIEVE: (MATHOD_GET,),
+    #     OPERATION_CREATE: (MATHOD_POST,),
+    #     OPERATION_UPDATE: (MATHOD_PUT,),
+    #     OPERATION_REPLACE: (MATHOD_PATCH, MATHOD_PUT),
+    #     OPERATION_DELETE: (MATHOD_DELETE,),
+    #     OPERATION_UPDATE_BY_CONDITION: (MATHOD_PATCH, MATHOD_PUT),
+    #     OPERATION_DELETE_BY_CONDITION: (MATHOD_DELETE,),
+    #     OPERATION_FUNC: (MATHOD_POST,),
+    # }
 
     slug = models.SlugField('接口标识', max_length=50, unique=True)
     app = models.CharField('app名字', max_length=50)
     model = models.CharField('数据模型名字', max_length=50)
-    operation = models.CharField('操作', max_length=20, choices=OPERATIONS_CHOICES)
+    operation = models.CharField('操作', max_length=20, choices=const.OPERATIONS_CHOICES)
     ordering = models.CharField('排序', max_length=500, blank=True, default='')
     expand_fields = models.CharField('展开字段', max_length=500, blank=True, default='')
     func_name = models.CharField('云函数名称', max_length=50, blank=True, default='')
@@ -86,7 +87,7 @@ class Api(models.Model):
     @property
     def method(self):
         '''API提交的方法'''
-        return self.METHOD_MAP.get(self.operation)
+        return const.METHOD_MAP.get(self.operation)
 
     @property
     def expand_fields_set(self):
@@ -155,7 +156,7 @@ class Parameter(models.Model):
 
     def is_special_defined(self):
         """自定义参数，用于特殊用途"""
-        return self.type in self.SPECIAL_TYPES
+        return self.type in const.SPECIAL_TYPES
 
     def __str__(self):
         return self.name
@@ -199,8 +200,8 @@ class SetField(models.Model):
 class Filter(models.Model):
     '''查询条件'''
 
-    TYPE_CONTAINER = 0  # 容器
-    TYPE_CHILD = 1  # 单一条件
+    # TYPE_CONTAINER = 0  # 容器
+    # TYPE_CHILD = 1  # 单一条件
 
     # OPERATIONS_AND = 'and'
     # OPERATIONS_OR = 'or'
@@ -245,7 +246,8 @@ class Filter(models.Model):
 
     api = models.ForeignKey(Api, models.CASCADE, verbose_name='api')
     type = models.IntegerField(
-        '条件类型', choices=((TYPE_CONTAINER, '容器'), (TYPE_CHILD, '单一条件'))
+        '条件类型',
+        choices=((const.FILTER_TYPE_CONTAINER, '容器'), (const.FILTER_TYPE_CHILD, '单一条件')),
     )
     parent = models.ForeignKey(
         'self', models.CASCADE, null=True, verbose_name='parent', related_name="children"
@@ -257,9 +259,9 @@ class Filter(models.Model):
     layer = models.IntegerField('嵌套层数', default=0)
 
     def __str__(self):
-        if self.type == self.TYPE_CONTAINER:
-            return '{self.operator}'
-        elif self.type == self.TYPE_CHILD:
+        if self.type == const.FILTER_TYPE_CONTAINER:
+            return f'{self.operator}'
+        elif self.type == const.FILTER_TYPE_CHILD:
             return f'{self.field} {self.operator} {self.value}'
         else:
             return ''
