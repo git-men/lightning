@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from member.models import User
 
 from api_basebone.core import exceptions
-from api_basebone.services import api_services
+from api_core.services import api_services
 
 
 class ApiTestCase(TestCase):
@@ -32,14 +32,14 @@ class ApiTestCase(TestCase):
             "params": {
                 "config": {
                     "slug": "show_api",
-                    "app": "api_basebone",
+                    "app": "api_db",
                     "model": "api",
                     "operation": "xxxxxx",
                 }
             },
         }
         result = self.client.post(
-            '/basebone/client/api_basebone__api/func/',
+            '/basebone/client/api_db__api/func/',
             data=data,
             content_type='application/json',
         ).json()
@@ -47,7 +47,7 @@ class ApiTestCase(TestCase):
 
         config = {
             "slug": "show_api",
-            "app": "api_basebone",
+            "app": "api_db",
             "model": "api",
             "operation": "xxxxxx",
         }
@@ -64,14 +64,14 @@ class ApiTestCase(TestCase):
             "params": {
                 "config": {
                     "slug": "show_api",
-                    "app": "api_basebone",
+                    "app": "api_db",
                     "model": "api",
                     "operation": "func",
                 }
             },
         }
         result = self.client.post(
-            '/basebone/client/api_basebone__api/func/',
+            '/basebone/client/api_db__api/func/',
             data=data,
             content_type='application/json',
         ).json()
@@ -83,7 +83,7 @@ class ApiTestCase(TestCase):
             "params": {
                 "config": {
                     "slug": "show_api",
-                    "app": "api_basebone",
+                    "app": "api_db",
                     "model": "api",
                     "operation": "func",
                     "func_name": "show_api",
@@ -94,7 +94,7 @@ class ApiTestCase(TestCase):
             },
         }
         result = self.client.post(
-            '/basebone/client/api_basebone__api/func/',
+            '/basebone/client/api_db__api/func/',
             data=data,
             content_type='application/json',
         ).json()
@@ -111,7 +111,7 @@ class ApiTestCase(TestCase):
         self.assertEqual('0', result['error_code'])
         result = result['result']
         self.assertEqual('show_api', result['slug'])
-        self.assertEqual('api_basebone', result['app'])
+        self.assertEqual('api_db', result['app'])
         self.assertEqual('api', result['model'])
         self.assertEqual('func', result['operation'])
         self.assertEqual('show_api', result['func_name'])
