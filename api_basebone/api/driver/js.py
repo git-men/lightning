@@ -25,7 +25,7 @@ def load_api_data(app, slug, config):
     if 'slug' in config:
         slug = config['slug']
         API_DATA[app][slug] = config
-        log.info('加载 api：%s', config['slug'])
+        #log.info('加载 api：%s', config['slug'])
 
 
 def load_all_api_js():
