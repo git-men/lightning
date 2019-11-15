@@ -24,6 +24,8 @@ def business_exception_handler(exc, context):
 
 def exception_handler(exc, context):
     """异常接收处理器"""
+    import traceback
+    traceback.print_exc()
     if isinstance(exc, BusinessException):
         return business_exception_handler(exc, context)
 

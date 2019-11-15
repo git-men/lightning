@@ -21,10 +21,7 @@ def get_reverse_fields(model):
 
 def get_all_relation_fields(model):
     """获取模型中所有的关系字段"""
-    return [
-        item for item in model._meta.get_fields()
-        if item.is_relation
-    ]
+    return [item for item in model._meta.get_fields() if item.is_relation]
 
 
 def check_field_is_reverse(field):
@@ -41,9 +38,7 @@ def get_field_by_reverse_field(field):
 
 
 def get_concrete_fields(model):
-    return [
-        item for item in model._meta.get_fields() if item.concrete
-    ]
+    return [item for item in model._meta.get_fields() if item.concrete]
 
 
 def get_related_model_field(model, related_model):
@@ -89,6 +84,9 @@ def get_relation_field_related_name(model, field_name):
         return
 
     related_name = field.remote_field.related_name
+
+    if field.one_to_one:
+        return field.remote_field.name, field
     if related_name is None:
         return '{}_set'.format(model.__name__.lower()), field
     return related_name, field
@@ -167,9 +165,7 @@ def get_dict_expand_fields_by_level(model, level):
 
     result = {}
     for item in relation_fields:
-        result[item.name] = get_dict_expand_fields_by_level(
-            item.related_model, level - 1
-        )
+        result[item.name] = get_dict_expand_fields_by_level(item.related_model, level - 1)
     return result
 
 

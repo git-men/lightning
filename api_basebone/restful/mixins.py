@@ -11,8 +11,10 @@ from api_basebone.drf.response import success_response
 from api_basebone.restful import const
 from api_basebone.restful.serializers import get_model_exclude_fields
 from api_basebone.utils.meta import get_all_relation_fields
+from api_basebone.utils.meta import get_bsm_model_admin
 from api_basebone.models import AdminLog
 from api_basebone.settings import settings as basebone_settings
+from .forms import get_form_class
 
 
 class CheckValidateMixin:
@@ -36,7 +38,9 @@ class CheckValidateMixin:
 
         # 获取非一对一的关系字段
         relation_fields = [
-            item.name for item in get_all_relation_fields(self.model) if not item.one_to_one
+            item.name
+            for item in get_all_relation_fields(self.model)
+            if not item.one_to_one
         ]
 
         if not isinstance(fields, list):
@@ -70,7 +74,9 @@ class StatisticsMixin:
                         error_code=exceptions.BSM_NOT_STATISTICS_CONFIG
                     )
                 return config
-            raise exceptions.BusinessException(error_code=exceptions.BSM_CAN_NOT_FIND_ADMIN)
+            raise exceptions.BusinessException(
+                error_code=exceptions.BSM_CAN_NOT_FIND_ADMIN
+            )
 
     @action(methods=['post'], detail=False, url_path='statistics')
     def statistics(self, request, *args, **kwargs):
@@ -214,3 +220,30 @@ class ActionLogMixin:
                 params=request.data,
             )
         return result
+
+
+class FormMixin(object):
+    """表单处理集合"""
+
+    def get_create_form(self):
+        """获取创建数据的验证表单"""
+        return get_form_class(self.model, 'create', end=self.end_slug)
+
+    def get_update_form(self):
+        """获取更新数据的验证表单"""
+        return get_form_class(self.model, 'update', end=self.end_slug)
+
+    def get_partial_update_form(self):
+        return get_form_class(self.model, 'update', end=self.end_slug)
+
+    def get_custom_patch_form(self):
+        return get_form_class(self.model, 'update', end=self.end_slug)
+
+    def get_validate_form(self, action):
+        """获取验证表单"""
+        return getattr(self, 'get_{}_form'.format(action))()
+
+    def get_bsm_model_admin(self):
+        """获取 BSM Admin 模块"""
+        return get_bsm_model_admin(self.model)
+

@@ -2,15 +2,10 @@ import copy
 import json
 import logging
 
-import requests
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.http import HttpResponse
-from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
@@ -19,51 +14,30 @@ from api_basebone.drf.response import success_response
 from api_basebone.export.fields import get_attr_in_gmeta_class
 from api_basebone.restful import batch_actions, renderers
 from api_basebone.restful.const import MANAGE_END_SLUG
-from api_basebone.restful.forms import get_form_class
-from api_basebone.restful.funcs import find_func
 from api_basebone.restful.mixins import (
     ActionLogMixin,
     CheckValidateMixin,
     GroupStatisticsMixin,
     StatisticsMixin,
 )
-from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.restful.serializers import (
     create_serializer_class,
     get_export_serializer_class,
     multiple_create_serializer_class,
 )
-from api_basebone.signals import post_bsm_create
+
+from api_basebone.utils import meta, get_app, module as basebone_module
+from api_basebone.utils.operators import build_filter_conditions2
+from api_basebone.restful.mixins import FormMixin
+from api_basebone.restful.viewsets import BSMModelViewSet
+
+from api_basebone.services import rest_services
 from api_basebone.utils import get_app, meta
-from api_basebone.utils.operators import build_filter_conditions
 from api_basebone.utils import queryset as queryset_utils
 
 from .user_pip import add_login_user_data
 
 log = logging.getLogger(__name__)
-
-
-class FormMixin(object):
-    """表单处理集合"""
-
-    def get_create_form(self):
-        """获取创建数据的验证表单"""
-        return get_form_class(self.model, 'create', end=self.end_slug)
-
-    def get_update_form(self):
-        """获取更新数据的验证表单"""
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_partial_update_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
-
-    def get_validate_form(self, action):
-        """获取验证表单"""
-        return getattr(self, 'get_{}_form'.format(action))()
-
-    def get_bsm_model_admin(self):
-        """获取 BSM Admin 模块"""
-        return meta.get_bsm_model_admin(self.model)
 
 
 class QuerySetMixin:
@@ -73,22 +47,49 @@ class QuerySetMixin:
         """获取 basebone 的管理类"""
         pass
 
+    def basebone_get_model_role_config(self):
+        """获取角色配置"""
+        if self.model_role_config is not None:
+            return self.model_role_config
+
+        role_config = getattr(
+            basebone_module.get_bsm_global_module(
+                basebone_module.BSM_GLOBAL_MODULE_ROLES
+            ),
+            basebone_module.BSM_GLOBAL_ROLES,
+            None,
+        )
+
+        key_prefix = f'{self.app_label}__{self.model_slug}'
+        if isinstance(role_config, dict):
+            self.model_role_config = role_config.get(key_prefix)
+        return self.model_role_config
+
     def get_queryset_by_filter_user(self, queryset):
         """通过用户过滤对应的数据集
 
         - 如果用户是超级用户，则不做任何过滤
         - 如果用户是普通用户，则客户端筛选的模型有引用到了用户模型，则过滤对应的数据集
+
+        FIXME: 这里先根据模型角色配置做出对应的响应
+
+        TODO: 当前一个用户只能属于一个用户组，如果用户没有属于任何组，则暂时不做任何处理
         """
         user = self.request.user
         if user and user.is_staff and user.is_superuser:
             return queryset
 
+        role_config = self.basebone_get_model_role_config()
+        if role_config:
+            # 如果
+            config_key = basebone_module.BSM_GLOBAL_ROLE_USE_ADMIN_FILTER_BY_LOGIN_USER
+            if role_config.get(config_key):
+                return queryset
+
         # 检测模型中是否有字段引用了用户模型
         has_user_field = meta.get_related_model_field(self.model, get_user_model())
         if has_user_field:
-            # 如果有，则读取 BSM Admin 中的配置
             admin_class = self.get_bsm_model_admin()
-
             if admin_class:
                 # 检测 admin 配置中是否指定了 auth_filter_field 属性
                 try:
@@ -110,9 +111,26 @@ class QuerySetMixin:
             return queryset.order_by(*fields)
         return queryset
 
+    def get_user_role_filters(self):
+        """获取此用户权限对应的过滤条件"""
+
+        user = self.request.user
+        if user and user.is_staff and user.is_superuser:
+            return []
+
+        role_config = self.basebone_get_model_role_config()
+        if role_config and isinstance(role_config, dict):
+            return role_config.get('filters')
+
     def get_queryset_by_filter_conditions(self, queryset):
         """
         用于检测客户端传入的过滤条件
+
+        这里面的各种过滤条件的权重
+
+        - 角色配置的过滤条件 高
+        - admin 配置的默认的过滤条件 中
+        - 客户端传进来的过滤条件 低
 
         客户端传入的过滤条件的数据结构如下：
 
@@ -124,33 +142,37 @@ class QuerySetMixin:
             }
         ]
         """
-        # 原先的写法是`if not queryset`，这样会引起queryset调用__bool__，并会触发fetch_all，导致请求变慢
-        # if not queryset.exists():
-        #     return queryset
+        # 原先的写法是`if not queryset or self.action in ['create']`，这样会引起queryset调用__bool__，并会触发fetch_all，导致请求变慢
+        if self.action in ['create']:
+            return queryset
 
-        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS)
-        filter_conditions = filter_conditions if filter_conditions else []
+        role_filters = self.get_user_role_filters()
+        filter_conditions = self.request.data.get(const.FILTER_CONDITIONS, [])
 
         admin_class = self.get_bsm_model_admin()
         if admin_class:
             default_filter = getattr(admin_class, admin.BSM_DEFAULT_FILTER, None)
-            if default_filter and isinstance(default_filter, list):
+            default_filter = default_filter
+            if default_filter:
                 filter_conditions += default_filter
+
+        if role_filters:
+            filter_conditions += role_filters
 
         # 这里做个动作 1 校验过滤条件中的字段，是否需要对结果集去重 2 组装过滤条件
         if filter_conditions:
             # TODO: 这里没有做任何的检测，需要加上检测
-            filter_fields = [
-                item['field']
-                for item in filter_conditions
-                if isinstance(item, dict) and 'field' in item
-            ]
-            self.basebone_check_distinct_queryset(filter_fields)
-            cons, excludes = build_filter_conditions(filter_conditions)
+            self.basebone_check_distinct_queryset(
+                list({item['field'] for item in filter_conditions})
+            )
+            cons = build_filter_conditions2(
+                filter_conditions, context={'user': self.request.user}
+            )
+
             if cons:
-                queryset = queryset.filter(cons)
-            if excludes:
-                queryset = queryset.exclude(excludes)
+                for item in cons.children:
+                    query_params = {item[0]: item[1]}
+                    queryset = queryset.filter(**query_params)
             return queryset
         return queryset
 
@@ -167,7 +189,15 @@ class QuerySetMixin:
             queryset = getattr(self, f'get_queryset_by_{item}')(queryset)
 
         self.basebone_origin_queryset = queryset
-        if self.basebone_distinct_queryset:
+
+        # 权限中配置是否去重
+        role_config = self.basebone_get_model_role_config()
+        role_distict = False
+        if role_config and isinstance(role_config, dict):
+            role_distict = role_config.get(
+                basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
+            )
+        if self.basebone_distinct_queryset or role_distict:
             return queryset.distinct()
         return queryset
 
@@ -178,6 +208,9 @@ class GenericViewMixin:
     def check_app_model(self):
         # 是否对结果集进行去重
         self.basebone_distinct_queryset = False
+
+        # 模型角色配置
+        self.model_role_config = None
 
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
@@ -405,38 +438,16 @@ class CommonManageViewSet(
     ActionLogMixin,
     GenericViewMixin,
     StatisticsMixin,
-    viewsets.ModelViewSet,
+    BSMModelViewSet,
 ):
-    """通用的管理接口视图"""
+    """通用的管理接口视图
+    list,set,retrieve,destroy的实现提到父类BSMModelViewSet
+    """
 
     permission_classes = (IsAdminUser,)
     pagination_class = PageNumberPagination
 
     end_slug = MANAGE_END_SLUG
-
-    def perform_create(self, serializer):
-        return serializer.save()
-
-    def perform_update(self, serializer):
-        return serializer.save()
-
-    def retrieve(self, request, *args, **kwargs):
-        """获取数据详情"""
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(serializer.data)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         """
@@ -444,79 +455,22 @@ class CommonManageViewSet(
 
         原因：序列化类有可能嵌套
         """
-        with transaction.atomic():
-            forward_relation_hand(self.model, request.data)
-            serializer = self.get_validate_form(self.action)(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            instance = self.perform_create(serializer)
-            # 如果有联合查询，单个对象创建后并没有联合查询
-            instance = self.get_queryset().filter(id=instance.id).first()
-            serializer = self.get_serializer(instance)
-            reverse_relation_hand(self.model, request.data, instance, detail=False)
-
-        with transaction.atomic():
-            log.debug(
-                'sending Post Save signal with: model: %s, instance: %s',
-                self.model,
-                instance,
-            )
-            post_bsm_create.send(sender=self.model, instance=instance, create=True)
-        return success_response(serializer.data)
+        return rest_services.manage_create(self, request)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-
-        with transaction.atomic():
-            forward_relation_hand(self.model, request.data)
-
-            partial = kwargs.pop('partial', False)
-            instance = self.get_object()
-            serializer = self.get_validate_form(self.action)(
-                instance, data=request.data, partial=partial
-            )
-            serializer.is_valid(raise_exception=True)
-
-            instance = self.perform_update(serializer)
-            serializer = self.get_serializer(instance)
-
-            if getattr(instance, '_prefetched_objects_cache', None):
-                instance._prefetched_objects_cache = {}
-
-            reverse_relation_hand(self.model, request.data, instance)
-
-        with transaction.atomic():
-            log.debug(
-                'sending Post Update signal with: model: %s, instance: %s',
-                self.model,
-                instance,
-            )
-            post_bsm_create.send(sender=self.model, instance=instance, create=False)
-        return success_response(serializer.data)
+        # partial = kwargs.pop('partial', False)
+        return rest_services.manage_update(self, request, False)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
+        # kwargs['partial'] = True
+        return rest_services.manage_update(self, request, True)
 
-    def destroy(self, request, *args, **kwargs):
-        """删除数据"""
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return success_response()
-
-    @action(methods=['POST'], detail=False, url_path='list')
-    def set(self, request, app, model, **kwargs):
-        """获取列表数据"""
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            return success_response(response.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data)
+    @action(methods=['put'], detail=True, url_path='patch')
+    def custom_patch(self, request, *args, **kwargs):
+        # kwargs['partial'] = True
+        return rest_services.manage_update(self, request, True)
 
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
@@ -594,34 +548,10 @@ class CommonManageViewSet(
     def func(self, request, app, model, **kwargs):
         """云函数, 由客户端直接调用的服务函数
         """
-
         data = request.data
         func_name = data.get('func_name', None) or request.GET.get('func_name', None)
         params = data.get('params', {}) or json.loads(request.GET.get('params', '{}'))
-        # import ipdb; ipdb.set_trace()
-        func, options = find_func(app, model, func_name)
-        if not func:
-            raise exceptions.BusinessException(
-                error_code=exceptions.FUNCTION_NOT_FOUNT,
-                error_data=f'no such func: {func_name} found',
-            )
-        if options.get('login_required', False):
-            if not request.user.is_authenticated:
-                raise PermissionDenied()
-        if options.get('staff_required', False):
-            if not request.user.is_staff:
-                raise PermissionDenied()
-        if options.get('superuser_required', False):
-            if not request.user.is_superuser:
-                raise PermissionDenied()
+        return rest_services.manage_func(
+            self, request.user, app, model, func_name, params
+        )
 
-        view_context = {'view': self}
-        params['view_context'] = view_context
-        result = func(request.user, **params)
-
-        # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
-        if isinstance(result, requests.Response):
-            return HttpResponse(result, result.headers.get('Content-Type', None))
-        if isinstance(result, list) or isinstance(result, dict):
-            return success_response(result)
-        return success_response()

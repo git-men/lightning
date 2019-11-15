@@ -33,6 +33,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'IntegerField': 'Integer',
     'BigIntegerField': 'String',
     'PositiveIntegerField': 'Integer',
+    'PositiveSmallIntegerField': 'Integer',
     'TextField': 'Text',
     'TimeField': 'Time',
     'URLField': 'String',
@@ -86,15 +87,17 @@ def get_attr_in_gmeta_class(model, config_name, default_value=None):
 class FieldConfig:
     def reset_field_config(self, field, data_type=None):
         """根据 Gmeta 中声明的字段的配置进行重置"""
-        field_config = get_attr_in_gmeta_class(field.model, gmeta.GMETA_FIELD_CONFIG, {}).get(
-            field.name, {}
-        )
+        field_config = get_attr_in_gmeta_class(
+            field.model, gmeta.GMETA_FIELD_CONFIG, {}
+        ).get(field.name, {})
         if not field_config:
             return field_config
 
         # 做 django 中的写法和输出的配置的转换
         result = {
-            gmeta.GMETA_FIELD_CONFIG_MAP[key] if key in gmeta.GMETA_FIELD_CONFIG_MAP else key: value
+            gmeta.GMETA_FIELD_CONFIG_MAP[key]
+            if key in gmeta.GMETA_FIELD_CONFIG_MAP
+            else key: value
             for key, value in field_config.items()
         }
         return result
@@ -141,7 +144,11 @@ class FieldConfig:
         if inspect.isfunction(func):
             return True
 
-        func_types = (types.BuiltinFunctionType, types.BuiltinMethodType, types.MethodType)
+        func_types = (
+            types.BuiltinFunctionType,
+            types.BuiltinMethodType,
+            types.MethodType,
+        )
         if isinstance(func, func_types):
             return True
         return False
@@ -241,7 +248,9 @@ def get_model_field_config(model):
 
         if field_type is not None:
             data_type = FIELDS.get(field_type)['name']
-            function = getattr(field_config_instance, '{}_params'.format(field_type.lower()), None)
+            function = getattr(
+                field_config_instance, '{}_params'.format(field_type.lower()), None
+            )
             if function is not None:
                 config.append(function(item, data_type))
             else:
@@ -261,7 +270,9 @@ def get_model_field_config(model):
                 reverse_config['type'] = 'mref'
 
             meta = item.related_model._meta
-            model_verbose_name = meta.verbose_name if meta.verbose_name else meta.model_name
+            model_verbose_name = (
+                meta.verbose_name if meta.verbose_name else meta.model_name
+            )
 
             reverse_config['displayName'] = model_verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)

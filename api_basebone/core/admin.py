@@ -26,6 +26,9 @@ BSM_MODAL_FROM = 'modal_form'
 
 BSM_MODAL_CONFIG = 'modal_config'
 
+# 默认排序
+BSM_ORDER_BY = 'order_by'
+
 # 表单的过滤
 BSM_FILTER = 'filter'
 
@@ -66,6 +69,7 @@ VALID_MANAGE_ATTRS = [
     BSM_BATCH_ACTION,
     BSM_MODAL_FROM,
     BSM_MODAL_CONFIG,
+    BSM_ORDER_BY,
     BSM_FILTER,
     BSM_FORM_FIELDS,
     BSM_FORM_LAYOUT,

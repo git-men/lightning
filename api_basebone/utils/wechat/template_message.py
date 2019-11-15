@@ -1,4 +1,5 @@
 import logging
+from optionaldict import optionaldict
 from django.conf import settings
 
 from wechatpy.client import WeChatClient
@@ -12,8 +13,16 @@ from api_basebone.utils.wechat import wxa
 logger = logging.getLogger('django')
 
 
-def weapp_send_template_message(app_id, user_id, touser, template_id,
-                                data=None, page=None, color=None, emphasis_keyword=None):
+def weapp_send_template_message(
+    app_id,
+    user_id,
+    touser,
+    template_id,
+    data=None,
+    page=None,
+    color=None,
+    emphasis_keyword=None,
+):
     """
     发送小程序模板消息
 
@@ -43,13 +52,51 @@ def weapp_send_template_message(app_id, user_id, touser, template_id,
         form_id = formid_instance.form_id
 
         return wxa(app_id).send_template_message(
-            touser, template_id, data, form_id,
-            page=page, color=color, emphasis_keyword=emphasis_keyword)
+            touser,
+            template_id,
+            data,
+            form_id,
+            page=page,
+            color=color,
+            emphasis_keyword=emphasis_keyword,
+        )
     except Exception as e:
         logger.error(f'weapp_send_template_error:{e}')
 
 
-def mp_send_template_message(app_id, touser, template_id, data, url=None, mini_program=None):
+def weapp_send_subscribe_message(app_id, touser, template_id, data=None, page=None):
+    """
+    发送订阅消息
+
+    Params:
+        app_id              是  微信应用 app_id
+        touser	            是	接收者（用户）的 openid
+        template_id	        是	所需下发的模板消息的 id
+        data	            是	模板内容，不填则下发空模板
+        page	            否	点击模板卡片后的跳转页面，仅限本小程序内的页面
+                                支持带参数,（示例index?foo=bar）。该字段不填则模板无跳转。
+
+    Returns:
+        errcode: 0,
+        errmsg: "ok"
+    """
+
+    data = data if (data and isinstance(data, dict)) else {}
+
+    try:
+        return wxa(app_id)._post(
+            'cgi-bin/message/subscribe/send',
+            data=optionaldict(
+                touser=touser, template_id=template_id, page=page, data=data
+            ),
+        )
+    except Exception as e:
+        logger.error(f'weapp_send_subscribe_message:{e}')
+
+
+def mp_send_template_message(
+    app_id, touser, template_id, data, url=None, mini_program=None
+):
     """
     发送公众号模板消息
 
@@ -67,10 +114,10 @@ def mp_send_template_message(app_id, touser, template_id, data, url=None, mini_p
     data = data if (data and isinstance(data, dict)) else {}
     try:
         appsecret = settings.WECHAT_APP_MAP[app_id]['appsecret']
-        client = WeChatClient(
-            app_id, appsecret, session=RedisStorage(redis_client))
+        client = WeChatClient(app_id, appsecret, session=RedisStorage(redis_client))
 
         return client.message.send_template(
-            touser, template_id, data, url=url, mini_program=mini_program)
+            touser, template_id, data, url=url, mini_program=mini_program
+        )
     except Exception as e:
         logger.error(f'mp_send_template_error:{e}')
