@@ -6,6 +6,7 @@ from django.db.models.fields import NOT_PROVIDED
 
 from api_basebone.core import gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
+from api_basebone.utils.format import underline_to_camel
 from api_basebone.utils.meta import (
     get_concrete_fields,
     get_export_apps,
@@ -29,6 +30,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'FloatField': 'Float',
     'DecimalField': 'Decimal',
     'GenericIPAddressField': 'String',
+    'SmallIntegerField': 'Integer',
     'IntegerField': 'Integer',
     'BigIntegerField': 'String',
     'PositiveIntegerField': 'Integer',
@@ -206,6 +208,7 @@ class FieldConfig:
         base = self._get_common_field_params(field, data_type)
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+        base['refField'] = field.remote_field.name
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -214,6 +217,7 @@ class FieldConfig:
         base = self._get_common_field_params(field, data_type)
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+        base['refField'] = field.remote_field.name
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -273,6 +277,7 @@ def get_model_field_config(model):
 
             reverse_config['displayName'] = model_verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
+            reverse_config['refField'] = field.name
             reverse_config.update(field_config_instance.reset_field_config(item))
             config.append(reverse_config)
 
@@ -300,6 +305,15 @@ def get_model_field_config(model):
             'readonly': True,
             'displayName': field_value['display_name'],
         }
+        config.append(attrs)
+
+    # 添加 annotated_field
+    annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    for name, field in annotated_fields.items():
+        attrs = {'required': False, 'readonly': True, 'name': name}
+        attrs.update({underline_to_camel(k): v for k, v in field.items()})
+        attrs.setdefault('displayName', name)
+        del attrs['annotation']
         config.append(attrs)
 
     ret = {
