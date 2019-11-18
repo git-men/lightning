@@ -30,6 +30,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'FloatField': 'Float',
     'DecimalField': 'Decimal',
     'GenericIPAddressField': 'String',
+    'SmallIntegerField': 'Integer',
     'IntegerField': 'Integer',
     'BigIntegerField': 'String',
     'PositiveIntegerField': 'Integer',
@@ -309,11 +310,7 @@ def get_model_field_config(model):
     # 添加 annotated_field
     annotated_fields = get_attr_in_gmeta_class(model, gmeta.GMETA_ANNOTATED_FIELDS, {})
     for name, field in annotated_fields.items():
-        attrs = {
-            'required': False,
-            'readonly': True,
-            'name': name,
-        }
+        attrs = {'required': False, 'readonly': True, 'name': name}
         attrs.update({underline_to_camel(k): v for k, v in field.items()})
         attrs.setdefault('displayName', name)
         del attrs['annotation']
