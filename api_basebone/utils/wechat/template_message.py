@@ -84,12 +84,13 @@ def weapp_send_subscribe_message(app_id, touser, template_id, data=None, page=No
     data = data if (data and isinstance(data, dict)) else {}
 
     try:
-        return wxa(app_id)._post(
+        result = wxa(app_id)._post(
             'cgi-bin/message/subscribe/send',
             data=optionaldict(
                 touser=touser, template_id=template_id, page=page, data=data
             ),
         )
+        return result
     except Exception as e:
         logger.error(f'weapp_send_subscribe_message:{e}')
 
