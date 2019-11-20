@@ -109,8 +109,10 @@ def serialize_queryset(data, action='list', expand_fields=None):
     return serializer.data
 
 
-def annotate_queryset(queryset):
+def annotate_queryset(queryset, fields=None):
     annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    if fields is not None:
+        annotated_fields = {k: v for k, v in annotated_fields.items() if k in fields}
     if annotated_fields:
         return queryset.annotate(**{name: field['annotation'] for name, field in annotated_fields.items()})
     return queryset

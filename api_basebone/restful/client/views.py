@@ -23,6 +23,7 @@ from api_basebone.restful.serializers import (
 )
 
 from api_basebone.utils import meta, get_app
+from api_basebone.utils import queryset as queryset_utils
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.utils.operators import build_filter_conditions2
 
@@ -282,13 +283,19 @@ class GenericViewMixin:
             objects = getattr(self.model, managers['client_api'], self.model.objects)
         else:
             objects = self.model.objects
-        expand_fields = self.expand_fields
-        if not expand_fields:
-            return self._get_queryset(objects.all())
 
-        expand_fields = self.translate_expand_fields(expand_fields)
-        field_list = [item.replace('.', '__') for item in expand_fields]
-        return self._get_queryset(objects.all().prefetch_related(*field_list))
+        queryset = objects.all()
+
+        expand_fields = self.expand_fields
+        if expand_fields:
+            expand_fields = self.translate_expand_fields(expand_fields)
+            field_list = [item.replace('.', '__') for item in expand_fields]
+            queryset = queryset.prefetch_related(*field_list)
+
+        filter_fields = [con['field'] for con in self.request.data.get(const.FILTER_CONDITIONS, [])]
+        queryset = queryset_utils.annotate(queryset, filter_fields)
+
+        return self._get_queryset(queryset)
 
     def get_serializer_class(self, expand_fields=None):
         """动态的获取序列化类
