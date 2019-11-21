@@ -390,7 +390,7 @@ class GenericViewMixin:
             field_list = [item.replace('.', '__') for item in expand_fields]
             queryset = queryset.prefetch_related(*field_list)
 
-        queryset = queryset_utils.annotate(queryset)
+        queryset = queryset_utils.annotate(queryset, context={'user': self.request.user})
 
         queryset = self._get_queryset(queryset)
 
