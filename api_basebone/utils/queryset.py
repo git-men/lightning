@@ -1,10 +1,9 @@
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, Prefetch
 from django.db.models import Manager
 from .operators import build_filter_conditions2
 from ..export.fields import get_attr_in_gmeta_class
 from ..core import gmeta
-from ..restful.serializers import multiple_create_serializer_class
-
+from ..restful.serializers import multiple_create_serializer_class, get_field
 
 __all__ = ['filter', 'serialize', 'annotate']
 
@@ -116,6 +115,23 @@ def annotate_queryset(queryset, fields=None, context=None):
     if annotated_fields:
         return queryset.annotate(**{name: field['annotation'] if not callable(field['annotation']) else field['annotation'](context or {}) for name, field in annotated_fields.items()})
     return queryset
+
+
+def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None):
+    result = []
+    for key, value in expand_dict.items():
+        field = get_field(model, key)
+        next_model = field.related_model
+        next_fields = fields and [field.split('.', maxsplit=1)[-1] for field in fields if field.startswith(key+'.')]
+        pfs = expand_dict_to_prefetch(next_model, value)
+        # if not pfs:
+        # 是否能节省资源？
+        #     result.append(key)
+        #     continue
+        qs = next_model.objects.prefetch_related(*pfs)
+        prefetch = Prefetch(key, queryset=annotate_queryset(qs, fields=next_fields, context=context))
+        result.append(prefetch)
+    return result
 
 
 # alias
