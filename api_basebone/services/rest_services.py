@@ -40,11 +40,19 @@ def filter_display_fields(data, display_fields):
 
 def filter_sub_display_fields(display_fields_set, record, prefix=''):
     display_record = {}
+
+    # 星号为通配符，该层所有属性都匹配
+    if prefix:
+        star_key = prefix + '.*'
+    else:
+        star_key = '*'
+
     for k, v in record.items():
         if prefix:
             full_key = prefix + '.' + k
         else:
             full_key = k
+        exclude_key = '-' + full_key
         if isinstance(v, list):
             if full_key not in display_fields_set:
                 continue
@@ -56,6 +64,14 @@ def filter_sub_display_fields(display_fields_set, record, prefix=''):
             if full_key not in display_fields_set:
                 continue
             display_record[k] = filter_sub_display_fields(display_fields_set, v, full_key)
+        # 负号优先级高于星号
+        elif exclude_key in display_fields_set:
+            """负号表示该属性不显示"""
+            continue
+        # 星号优先级高于具体的列名
+        elif star_key in display_fields_set:
+            """星号为通配符"""
+            display_record[k] = v
         elif full_key in display_fields_set:
             display_record[k] = v
     return display_record
