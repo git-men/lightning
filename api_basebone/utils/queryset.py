@@ -123,7 +123,7 @@ def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None):
         field = get_field(model, key)
         next_model = field.related_model
         next_fields = fields and [field.split('.', maxsplit=1)[-1] for field in fields if field.startswith(key+'.')]
-        pfs = expand_dict_to_prefetch(next_model, value)
+        pfs = expand_dict_to_prefetch(next_model, value, fields=next_fields, context=context)
         # if not pfs:
         # 是否能节省资源？
         #     result.append(key)
