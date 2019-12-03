@@ -24,6 +24,7 @@ from api_basebone.restful.serializers import (
     create_serializer_class,
     get_export_serializer_class,
     multiple_create_serializer_class,
+    sort_expand_fields,
 )
 
 from api_basebone.utils import meta, get_app, module as basebone_module
@@ -382,14 +383,15 @@ class GenericViewMixin:
 
         queryset = self.model.objects.all()
 
+        context = {'user': self.request.user}
+
         expand_fields = self.expand_fields
         if expand_fields:
             expand_fields = self.translate_expand_fields(expand_fields)
-            field_list = [item.replace('.', '__') for item in expand_fields]
-            queryset = queryset.prefetch_related(*field_list)
+            expand_dict = sort_expand_fields(expand_fields)
+            queryset = queryset.prefetch_related(*queryset_utils.expand_dict_to_prefetch(queryset.model, expand_dict, context=context))
 
-        queryset = queryset_utils.annotate(queryset, context={'user': self.request.user})
-
+        queryset = queryset_utils.annotate(queryset, context=context)
         queryset = self._get_queryset(queryset)
 
         if admin_get_queryset:
