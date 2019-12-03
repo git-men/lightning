@@ -25,9 +25,12 @@ def filter_display_fields(data, display_fields):
 
     display_fields_set = set()
     for field_str in display_fields:
-        items = field_str.split('.')
-        for i in range(len(items)):
-            display_fields_set.add('.'.join(items[: i + 1]))
+        if field_str.startswith('-'):
+            display_fields_set.add(field_str)
+        else:
+            items = field_str.split('.')
+            for i in range(len(items)):
+                display_fields_set.add('.'.join(items[: i + 1]))
     if isinstance(data, list):
         results = []
         for record in data:
@@ -53,9 +56,19 @@ def filter_sub_display_fields(display_fields_set, record, prefix=''):
         else:
             full_key = k
         exclude_key = '-' + full_key
+
+        # 负号优先级高于星号
+        if exclude_key in display_fields_set:
+            """负号表示该属性不显示"""
+            continue
+
         if isinstance(v, list):
-            if full_key not in display_fields_set:
+            if (star_key not in display_fields_set) and (
+                full_key not in display_fields_set
+            ):
+                """星号为通配符"""
                 continue
+
             display_record[k] = []
             for d in v:
                 if isinstance(d, dict):
@@ -66,13 +79,12 @@ def filter_sub_display_fields(display_fields_set, record, prefix=''):
                 else:
                     display_record[k].append(d)
         elif isinstance(v, dict):
-            if full_key not in display_fields_set:
+            if (star_key not in display_fields_set) and (
+                full_key not in display_fields_set
+            ):
+                """星号为通配符"""
                 continue
             display_record[k] = filter_sub_display_fields(display_fields_set, v, full_key)
-        # 负号优先级高于星号
-        elif exclude_key in display_fields_set:
-            """负号表示该属性不显示"""
-            continue
         # 星号优先级高于具体的列名
         elif star_key in display_fields_set:
             """星号为通配符"""
