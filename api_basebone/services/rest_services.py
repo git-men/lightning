@@ -58,8 +58,13 @@ def filter_sub_display_fields(display_fields_set, record, prefix=''):
                 continue
             display_record[k] = []
             for d in v:
-                sub_record = filter_sub_display_fields(display_fields_set, d, full_key)
-                display_record[k].append(sub_record)
+                if isinstance(d, dict):
+                    sub_record = filter_sub_display_fields(
+                        display_fields_set, d, full_key
+                    )
+                    display_record[k].append(sub_record)
+                else:
+                    display_record[k].append(d)
         elif isinstance(v, dict):
             if full_key not in display_fields_set:
                 continue
