@@ -170,9 +170,7 @@ class QuerySetMixin:
             )
 
             if cons:
-                for item in cons.children:
-                    query_params = {item[0]: item[1]}
-                    queryset = queryset.filter(**query_params)
+                queryset = queryset.filter(cons)
             return queryset
         return queryset
 
