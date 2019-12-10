@@ -74,4 +74,4 @@ class BusinessException(Exception):
         self.error_app = error_app if error_app else force_text(self.default_error_app)
 
     def __str__(self):
-        return f'{self.error_code}:{self.error_message}'
+        return f'{self.error_code}:{self.error_message},{self.error_data}'
