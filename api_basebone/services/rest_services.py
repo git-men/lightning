@@ -183,7 +183,7 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
     return success_response()
 
 
-def client_create(genericAPIView, request):
+def client_create(genericAPIView, request, set_data):
     """
         这里校验表单和序列化类分开创建
 
@@ -191,14 +191,14 @@ def client_create(genericAPIView, request):
         """
 
     with transaction.atomic():
-        client_user_pip.add_login_user_data(genericAPIView, request.data)
-        forward_relation_hand(genericAPIView.model, request.data)
+        client_user_pip.add_login_user_data(genericAPIView, set_data)
+        forward_relation_hand(genericAPIView.model, set_data)
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
-            data=request.data
+            data=set_data
         )
         serializer.is_valid(raise_exception=True)
         instance = genericAPIView.perform_create(serializer)
-        reverse_relation_hand(genericAPIView.model, request.data, instance, detail=False)
+        reverse_relation_hand(genericAPIView.model, set_data, instance, detail=False)
         instance = genericAPIView.get_queryset().get(id=instance.id)
 
         # with transaction.atomic():
@@ -215,23 +215,23 @@ def client_create(genericAPIView, request):
         return success_response(serializer.data)
 
 
-def manage_create(genericAPIView, request):
+def manage_create(genericAPIView, request, set_data):
     """
         这里校验表单和序列化类分开创建
 
         原因：序列化类有可能嵌套
         """
     with transaction.atomic():
-        forward_relation_hand(genericAPIView.model, request.data)
+        forward_relation_hand(genericAPIView.model, set_data)
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
-            data=request.data, context=genericAPIView.get_serializer_context()
+            data=set_data, context=genericAPIView.get_serializer_context()
         )
         serializer.is_valid(raise_exception=True)
         instance = genericAPIView.perform_create(serializer)
         # 如果有联合查询，单个对象创建后并没有联合查询
         instance = genericAPIView.get_queryset().filter(id=instance.id).first()
         serializer = genericAPIView.get_serializer(instance)
-        reverse_relation_hand(genericAPIView.model, request.data, instance, detail=False)
+        reverse_relation_hand(genericAPIView.model, set_data, instance, detail=False)
 
         log.debug(
             'sending Post Save signal with: model: %s, instance: %s',
@@ -242,22 +242,22 @@ def manage_create(genericAPIView, request):
     return success_response(serializer.data)
 
 
-def client_update(genericAPIView, request, partial):
+def client_update(genericAPIView, request, partial, set_data):
     """全量更新数据"""
     with transaction.atomic():
-        client_user_pip.add_login_user_data(genericAPIView, request.data)
-        forward_relation_hand(genericAPIView.model, request.data)
+        client_user_pip.add_login_user_data(genericAPIView, set_data)
+        forward_relation_hand(genericAPIView.model, set_data)
 
         # partial = kwargs.pop('partial', False)
         instance = genericAPIView.get_object()
 
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
-            instance, data=request.data, partial=partial
+            instance, data=set_data, partial=partial
         )
         serializer.is_valid(raise_exception=True)
         instance = genericAPIView.perform_update(serializer)
 
-        reverse_relation_hand(genericAPIView.model, request.data, instance)
+        reverse_relation_hand(genericAPIView.model, set_data, instance)
         instance = genericAPIView.get_queryset().get(id=instance.id)
 
         # with transaction.atomic():
@@ -274,17 +274,17 @@ def client_update(genericAPIView, request, partial):
         return success_response(serializer.data)
 
 
-def manage_update(genericAPIView, request, partial):
+def manage_update(genericAPIView, request, partial, set_data):
     """全量更新数据"""
 
     with transaction.atomic():
-        forward_relation_hand(genericAPIView.model, request.data)
+        forward_relation_hand(genericAPIView.model, set_data)
 
         # partial = kwargs.pop('partial', False)
         instance = genericAPIView.get_object()
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
             instance,
-            data=request.data,
+            data=set_data,
             partial=partial,
             context=genericAPIView.get_serializer_context(),
         )
@@ -296,7 +296,7 @@ def manage_update(genericAPIView, request, partial):
         if getattr(instance, '_prefetched_objects_cache', None):
             instance._prefetched_objects_cache = {}
 
-        reverse_relation_hand(genericAPIView.model, request.data, instance)
+        reverse_relation_hand(genericAPIView.model, set_data, instance)
 
     with transaction.atomic():
         log.debug(

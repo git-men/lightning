@@ -350,22 +350,22 @@ class CommonManageViewSet(FormMixin, QuerySetMixin, GenericViewMixin, BSMModelVi
 
         原因：序列化类有可能嵌套
         """
-        return rest_services.client_create(self, request)
+        return rest_services.client_create(self, request, request.data)
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
         # partial = kwargs.pop('partial', False)
-        return rest_services.client_update(self, request, False)
+        return rest_services.client_update(self, request, False, request.data)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
         # kwargs['partial'] = True
-        return rest_services.client_update(self, request, True)
+        return rest_services.client_update(self, request, True, request.data)
 
     @action(methods=['put'], detail=True, url_path='patch')
     def custom_patch(self, request, *args, **kwargs):
         # kwargs['partial'] = True
-        return rest_services.client_update(self, request, True)
+        return rest_services.client_update(self, request, True, request.data)
 
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
