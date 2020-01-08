@@ -18,10 +18,13 @@ class MenuAdmin(BSMAdmin):
         },
         'page', 'permission', 'model', 'sequence']
     form_fields = [
-        'name', 'icon', 'parent', 'page', 'permission', 'model', 'sequence'
+        'name', 'icon', 'parent', 'page',
+        {'name': 'model', 'show': '${page} === "list" || ${page} === "detail"'},
+        'permission', 'sequence',
     ]
     inlineFormFields = ['sequence']
     display_in_tree = True  # 树型列表
+    inline_actions = ['edit', 'delete']
 
     class Meta:
         model = Menu

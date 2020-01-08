@@ -19,6 +19,8 @@ BSM_DISPLAY_IN_TREE = 'display_in_tree'
 
 BSM_INLINE_ACTIONS = 'inline_actions'
 
+BSM_TABLE_ACTIONS = 'table_actions'
+
 # 批量操作
 BSM_BATCH_ACTION = 'actions'
 
@@ -66,6 +68,7 @@ VALID_MANAGE_ATTRS = [
     BSM_PARENT_FIELD,
     BSM_DISPLAY,
     BSM_INLINE_ACTIONS,
+    BSM_TABLE_ACTIONS,
     BSM_BATCH_ACTION,
     BSM_MODAL_FROM,
     BSM_MODAL_CONFIG,

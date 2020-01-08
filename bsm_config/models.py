@@ -11,6 +11,7 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.apps.registry import apps
 
+from api_basebone.core.fields import JSONField
 from api_basebone.export.specs import FieldType
 
 # 自定义菜单
@@ -30,7 +31,9 @@ class Menu(models.Model):
         'self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单', related_name='children'
     )
     page = models.CharField(
-        '页面', max_length=200, help_text='前端功能页面的标识', default='list', null=True, blank=True
+        '页面', max_length=200, help_text='前端功能页面的标识', default='list', null=True, blank=True, choices=[
+            ['list', '列表页'], ['detail', '详情页'], ['adminConfig', '页面配置面板']
+        ]
     )
     permission = models.CharField(
         '关联权限',
@@ -122,3 +125,12 @@ class PermissionGMeta:
 Permission.__str__ = permissions_new_str
 setattr(Permission, 'display_name', display_name)
 setattr(Permission, 'GMeta', PermissionGMeta)
+
+
+class Admin(models.Model):
+    model = models.CharField('模型名称', max_length=30)
+    config = JSONField(default={})
+
+    class Meta:
+        verbose_name = 'Admin配置'
+        verbose_name_plural = 'Admin配置'
