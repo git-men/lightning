@@ -3,7 +3,7 @@ funcs = {}
 
 
 def register_func(app, model, func_name, func, options):
-    funcs[f'{app}/{model}/@{func_name}'] = (func, options)
+    funcs[(app, model, func_name)] = (func, options)
 
 
 def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False):
@@ -24,5 +24,5 @@ def bsm_func(name, model, login_required=True, staff_required=False, superuser_r
 
 
 def find_func(app, model, func_name):
-    func, options = funcs.get(f'{app}/{model}/@{func_name}', (None, None))
+    func, options = funcs.get((app, model, func_name), (None, None))
     return func, options
