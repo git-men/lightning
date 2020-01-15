@@ -21,6 +21,11 @@ INVALID_API = '10016'
 DISABLE_API = '10017'
 SLUG_EXISTS = '10018'
 
+CAN_NOT_SAVE_TRIGGER = '10019'
+INVALID_TRIGGER = '10020'
+DISABLE_TRIGGER = '10021'
+TRIGGER_ERROR = '10022'
+
 ERROR_PHRASES = {
     PARAMETER_FORMAT_ERROR: '参数格式错误',
     SERVER_IS_BUSY: '服务器繁忙，请稍后再试',
@@ -42,6 +47,9 @@ ERROR_PHRASES = {
     INVALID_API: '无此api',
     DISABLE_API: 'api已停用',
     SLUG_EXISTS: '标识已存在',
+    CAN_NOT_SAVE_TRIGGER: '当前模式不支持触发器在线编辑',
+    INVALID_TRIGGER: '无此触发器',
+    TRIGGER_ERROR: '触发器运行异常',
 }
 
 
