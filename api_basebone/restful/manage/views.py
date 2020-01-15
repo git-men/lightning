@@ -27,13 +27,12 @@ from api_basebone.restful.serializers import (
     sort_expand_fields,
 )
 
-from api_basebone.utils import meta, get_app, module as basebone_module
+from api_basebone.utils import meta, module as basebone_module
 from api_basebone.utils.operators import build_filter_conditions2
 from api_basebone.restful.mixins import FormMixin
 from api_basebone.restful.viewsets import BSMModelViewSet
 
 from api_basebone.services import rest_services
-from api_basebone.utils import get_app, meta
 from api_basebone.utils import queryset as queryset_utils
 
 from .user_pip import add_login_user_data
@@ -214,7 +213,7 @@ class GenericViewMixin:
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
         # 检测应用是否在 INSTALLED_APPS 中
-        if get_app(self.app_label) not in settings.INSTALLED_APPS:
+        if self.app_label not in apps.all_models:
             raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
 
         # 检测模型是否合法
@@ -249,7 +248,7 @@ class GenericViewMixin:
                 self.model_slug = valid_item['model_slug']
 
                 # 检测应用是否在 INSTALLED_APPS 中
-                if get_app(self.app_label) not in settings.INSTALLED_APPS:
+                if self.app_label not in apps.all_models:
                     raise exceptions.BusinessException(
                         error_code=exceptions.APP_LABEL_IS_INVALID
                     )

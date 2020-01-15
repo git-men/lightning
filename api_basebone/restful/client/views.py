@@ -22,7 +22,7 @@ from api_basebone.restful.serializers import (
     multiple_create_serializer_class,
 )
 
-from api_basebone.utils import meta, get_app
+from api_basebone.utils import meta
 from api_basebone.utils import queryset as queryset_utils
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
 from api_basebone.utils.operators import build_filter_conditions2
@@ -164,7 +164,7 @@ class GenericViewMixin:
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
         # 检测应用是否在 INSTALLED_APPS 中
-        if get_app(self.app_label) not in settings.INSTALLED_APPS:
+        if self.app_label not in apps.all_models:
             raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
 
         # 检测模型是否合法
