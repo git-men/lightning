@@ -4,6 +4,7 @@ from functools import reduce
 from django.apps import apps
 from django.db.models import Manager, Q
 from django.template import engines
+from api_basebone.services.expresstion import resolve_expression
 
 django_engine = engines['django']
 
@@ -30,6 +31,8 @@ OPERATOR_MAP = {
 
 def get_expression_value(item, context):
     """获取表达式的值"""
+    if 'expression_type' not in item:
+        return resolve_expression(item['expression'], context)
     object_key, attrs = None, None
     expression, expression_type = item.get('expression'), item.get('expression_type')
     if expression_type == 'object_attr':
@@ -99,12 +102,10 @@ def build_filter_conditions(filters, context=None):
         if not isinstance(item, dict) or not valid_keys.issubset(set(item.keys())):
             continue
 
-        item_value = item.get("value")
         if "expression" in item:
-            try:
-                item_value = get_expression_value(item, context)
-            except Exception:
-                continue
+            item_value = get_expression_value(item, context)
+        else:
+            item_value = item.get("value")
 
         if item["operator"] in ["!=", "!==", "<>"]:
             exclude_cons.append(Q(**{item["field"]: item_value}))
@@ -142,12 +143,9 @@ def build_filter_conditions2(filters, context=None):
     if not filters or not isinstance(filters, list):
         return None
 
-    if not isinstance(context, dict):
-        context = {}
-
     trans_cons = []
     for item in filters:
-        build_conditions_in_item(trans_cons, item, context)
+        build_conditions_in_item(trans_cons, item, context or {})
 
     return reduce(operator.and_, trans_cons) if trans_cons else None
 
@@ -177,12 +175,10 @@ def build_conditions_in_item(trans_cons, item, context=None):
         if not valid_keys.issubset(set(item.keys())):
             return
 
-        item_value = item.get("value")
         if "expression" in item:
-            try:
-                item_value = get_expression_value(item, context)
-            except Exception:
-                return
+            item_value = get_expression_value(item, context)
+        else:
+            item_value = item.get("value")
 
         if item["operator"] in ["!=", "!==", "<>"]:
             trans_cons.append(~Q(**{item["field"]: item_value}))

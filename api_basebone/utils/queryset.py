@@ -8,19 +8,12 @@ from ..restful.serializers import multiple_create_serializer_class, get_field
 __all__ = ['filter', 'serialize', 'annotate']
 
 
-def filter_queryset(queryset, filters=None):
+def filter_queryset(queryset, filters=None, context=None):
     if not filter:
         return queryset
-    cons = build_filter_conditions2(filters)
+    cons = build_filter_conditions2(filters, context=context)
     if cons:
         queryset = queryset.filter(cons)
-    # if exclude:
-    #     queryset = queryset.exclude(exclude)
-    # cons, exclude = build_filter_conditions(filters)
-    # if cons:
-    #     queryset = queryset.filter(cons)
-    # if exclude:
-    #     queryset = queryset.exclude(exclude)
 
     return queryset
 
