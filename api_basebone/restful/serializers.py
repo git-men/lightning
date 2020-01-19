@@ -185,13 +185,15 @@ def create_meta_class(
 
 
 def create_serializer_class(
-    model, exclude_fields=None, tree_structure=None, action=None, end_slug=None, **kwargs
+    model, exclude_fields=None, tree_structure=None, action=None, end_slug=None, attrs=None,
 ):
     """构建序列化类
 
     Params:
         tree_structure 元组 admin 中做对应配置
     """
+    if attrs is None:
+        attrs = {}
 
     def __init__(self, *args, **kwargs):
         """
@@ -214,7 +216,7 @@ def create_serializer_class(
 
         super(CustomModelSerializer, self).__init__(*args, **kwargs)
 
-    extra_fields = list(kwargs.keys())
+    extra_fields = list(attrs.keys())
     new_attr = {}
     # 动态构建树形结构的字段
     if tree_structure:
@@ -247,7 +249,8 @@ def create_serializer_class(
         for name, field in annotated_fields.items():
             new_attr[name] = ComputedFieldTypeSerializerMap[field['type']](read_only=True)
 
-    attrs = {
+    class_name = f'{model.__name__}ModelSerializer'
+    return type(class_name, (BaseModelSerializerMixin, CustomModelSerializer), {
         'Meta': create_meta_class(
             model, exclude_fields=exclude_fields, extra_fields=extra_fields, action=action
         ),
@@ -255,11 +258,9 @@ def create_serializer_class(
         'basebone_model': model,
         'basebone_end_slug': end_slug,
         '__init__': __init__,
-    }
-    attrs.update(new_attr)
-    attrs.update(kwargs)
-    class_name = f'{model.__name__}ModelSerializer'
-    return type(class_name, (BaseModelSerializerMixin, CustomModelSerializer), attrs)
+        **new_attr,
+        **attrs,
+    })
 
 
 def get_field(model, field_name):
@@ -374,7 +375,7 @@ def create_nested_serializer_class(
                 end_slug=end_slug,
             )(many=many)
     return create_serializer_class(
-        model, exclude_fields=exclude_fields, action=action, end_slug=end_slug, **attrs
+        model, exclude_fields=exclude_fields, action=action, end_slug=end_slug, attrs=attrs
     )
 
 
@@ -410,7 +411,7 @@ def multiple_create_serializer_class(
         tree_structure=tree_structure,
         action=action,
         end_slug=end_slug,
-        **attrs,
+        attrs=attrs,
     )
 
 
