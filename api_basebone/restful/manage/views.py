@@ -212,17 +212,12 @@ class GenericViewMixin:
 
         self.app_label, self.model_slug = self.kwargs.get('app'), self.kwargs.get('model')
 
-        # 检测应用是否在 INSTALLED_APPS 中
-        if self.app_label not in apps.all_models:
-            raise exceptions.BusinessException(error_code=exceptions.APP_LABEL_IS_INVALID)
-
-        # 检测模型是否合法
-        if self.model_slug not in apps.all_models[self.app_label]:
+        try:
+            self.model = apps.get_model(self.app_label, self.model_slug)
+        except LookupError:
             raise exceptions.BusinessException(
                 error_code=exceptions.MODEL_SLUG_IS_INVALID
             )
-
-        self.model = apps.all_models[self.app_label][self.model_slug]
 
         # 加载 admin 配置
         meta.load_custom_admin_module()
@@ -247,19 +242,13 @@ class GenericViewMixin:
                 self.app_label = valid_item['app_label']
                 self.model_slug = valid_item['model_slug']
 
-                # 检测应用是否在 INSTALLED_APPS 中
-                if self.app_label not in apps.all_models:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.APP_LABEL_IS_INVALID
-                    )
-
                 # 检测模型是否合法
-                if self.model_slug not in apps.all_models[self.app_label]:
+                try:
+                    self.model = apps.get_model(self.app_label, self.model_slug)
+                except LookupError:
                     raise exceptions.BusinessException(
                         error_code=exceptions.MODEL_SLUG_IS_INVALID
                     )
-
-                self.model = apps.all_models[self.app_label][self.model_slug]
             else:
                 raise exceptions.BusinessException(
                     error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
