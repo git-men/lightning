@@ -41,10 +41,12 @@ def insert_user_to_data(model, user, data):
                     continue
 
                 has_user_field = meta.get_related_model_field(
-                    item.related_model, get_user_model())
+                    item.related_model, get_user_model()
+                )
                 if has_user_field:
                     field_name = get_gmeta_config_by_key(
-                        item.related_model, gmeta.GMETA_CLIENT_USER_FIELD)
+                        item.related_model, gmeta.GMETA_CLIENT_USER_FIELD
+                    )
                     if field_name:
                         for reverse_item in value:
                             if isinstance(reverse_item, dict):
@@ -59,10 +61,12 @@ def insert_user_to_data(model, user, data):
                         continue
 
                     has_user_field = meta.get_related_model_field(
-                        item.related_model, get_user_model())
+                        item.related_model, get_user_model()
+                    )
                     if has_user_field:
                         field_name = get_gmeta_config_by_key(
-                            item.related_model, gmeta.GMETA_CLIENT_USER_FIELD)
+                            item.related_model, gmeta.GMETA_CLIENT_USER_FIELD
+                        )
                         if field_name:
                             for child_item in value:
                                 if isinstance(child_item, dict):
@@ -73,10 +77,12 @@ def insert_user_to_data(model, user, data):
                     # 使用字典数据结构
                     if isinstance(value, dict):
                         has_user_field = meta.get_related_model_field(
-                            item.related_model, get_user_model())
+                            item.related_model, get_user_model()
+                        )
                         if has_user_field:
                             field_name = get_gmeta_config_by_key(
-                                item.related_model, gmeta.GMETA_CLIENT_USER_FIELD)
+                                item.related_model, gmeta.GMETA_CLIENT_USER_FIELD
+                            )
                             if field_name:
                                 # 如果用户数据中没有传递用户的数据，则进行插入
                                 if field_name not in value:
@@ -98,5 +104,6 @@ def add_login_user_data(view, data):
     if not view.request.data:
         return
 
-    user = get_user_model().objects.get(id=view.request.user.id)
-    return insert_user_to_data(view.model, user, data)
+    user = get_user_model().objects.filter(id=view.request.user.id).first()
+    if user:
+        return insert_user_to_data(view.model, user, data)
