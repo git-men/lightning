@@ -4,6 +4,8 @@ import operator
 from decimal import Decimal
 from functools import reduce
 from django.utils import timezone
+from django.db.models import F, Value
+from django.db.models.functions import Concat
 
 
 def reduce_wrap(func):
@@ -40,7 +42,10 @@ FUNCS = {
     'getitem': operator.getitem,
     'contains': lambda container, *args: all(k in container for k in args),
     'if': lambda cond, a, b: a if cond else b,
-    'slice': lambda obj, *args: obj[slice(*args)]
+    'slice': lambda obj, *args: obj[slice(*args)],
+    'F': F,
+    'Concat': Concat,
+    'Value': Value,
 }
 
 
@@ -72,7 +77,7 @@ def split_expression(expression, symbol):
         yield buffer
 
 
-def resolve_expression(expression, variables):
+def resolve_expression(expression, variables=None):
     expression = expression.strip()
 
     try:
