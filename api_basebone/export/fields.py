@@ -160,6 +160,7 @@ class FieldConfig:
             'name': field.name,
             'displayName': field.verbose_name,
             'required': not field.blank,
+            'primaryKey': field.primary_key,
             'type': data_type,
             'help': field.help_text,
         }
