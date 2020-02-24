@@ -199,7 +199,7 @@ def client_create(genericAPIView, request, set_data):
         serializer.is_valid(raise_exception=True)
         instance = genericAPIView.perform_create(serializer)
         reverse_relation_hand(genericAPIView.model, set_data, instance, detail=False)
-        instance = genericAPIView.get_queryset().get(id=instance.id)
+        instance = genericAPIView.get_queryset().get(pk=instance.pk)
 
         # with transaction.atomic():
         log.debug(
@@ -210,7 +210,7 @@ def client_create(genericAPIView, request, set_data):
         post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         serializer = genericAPIView.get_serializer(
-            genericAPIView.get_queryset().get(id=instance.id)
+            genericAPIView.get_queryset().get(pk=instance.pk)
         )
         return success_response(serializer.data)
 
@@ -229,7 +229,7 @@ def manage_create(genericAPIView, request, set_data):
         serializer.is_valid(raise_exception=True)
         instance = genericAPIView.perform_create(serializer)
         # 如果有联合查询，单个对象创建后并没有联合查询
-        instance = genericAPIView.get_queryset().filter(id=instance.id).first()
+        instance = genericAPIView.get_queryset().filter(pk=instance.pk).first()
         serializer = genericAPIView.get_serializer(instance)
         reverse_relation_hand(genericAPIView.model, set_data, instance, detail=False)
 
@@ -258,7 +258,7 @@ def client_update(genericAPIView, request, partial, set_data):
         instance = genericAPIView.perform_update(serializer)
 
         reverse_relation_hand(genericAPIView.model, set_data, instance)
-        instance = genericAPIView.get_queryset().get(id=instance.id)
+        instance = genericAPIView.get_queryset().get(pk=instance.pk)
 
         # with transaction.atomic():
         log.debug(
@@ -269,7 +269,7 @@ def client_update(genericAPIView, request, partial, set_data):
         post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False)
 
         serializer = genericAPIView.get_serializer(
-            genericAPIView.get_queryset().get(id=instance.id)
+            genericAPIView.get_queryset().get(pk=instance.pk)
         )
         return success_response(serializer.data)
 
