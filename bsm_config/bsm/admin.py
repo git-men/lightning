@@ -21,6 +21,7 @@ class MenuAdmin(BSMAdmin):
         'name', 'icon', 'parent', 'page',
         {'name': 'model', 'show': '${page} === "list" || ${page} === "detail"'},
         'permission', 'sequence',
+        {'name': 'path', 'show': '${page} === "auto"'}
     ]
     inlineFormFields = ['sequence']
     display_in_tree = True  # 树型列表

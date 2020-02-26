@@ -32,9 +32,10 @@ class Menu(models.Model):
     )
     page = models.CharField(
         '页面', max_length=200, help_text='前端功能页面的标识', default='list', null=True, blank=True, choices=[
-            ['list', '列表页'], ['detail', '详情页'], ['adminConfig', '页面配置面板']
+            ['list', '列表页'], ['detail', '详情页'], ['adminConfig', '页面配置面板'], ['auto', '自定义页面']
         ]
     )
+    path = models.CharField('自定义路径', max_length=255, null=True, blank=True)
     permission = models.CharField(
         '关联权限',
         max_length=200,
@@ -134,3 +135,27 @@ class Admin(models.Model):
     class Meta:
         verbose_name = 'Admin配置'
         verbose_name_plural = 'Admin配置'
+
+class Setting(models.Model):
+    key = models.CharField('配置键', max_length=30, unique=True)
+    value = models.CharField('配置值', max_length=255, null=True, blank=True)
+    type = models.CharField('键类型', max_length=30, default='string', choices=[
+        ('string', '字符串'),
+        ('text', '文本'),
+        ('integer', '整型'),
+        ('float', '浮点数'),
+        ('decimal', '小数'),
+        ('bool', 'Boolean值'),
+        ('time', '时间'),
+        ('date', '日期'),
+        ('datetime', '日期时间'),
+        ('image', '图片'),
+        ('file', '文件'),
+    ])
+    display_name = models.CharField('中文名', max_length=30)
+
+
+    class Meta:
+        verbose_name = '网站配置'
+        verbose_name_plural = '网站配置'
+

@@ -14,6 +14,7 @@ from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.drf.response import success_response
 from api_basebone.export.admin import get_app_admin_config
 from api_basebone.export.fields import get_app_field_schema
+from api_basebone.export.setting import get_settins
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, tree_parent_field
 from bsm_config.models import Menu
@@ -45,7 +46,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """获取所有的客户端配置，包括schema, admin
         """
         self._load_bsm_admin_module()
-        data = {'schemas': get_app_field_schema(), 'admins': get_app_admin_config()}
+        data = {'schemas': get_app_field_schema(), 'admins': get_app_admin_config(), 'settings': get_settins()}
         return success_response(data)
 
     def _get_menu_from_database(self):
