@@ -292,9 +292,16 @@ class GenericViewMixin:
             field_list = [item.replace('.', '__') for item in expand_fields]
             queryset = queryset.prefetch_related(*field_list)
 
-        filter_fields = [
-            con['field'] for con in self.request.data.get(const.FILTER_CONDITIONS, [])
-        ]
+        filter_fields = set()
+
+        def add_filter_fields(cons):
+            for con in cons:
+                if 'field' in con:
+                    filter_fields.add(con['field'])
+                if 'children' in con:
+                    add_filter_fields(con['children'])
+
+        add_filter_fields(self.request.data.get(const.FILTER_CONDITIONS, []))
         queryset = queryset_utils.annotate(
             queryset, filter_fields, context={'user': self.request.user}
         )
