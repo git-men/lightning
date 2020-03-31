@@ -116,6 +116,9 @@ class ConfigViewSet(viewsets.GenericViewSet):
     @action(detail=False, url_path='manage/menu', permission_classes=(IsAdminUser,))
     def get_manage_menu(self, request, *args, **kwargs):
         """获取管理端的菜单配置"""
+        if hasattr(settings, 'ADMIN_MENUS'):
+            return success_response(settings.ADMIN_MENUS)
+
         menutype = request.query_params.get('menutype', 'database')
         if menutype == 'database':
             return self._get_menu_from_database()
