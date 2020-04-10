@@ -19,7 +19,7 @@ class Menu(models.Model):
     """存储管理后台左侧导航菜单栏的结构
     """
 
-    name = models.CharField('名称', max_length=30)
+    name = models.CharField('名称', max_length=30, null=True, blank=True)
     icon = models.CharField(
         '图标名',
         max_length=100,
