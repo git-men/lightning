@@ -129,7 +129,7 @@ setattr(Permission, 'GMeta', PermissionGMeta)
 
 
 class Admin(models.Model):
-    model = models.CharField('模型名称', max_length=30)
+    model = models.CharField('模型名称', max_length=100)
     config = JSONField(default={})
 
     class Meta:

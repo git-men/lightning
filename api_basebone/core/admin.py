@@ -83,6 +83,7 @@ VALID_MANAGE_ATTRS = [
     BSM_STATISTICS,
     BSM_DISPLAY_IN_TREE,
     BSM_SORTABLE,
+    'detail',  # 详情页临时配置
 ]
 
 # 属性和默认值映射

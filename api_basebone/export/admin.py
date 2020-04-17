@@ -5,6 +5,7 @@ from api_basebone.restful.batch_actions import get_model_batch_actions
 from api_basebone.core.admin import BSMAdminModule
 from api_basebone.utils import meta
 from api_basebone.utils.format import underline_to_camel
+from bsm_config.models import Admin
 
 
 class BSMAdminConfig:
@@ -53,6 +54,10 @@ def get_app_admin_config():
     export_apps, config = meta.get_export_apps(), {}
     if not export_apps:
         return config
+
+    for admin in Admin.objects.all():
+        config[admin.model] = admin.config
+        config[admin.model]['_id'] = admin.id
 
     # 动态加载 amdin 模块
     meta.load_custom_admin_module()
