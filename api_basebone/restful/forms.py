@@ -1,4 +1,7 @@
+import functools
+
 from rest_framework import serializers
+from rest_framework.utils.model_meta import get_field_info
 
 from api_basebone.core import drf_field, gmeta
 from api_basebone.core.fields import JSONField
@@ -106,6 +109,28 @@ def create_meta_class(model, exclude_fields=None):
     return type('Meta', (object,), attrs)
 
 
+def simple_support_m2m_field_specify_through_model(func):
+    """
+    简单的支持多对多字段指定了through_model
+    TODO 如果中间表有必填字段，是会出错的
+    :param func:
+    :return:
+    """
+    @functools.wraps(func)
+    def wrapper(model, exclude_fields=None, **kwargs):
+        if model._meta.many_to_many:
+            field_info = get_field_info(model)
+            for field in model._meta.many_to_many:
+                if field_info.forward_relations[field.name].has_through_model:
+                    related_model = field.related_model
+                    kwargs[field.name] = serializers.PrimaryKeyRelatedField(many=True,
+                                                                queryset=related_model.objects.all())
+        return func(model, exclude_fields=None, **kwargs)
+
+    return wrapper
+
+
+@simple_support_m2m_field_specify_through_model
 def create_form_class(model, exclude_fields=None, **kwargs):
     """构建序列化类"""
 
