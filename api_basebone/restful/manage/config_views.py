@@ -46,8 +46,13 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """获取所有的客户端配置，包括schema, admin
         """
         self._load_bsm_admin_module()
-        data = {'schemas': get_app_field_schema(), 'admins': get_app_admin_config(), 'settings': get_settins()}
+        data = {'schemas': get_app_field_schema(), 'admins': get_app_admin_config()}
         return success_response(data)
+
+    @action(detail=False, url_path='settings')
+    def get_web_settins(self, request, *args, **kargs):
+        settings = get_settins()
+        return success_response(settings)
 
     def _get_menu_from_database(self):
         """从数据库中获取菜单"""
