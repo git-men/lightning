@@ -162,9 +162,16 @@ class QuerySetMixin:
         # 这里做个动作 1 校验过滤条件中的字段，是否需要对结果集去重 2 组装过滤条件
         if filter_conditions:
             # TODO: 这里没有做任何的检测，需要加上检测
-            self.basebone_check_distinct_queryset(
-                list({item['field'] for item in filter_conditions})
-            )
+            fields = set()
+
+            def tree_check(cond):
+                for c in cond:
+                    if 'children' in c:
+                        tree_check(c['children'])
+                    else:
+                        fields.add(c['field'])
+            tree_check(filter_conditions)
+            self.basebone_check_distinct_queryset(list(fields))
             cons = build_filter_conditions2(
                 filter_conditions, context={'user': self.request.user}
             )
