@@ -17,6 +17,9 @@ BSM_DISPLAY = 'display'
 # 以树型结构的表格展示
 BSM_DISPLAY_IN_TREE = 'display_in_tree'
 
+# 列表支持排序
+BSM_DISPLAY_IN_SORT ='display_in_sort'
+
 BSM_INLINE_ACTIONS = 'inline_actions'
 
 BSM_TABLE_ACTIONS = 'table_actions'
@@ -83,6 +86,7 @@ VALID_MANAGE_ATTRS = [
     BSM_STATISTICS,
     BSM_DISPLAY_IN_TREE,
     BSM_SORTABLE,
+    BSM_DISPLAY_IN_SORT,
     'detail',  # 详情页临时配置
 ]
 

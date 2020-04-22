@@ -460,6 +460,10 @@ class CommonManageViewSet(
         # kwargs['partial'] = True
         return rest_services.manage_update(self, request, True, request.data)
 
+    @action(methods=['POST', 'GET'], detail=False, url_path='update_sort')
+    def update_sort(self, request, *args, **kwargs):
+        return rest_services.update_sort(self, request, request.data)
+
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
         """

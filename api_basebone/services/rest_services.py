@@ -307,6 +307,24 @@ def manage_update(genericAPIView, request, partial, set_data):
         post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False)
     return success_response(serializer.data)
 
+def update_sort(genericAPIView, request, data):
+    instance = genericAPIView.model
+    from django.db.models import F, Q
+    with transaction.atomic():
+        dragItem = instance.objects.filter(id=data['dragId']).first()
+        hoverItem = instance.objects.filter(id=data['hoverId']).first()
+        dragIndex = dragItem.sequence
+        hoveIndex = hoverItem.sequence
+        if dragItem.parent != hoverItem.parent:
+            dragItem.parent=hoverItem.parent
+            dragItem.save()
+        if  dragIndex > hoveIndex:
+            instance.objects.filter(Q(sequence__gte = hoveIndex), Q(sequence__lt = dragIndex)).update(sequence=F('sequence') + 1)
+        elif dragIndex < hoveIndex:
+            instance.objects.filter(Q(sequence__lte = hoveIndex), Q(sequence__gt = dragIndex)).update(sequence=F('sequence') - 1)
+        dragItem.sequence=hoveIndex
+        dragItem.save()
+    return success_response(instance.objects.all().values())
 
 def destroy(genericAPIView, request):
     """删除数据"""
