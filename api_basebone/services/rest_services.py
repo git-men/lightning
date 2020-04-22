@@ -315,14 +315,16 @@ def update_sort(genericAPIView, request, data):
         hoverItem = instance.objects.filter(id=data['hoverId']).first()
         dragIndex = dragItem.sequence
         hoveIndex = hoverItem.sequence
+        dragItem.sequence = -1
+        dragItem.save()
         if dragItem.parent != hoverItem.parent:
-            dragItem.parent=hoverItem.parent
+            dragItem.parent = hoverItem.parent
             dragItem.save()
         if  dragIndex > hoveIndex:
             instance.objects.filter(Q(sequence__gte = hoveIndex), Q(sequence__lt = dragIndex)).update(sequence=F('sequence') + 1)
         elif dragIndex < hoveIndex:
             instance.objects.filter(Q(sequence__lte = hoveIndex), Q(sequence__gt = dragIndex)).update(sequence=F('sequence') - 1)
-        dragItem.sequence=hoveIndex
+        dragItem.sequence = hoveIndex
         dragItem.save()
     return success_response(instance.objects.all().values())
 
