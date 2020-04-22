@@ -18,7 +18,9 @@ class MenuAdmin(BSMAdmin):
         # },
         'name','page', 'permission', 'model', 'sequence']
     form_fields = [
-        'name', 'icon', 'parent', 'page',
+        'name', 'icon',
+        {'name': 'parent', 'widget': 'Cascader'},
+        'page',
         {'name': 'model', 'show': '${page} === "list" || ${page} === "detail"'},
         'permission', 'sequence',
         {'name': 'path', 'show': '${page} === "auto"'}
