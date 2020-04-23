@@ -309,23 +309,31 @@ def manage_update(genericAPIView, request, partial, set_data):
 
 def update_sort(genericAPIView, request, data):
     instance = genericAPIView.model
+    admin = genericAPIView.get_bsm_model_admin()
+    sort_key = admin.sort_key
+    print(admin, sort_key)
     from django.db.models import F, Q
     with transaction.atomic():
         dragItem = instance.objects.filter(id=data['dragId']).first()
         hoverItem = instance.objects.filter(id=data['hoverId']).first()
-        dragIndex = dragItem.sequence
-        hoveIndex = hoverItem.sequence
-        dragItem.sequence = -1
+        dragIndex = getattr(dragItem, sort_key)
+        hoveIndex = getattr(hoverItem, sort_key)
+        isDownward = dragIndex < hoveIndex or (dragIndex == hoveIndex and dragItem.id < hoverItem.id)
+        dragItem.parent = hoverItem.parent
+        setattr(dragItem, sort_key, hoveIndex + 1)
         dragItem.save()
-        if dragItem.parent != hoverItem.parent:
-            dragItem.parent = hoverItem.parent
-            dragItem.save()
-        if  dragIndex > hoveIndex:
-            instance.objects.filter(Q(sequence__gte = hoveIndex), Q(sequence__lt = dragIndex)).update(sequence=F('sequence') + 1)
-        elif dragIndex < hoveIndex:
-            instance.objects.filter(Q(sequence__lte = hoveIndex), Q(sequence__gt = dragIndex)).update(sequence=F('sequence') - 1)
-        dragItem.sequence = hoveIndex
-        dragItem.save()
+        instance.objects.filter(
+            Q(parent = hoverItem.parent), 
+            ~Q(id = dragItem.id), 
+            Q(**{f'{sort_key}__gt': hoveIndex})
+        ).update(**{f'{sort_key}': F(f'{sort_key}') + 2})
+        up = Q(id__gt = hoverItem.id) if isDownward else Q(id__gte = hoverItem.id)
+        instance.objects.filter(
+            Q(parent = hoverItem.parent), 
+            ~Q(id = dragItem.id), 
+            Q(**{f'{sort_key}': hoveIndex}), 
+            up
+        ).update(**{f'{sort_key}': F(f'{sort_key}') + 2})
     return success_response(instance.objects.all().values())
 
 def destroy(genericAPIView, request):

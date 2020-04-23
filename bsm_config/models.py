@@ -14,8 +14,6 @@ from django.apps.registry import apps
 from api_basebone.core.fields import JSONField
 from api_basebone.export.specs import FieldType
 
-def menu_count():
-    return Menu.objects.count()
 
 # 自定义菜单
 class Menu(models.Model):
@@ -52,7 +50,7 @@ class Menu(models.Model):
         help_text='格式为：<app_label>__<model>',
         null=True,
     )
-    sequence = models.IntegerField('排序', default=menu_count, unique=True, help_text='数值越小，排列越前')
+    sequence = models.IntegerField('排序', default=1000, help_text='数值越小，排列越前')
 
     class Meta:
         verbose_name = '导航菜单'
