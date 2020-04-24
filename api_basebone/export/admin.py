@@ -65,3 +65,20 @@ def get_app_admin_config():
     for key, cls in BSMAdminModule.modules.items():
         config[key] = bsm_admin_config.admin_model_config(cls)
     return config
+
+
+def get_json_field_admin_config(json_object_schemas:dict, json_array_item_schemas:dict):
+    """
+    生成默认的json field admin
+    :param json_object_schemas:
+    :param json_array_item_schemas
+    :return:
+    """
+    admin_configs = {}
+    for key, value in json_object_schemas.items():
+        admin_configs[key] = {'formFields': [field['name'] for field in value['fields']]}
+
+    for key, value in json_array_item_schemas.items():
+        admin_configs[key] = {'inlineFormFields': [field['name'] for field in value['fields']]}
+
+    return admin_configs

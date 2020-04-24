@@ -138,4 +138,10 @@ FIELDS = {
             },
         ],
     },
+    'Object': {
+        'name': 'object',
+    },
+    'Array': {
+        'name': 'array',
+    },
 }
