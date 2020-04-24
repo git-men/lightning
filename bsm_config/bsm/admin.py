@@ -18,13 +18,17 @@ class MenuAdmin(BSMAdmin):
         # },
         'name','page', 'permission', 'model', 'sequence']
     form_fields = [
-        'name', 'icon', 'parent', 'page',
+        'name', 'icon',
+        {'name': 'parent', 'widget': 'Cascader'},
+        'page',
         {'name': 'model', 'show': '${page} === "list" || ${page} === "detail"'},
         'permission', 'sequence',
         {'name': 'path', 'show': '${page} === "auto"'}
     ]
     inlineFormFields = ['sequence']
     display_in_tree = True  # 树型列表
+    display_in_sort = True # 排序列表
+    sort_key = 'sequence' # 排序字段
     inline_actions = ['edit', 'delete']
 
     class Meta:
