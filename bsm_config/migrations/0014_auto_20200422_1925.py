@@ -24,6 +24,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='menu',
             name='sequence',
-            field=models.IntegerField(default=bsm_config.models.menu_count, help_text='数值越小，排列越前', unique=True, verbose_name='排序'),
+            field=models.IntegerField(help_text='数值越小，排列越前', unique=True, verbose_name='排序'),
         ),
     ]
