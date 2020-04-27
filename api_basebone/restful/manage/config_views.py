@@ -12,8 +12,8 @@ from api_basebone.restful.serializers import (
 
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.drf.response import success_response
-from api_basebone.export.admin import get_app_admin_config
-from api_basebone.export.fields import get_app_field_schema
+from api_basebone.export.admin import get_app_admin_config, get_json_field_admin_config
+from api_basebone.export.fields import get_app_field_schema, get_app_json_field_schema
 from api_basebone.export.setting import get_settins
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, tree_parent_field
@@ -46,7 +46,15 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """获取所有的客户端配置，包括schema, admin
         """
         self._load_bsm_admin_module()
-        data = {'schemas': get_app_field_schema(), 'admins': get_app_admin_config()}
+        data = {
+            'schemas': get_app_field_schema(),
+            'admins': get_app_admin_config()
+        }
+        json_object_schemas, json_array_item_schemas = get_app_json_field_schema()
+        json_admin_configs = get_json_field_admin_config(json_object_schemas,json_array_item_schemas)
+        data['schemas'].update(json_object_schemas)
+        data['schemas'].update(json_array_item_schemas)
+        data['admins'].update(json_admin_configs)
         return success_response(data)
 
     @action(detail=False, url_path='settings')

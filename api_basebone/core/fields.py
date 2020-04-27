@@ -1,6 +1,7 @@
 import json
 from django.db import models
 from jsonfield import JSONField as OriginJSONField
+from api_basebone.core.object_model import ObjectModel
 
 
 class BoneRichTextField(models.TextField):
@@ -39,4 +40,48 @@ class JSONField(OriginJSONField):
 
         if isinstance(value, (dict, list)):
             return json.dumps(value, **self.dump_kwargs)
+        return value
+
+    def from_db_value(self, value, expression, connection, context):
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
+
+
+class ObjectField(JSONField):
+    """
+    """
+
+    def __init__(self, object_model: ObjectModel = None, **kwargs):
+        self.object_model = object_model or ObjectModel()
+        super(ObjectField, self).__init__(**kwargs)
+
+    def get_bsm_internal_type(self):
+        return 'JsonObjectField'
+
+    def from_db_value(self, value, expression, connection, context):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except:
+                return {}
+        return value
+
+
+class ArrayField(JSONField):
+
+    def __init__(self, item_model: ObjectModel = None, item_type: str = 'string', **kwargs):
+        self.item_model = item_model or ObjectModel()
+        self.item_type = item_type
+        super(ArrayField, self).__init__(**kwargs)
+
+    def get_bsm_internal_type(self):
+        return 'JsonArrayField'
+
+    def from_db_value(self, value, expression, connection, context):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except:
+                return {}
         return value

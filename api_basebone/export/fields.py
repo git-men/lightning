@@ -13,6 +13,7 @@ from api_basebone.utils.meta import (
     get_reverse_fields,
     get_field_by_reverse_field,
 )
+from api_basebone.core.fields import ObjectField, ArrayField
 
 from .specs import FIELDS
 
@@ -45,6 +46,8 @@ DJANGO_FIELD_TYPE_MAP = {
     'BoneRichTextField': 'RichText',
     'BoneImageUrlField': 'Image',
     'BoneFileUrlField': 'File',
+    'JsonObjectField': 'Object',
+    'JsonArrayField': 'Array'
 }
 
 VALIDATOR_MAP = {
@@ -227,6 +230,23 @@ class FieldConfig:
         base.update(self.reset_field_config(field, data_type))
         return base
 
+    def object_params(self, field, data_type):
+        """小数类型的配置获取
+        """
+        base = self._get_common_field_params(field, data_type)
+        base['ref'] = f'object_model__{field.name}'
+        base.update(self.reset_field_config(field, data_type))
+        return base
+
+    def array_params(self, field, data_type):
+        """小数类型的配置获取
+        """
+        base = self._get_common_field_params(field, data_type)
+        base['ref'] = f'array_item_model__{field.name}'
+        base['item_type'] = field.item_type
+        base.update(self.reset_field_config(field, data_type))
+        return base
+
 
 field_config_instance = FieldConfig()
 
@@ -350,3 +370,43 @@ def get_app_field_schema():
         for model in app.get_models():
             config.update(get_model_field_config(model))
     return config
+
+
+def get_app_json_field_schema():
+    """输出应用模型json field配置"""
+
+    def generate_object_field_schema(models):
+        config = {}
+        for model in models:
+            object_fields = [field for field in get_concrete_fields(model)
+                             if isinstance(field, ObjectField)]
+            for field in object_fields:
+                if field.object_model:
+                    config.update(get_model_field_config(field.object_model))
+        return config
+
+    def generate_array_field_schema(models):
+        config = {}
+        for model in models:
+            array_fields = [field for field in get_concrete_fields(model)
+                            if isinstance(field, ArrayField)]
+            for field in array_fields:
+                if field.item_model:
+                    config.update(get_model_field_config(field.item_model))
+        return config
+
+    object_field_config, array_field_config, export_apps = {}, {}, get_export_apps()
+    if not export_apps:
+        return {}
+
+    for item in export_apps:
+        app = apps.get_app_config(item)
+        models = app.get_models()
+        models = list(models)
+        object_field_config.update(generate_object_field_schema(models))
+        array_field_config.update(generate_array_field_schema(models))
+
+    return (
+        {f'object_model{key}': value for key, value in object_field_config.items()},
+        {f'array_item_model{key}': value for key, value in array_field_config.items()}
+        )
