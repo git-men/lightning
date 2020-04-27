@@ -9,16 +9,11 @@ from bsm_config.models import Menu
 @register
 class MenuAdmin(BSMAdmin):
     display = [
-        # {
-        #     'type': 'combo',
-        #     'name': 'displayName',
-        #     'displayName': '名称',
-        #     'template': 'iconText',
-        #     'mapping': {'icon': 'icon', 'text': 'name'}
-        # },
-        'name','page', 'permission', 'model', 'sequence']
+        'name','page', 'permission', 'model', 'sequence'  
+    ]
     form_fields = [
-        'name', 'icon',
+        'name', 
+        {'name': 'icon', 'widget': 'IconSelect'},
         {'name': 'parent', 'widget': 'Cascader'},
         'page',
         {'name': 'model', 'show': '${page} === "list" || ${page} === "detail"'},
