@@ -17,7 +17,7 @@ class MenuAdmin(BSMAdmin):
             },
             'displayName': '图标与名称'
         },
-        'name','page', 'permission', 'model', 'sequence'  
+        'page', 'permission', 'model', 'sequence'  
     ]
     form_fields = [
         'name', 
