@@ -9,6 +9,14 @@ from bsm_config.models import Menu
 @register
 class MenuAdmin(BSMAdmin):
     display = [
+        {
+            'widget': 'iconText',
+            'fields': {
+                'icon': 'icon',
+                'text': 'name',
+            },
+            'displayName': '图标与名称'
+        },
         'name','page', 'permission', 'model', 'sequence'  
     ]
     form_fields = [
