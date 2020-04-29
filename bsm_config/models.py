@@ -33,7 +33,7 @@ class Menu(models.Model):
     )
     page = models.CharField(
         '页面', max_length=200, help_text='前端功能页面的标识', default='list', null=True, blank=True, choices=[
-            ['list', '列表页'], ['detail', '详情页'], ['adminConfig', '页面配置面板'], ['auto', '自定义页面']
+            ['list', '列表页'], ['detail', '详情页'], ['adminConfig', '页面配置面板'], ['auto', '自定义页面'], ['chart', '自定义图表']
         ]
     )
     path = models.CharField('自定义路径', max_length=255, null=True, blank=True)
