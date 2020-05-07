@@ -52,6 +52,19 @@ class Menu(models.Model):
     )
     sequence = models.IntegerField('排序', default=1000, help_text='数值越小，排列越前')
 
+    @property
+    def display_name(self):
+        if self.name:
+            return self.name
+        if self.page == 'list':
+            try:
+                app_label, model_name = self.model.split('__', maxsplit=1)
+                model = apps.get_model(app_label, model_name)
+                return model._meta.verbose_name + '管理'
+            except:
+                pass
+        return '未命名'
+
     class Meta:
         verbose_name = '导航菜单'
         verbose_name_plural = '导航菜单'
@@ -59,6 +72,9 @@ class Menu(models.Model):
     class GMeta:
         title_field = 'name'
         parent_field = 'parent'
+        computed_fields = [
+            {'name': 'display_name', 'display_name': '显示名', 'type': FieldType.STRING}
+        ]
 
     def __str__(self):
         return f'{self.name}:{self.model}'
