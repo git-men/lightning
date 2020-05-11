@@ -17,15 +17,15 @@ class MenuAdmin(BSMAdmin):
             },
             'displayName': '名称'
         },
-        'page', 'permission', 'model', 'sequence'  
+        'page', 'permission', 'model', 
     ]
     form_fields = [
         'name', 
         {'name': 'icon', 'widget': 'IconSelect'},
         {'name': 'parent', 'widget': 'Cascader'},
-        'page',
-        {'name': 'model', 'show': '${page} === "list" || ${page} === "detail"'},
-        'permission', 'sequence',
+        {'name': 'type', 'widget': 'Radio'},
+        {'name': 'page', 'show': '${type} === "item"'},
+        {'name': 'model', 'widget': 'ModelSelect', 'show': '(${page} === "list" || ${page} === "detail") && ${type} === "item"'},
         {'name': 'path', 'show': '${page} === "auto"'}
     ]
     inlineFormFields = ['sequence']
