@@ -13,9 +13,9 @@ class MenuAdmin(BSMAdmin):
             'widget': 'iconText',
             'fields': {
                 'icon': 'icon',
-                'text': 'name',
+                'text': 'display_name',
             },
-            'displayName': '图标与名称'
+            'displayName': '名称'
         },
         'page', 'permission', 'model', 'sequence'  
     ]
