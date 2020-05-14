@@ -7,7 +7,7 @@ BSM体系的配置，都可以存储至数据库，包括：
 """
 
 from django.db import models
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Permission, Group
 from django.contrib.contenttypes.models import ContentType
 from django.apps.registry import apps
 
@@ -19,6 +19,19 @@ from api_basebone.export.specs import FieldType
 class Menu(models.Model):
     """存储管理后台左侧导航菜单栏的结构
     """
+
+    PAGE_LIST = 'list'
+    PAGE_DETAIL = 'detail'
+    PAGE_ADMIN_CONFIG= 'adminConfig'
+    PAGE_AUTO = 'auto'
+    PAGE_CHART = 'chart'
+    PAGE_CHOICES = [
+        [PAGE_LIST, '列表页'], 
+        [PAGE_DETAIL, '详情页'], 
+        [PAGE_ADMIN_CONFIG, '页面配置面板'], 
+        [PAGE_AUTO, '自定义页面'], 
+        [PAGE_CHART, '自定义图表'], 
+    ]
 
     TYPE_ITEM = 'item'
     TYPE_GROUP = 'group'
@@ -40,13 +53,7 @@ class Menu(models.Model):
         help_text='前端功能页面的标识', 
         default='', 
         null=True,
-        choices=[
-            ['list', '列表页'], 
-            ['detail', '详情页'], 
-            ['adminConfig', '页面配置面板'], 
-            ['auto', '自定义页面'], 
-            ['chart', '自定义图表'], 
-        ]
+        choices=PAGE_CHOICES
     )
     path = models.CharField('自定义路径', max_length=255, null=True, blank=True)
     permission = models.CharField(
@@ -63,6 +70,13 @@ class Menu(models.Model):
     )
     sequence = models.IntegerField('排序', default=1000, help_text='数值越小，排列越前')
     type = models.CharField('菜单类型', max_length=20, default='item', choices=TYPE_CHOICES)
+    groups = models.ManyToManyField(
+        Group, 
+        related_name='groups', 
+        blank=True, 
+        verbose_name='关联角色',
+        help_text='设置可查看此菜单的角色',
+    )
 
     @property
     def display_name(self):
@@ -150,10 +164,13 @@ class PermissionGMeta:
         {'name': 'display_name', 'display_name': '显示名称', 'type': FieldType.STRING}
     ]
 
+class GroupGMeta:
+    title_field = 'name'
 
 Permission.__str__ = permissions_new_str
 setattr(Permission, 'display_name', display_name)
 setattr(Permission, 'GMeta', PermissionGMeta)
+setattr(Group, 'GMeta', GroupGMeta)
 
 
 class Admin(models.Model):

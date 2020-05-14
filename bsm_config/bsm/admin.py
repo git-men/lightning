@@ -1,4 +1,3 @@
-from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 
 from api_basebone.core.admin import BSMAdmin, register
@@ -17,7 +16,7 @@ class MenuAdmin(BSMAdmin):
             },
             'displayName': '名称'
         },
-        'page', 'permission', 'model', 
+        'page', 'permission', 'model',
     ]
     form_fields = [
         'name', 
@@ -26,7 +25,8 @@ class MenuAdmin(BSMAdmin):
         {'name': 'type', 'widget': 'Radio'},
         {'name': 'page', 'show': '${type} === "item"'},
         {'name': 'model', 'widget': 'ModelSelect', 'show': '(${page} === "list" || ${page} === "detail") && ${type} === "item"'},
-        {'name': 'path', 'show': '${page} === "auto"'}
+        {'name': 'path', 'show': '${page} === "auto"'},
+        'groups'
     ]
     inlineFormFields = ['sequence']
     display_in_tree = True  # 树型列表
