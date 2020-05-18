@@ -1,8 +1,8 @@
 from django.apps import apps
-from django.contrib.auth.models import Permission, Group
+from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 
-from .models import Menu   
+from .models import Menu, Setting
 
 
 def create_permission(menu):
@@ -11,7 +11,7 @@ def create_permission(menu):
         permission = Permission.objects.filter(content_type__app_label=app,content_type__model=model,codename=f'view_{model}').first()
      
     if menu.page in (Menu.PAGE_ADMIN_CONFIG, Menu.PAGE_AUTO, Menu.PAGE_CHART) or menu.type == Menu.TYPE_GROUP:
-        codename = f'menu_view_{menu.page}_{menu.id}'   
+        codename = f'menu_view_{menu.page or menu.type}_{menu.id}'   
         content_type = ContentType.objects.get_for_model(Menu)
         permission, _ = Permission.objects.get_or_create(codename=codename, name=codename,content_type=content_type)
     
@@ -46,7 +46,7 @@ def check_page(old_page, new_page):
     else:
         return True
 
-def create_menus_permssion(menus):
+def create_menus_permission(menus):
     permissions = []
     for menu in menus:
         if menu.page in (Menu.PAGE_LIST, Menu.PAGE_DETAIL):
@@ -54,7 +54,7 @@ def create_menus_permssion(menus):
             permission =f'{app}.view_{model}'
 
         if menu.page in (Menu.PAGE_ADMIN_CONFIG, Menu.PAGE_AUTO, Menu.PAGE_CHART) or menu.type == Menu.TYPE_GROUP:
-            codename = f'menu_view_{menu.page}_{menu.id}'   
+            codename = f'menu_view_{menu.page or menu.type}_{menu.id}'   
             content_type = ContentType.objects.get_for_model(Menu)
             p = Permission(codename=codename, name=codename,content_type=content_type)
             permission = f'{p.content_type.app_label}.{p.codename}'
@@ -65,9 +65,6 @@ def create_menus_permssion(menus):
     Menu.objects.bulk_update(menus, ['permission'])
     Permission.objects.bulk_create(permissions)
 
-def get_default_group():
-    group, _ = Group.objects.get_or_create(name='普通管理员')
-    return group
 
 
     
