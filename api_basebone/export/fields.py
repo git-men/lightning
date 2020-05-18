@@ -260,7 +260,7 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
-    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, 'id')
+    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, model._meta.pk.name)
 
     config = []
     for item in fields:
