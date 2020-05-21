@@ -162,7 +162,7 @@ class GroupStatisticsMixin:
         }
 
         # TODO 解决重名的方法，例如供应商名称传过来的是'agency.name'，那么SQL应该同时group by agency_id 和 agency__name，而不单单是agency__name
-        return {k: group_functions[v.get('method', None)](v['field']) for k, v in group.items()}
+        return {k: group_functions[v.get('method', None)](v['field'].replace('.', '__')) for k, v in group.items()}
 
     def get_queryset_by_filter_conditions(self, queryset):
         if self.action == 'group_statistics':
@@ -191,7 +191,7 @@ class GroupStatisticsMixin:
             self.get_queryset()
             .values(*group_kwargs.keys())
             .annotate(
-                **{key: methods[value.get('method', None)](value['field'], distinct=value.get('distinct', False)) for key, value in fields.items()
+                **{key: methods[value.get('method', None)](value['field'].replace('.', '__'), distinct=value.get('distinct', False)) for key, value in fields.items()
                    # 排除exclude_fields
                    if value['field'] not in get_model_exclude_fields(self.model, None)}
             )
