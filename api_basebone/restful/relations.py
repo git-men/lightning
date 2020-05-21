@@ -43,7 +43,7 @@ def forward_many_to_many(field, value, update_data):
 
             serializer = create_serializer_class(model)(data=item_data)
             serializer.is_valid(raise_exception=True)
-            create_ids.append(serializer.save().id)
+            create_ids.append(serializer.save().pk)
         pure_data += create_ids
 
     if update_list:
@@ -91,7 +91,7 @@ def forward_one_to_many(field, value, update_data):
 
         serializer = create_serializer_class(model)(data=value)
         serializer.is_valid(raise_exception=True)
-        update_data[key] = serializer.save().id
+        update_data[key] = serializer.save().pk
         return update_data
 
     # 如果传进来的数据包含主键，则代表是更新数据
@@ -216,13 +216,13 @@ def reverse_one_to_many(field, value, instance, detail=True):
                         error_data=f'{key}: {value} 指定的主键找不到对应的数据'
                     )
 
-                item_value[field.remote_field.name] = instance.id
+                item_value[field.remote_field.name] = instance.pk
                 serializer = create_serializer_class(model)(instance=obj, data=item_value, partial=True)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
             else:
                 # 如果传进来的数据不包含主键，则代表是创建数据
-                item_value[field.remote_field.name] = instance.id
+                item_value[field.remote_field.name] = instance.pk
                 serializer = create_serializer_class(model)(data=item_value)
                 serializer.is_valid(raise_exception=True)
                 obj = serializer.save()
@@ -244,7 +244,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
         relation = meta.get_relation_field_related_name(model, field.remote_field.name)
 
         if relation:
-            model.objects.filter(id__in=pure_id_list).update(**{relation[1].name: instance})
+            model.objects.filter(pk__in=pure_id_list).update(**{relation[1].name: instance})
             getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
     elif pure_id_list:
         # 如果是创建，则需要创建对应的数据
