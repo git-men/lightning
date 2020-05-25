@@ -15,24 +15,15 @@ def init_setting():
         setting.save()
 
 @bsm_func(staff_required=True, name='update_setting', model=Setting)
-def update_setting(user=None, **kwargs):
-    print('---------------setting----------')
-    print(kwargs)
-    settings = dict(kwargs)
-    del settings['view_context']
-    print(settings)
+def update_setting(user, settings, **kwargs):
     result = {}
     with transaction.atomic():
         for key, value in settings.items():
             setting = Setting.objects.filter(key=key)
-            print(11,setting)
             if setting.exists():
                 setting.update(key=key, value= value)
-                print('---------')
-                print(setting)
                 result.update({setting.first().key: setting.first().value}) 
 
-    print(1111,result)
     return  result
 
 @bsm_func(staff_required=True, name='update_user', model=Setting)
