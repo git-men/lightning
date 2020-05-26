@@ -308,10 +308,11 @@ def manage_update(genericAPIView, request, partial, set_data):
     return success_response(serializer.data)
 
 def update_sort(genericAPIView, request, data):
+    if data.get('dragId') == data.get('hoverId'):
+        return
     instance = genericAPIView.model
     admin = genericAPIView.get_bsm_model_admin()
     sort_key = admin.sort_key
-    print(admin, sort_key)
     from django.db.models import F, Q
     with transaction.atomic():
         dragItem = instance.objects.filter(id=data['dragId']).first()
@@ -319,9 +320,8 @@ def update_sort(genericAPIView, request, data):
         dragIndex = getattr(dragItem, sort_key)
         hoveIndex = getattr(hoverItem, sort_key)
         isDownward = dragIndex < hoveIndex or (dragIndex == hoveIndex and dragItem.id < hoverItem.id)
-        dragItem.parent = hoverItem.parent
-        setattr(dragItem, sort_key, hoveIndex + 1)
-        dragItem.save()
+        instance.objects.filter(id=data['dragId']).update(**{'parent': hoverItem.parent, sort_key: hoveIndex + 1})
+        
         instance.objects.filter(
             Q(parent = hoverItem.parent), 
             ~Q(id = dragItem.id), 
