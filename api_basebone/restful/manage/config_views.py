@@ -70,10 +70,10 @@ class ConfigViewSet(viewsets.GenericViewSet):
             tree_structure=tree_data,
             action='list',
             end_slug=MANAGE_END_SLUG,
-            exclude_fields={'bsm_config__menu': ['parent', 'permission', 'sequence']},
+            exclude_fields={'bsm_config__menu': ['parent', 'permission']},
         )
         permissions = self.request.user.get_all_permissions()
-        queryset = Menu.objects.filter(Q(permission=None) | Q(permission='') | Q(permission__in=permissions), parent=None).order_by('sequence').all()
+        queryset = Menu.objects.filter(Q(permission=None) | Q(permission='') | Q(permission__in=permissions), parent=None).order_by('sequence','id').all()
         return success_response(serializer_class(queryset, many=True).data)
 
     def _get_menu_from_custom(self):
