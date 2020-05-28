@@ -198,6 +198,7 @@ class Setting(models.Model):
         ('file', '文件'),
     ])
     display_name = models.CharField('中文名', max_length=30)
+    is_admin = models.BooleanField('仅管理员可看', default=False)
 
 
     class Meta:
