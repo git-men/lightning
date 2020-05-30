@@ -214,8 +214,7 @@ class FieldConfig:
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
         base['refField'] = field.remote_field.name
-        if field.many_to_one or field.one_to_one or field.one_to_many:
-            base['refTo'] = field.remote_field.field_name or meta.pk and meta.pk.name
+        base['refTo'] = field.remote_field.field_name
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -225,8 +224,7 @@ class FieldConfig:
         meta = field.related_model._meta
         base['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
         base['refField'] = field.remote_field.name
-        if field.many_to_one or field.one_to_one or field.one_to_many:
-            base['refTo'] = field.remote_field.field_name or meta.pk and meta.pk.name
+        base['refTo'] = field.m2m_reverse_target_field_name()
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -287,25 +285,20 @@ def get_model_field_config(model):
     reverse_fields = get_reverse_fields(model)
     if reverse_fields:
         for item in reverse_fields:
-            field = get_field_by_reverse_field(item)
-            if not field:
-                continue
-
             reverse_config = {'name': item.name, 'required': False, 'type': 'bref'}
 
-            if field.many_to_many:
+            if item.many_to_many:
                 reverse_config['type'] = 'mref'
 
-            meta = item.related_model._meta
-            model_verbose_name = (
-                meta.verbose_name if meta.verbose_name else meta.model_name
-            )
-
-            reverse_config['displayName'] = model_verbose_name
+            meta = model._meta
+            reverse_config['displayName'] = meta.verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
-            reverse_config['refField'] = field.name
-            if field.many_to_one or field.one_to_one or field.one_to_many:
-                reverse_config['refTo'] = field.remote_field.field_name or meta.pk and meta.pk.name
+            reverse_config['refField'] = item.remote_field.name
+            # TODO bref 下还是不应该要有refTo了，但是为了保留兼容性，可以先保留代码
+            if item.one_to_one or item.one_to_many:
+                reverse_config['refTo'] = item.field_name or meta.pk and meta.pk.name
+            elif item.many_to_many:
+                reverse_config['refTo'] = item.field.m2m_target_field_name()
             reverse_config.update(field_config_instance.reset_field_config(item))
             config.append(reverse_config)
 
