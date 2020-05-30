@@ -25,12 +25,14 @@ class Menu(models.Model):
     PAGE_ADMIN_CONFIG= 'adminConfig'
     PAGE_AUTO = 'auto'
     PAGE_CHART = 'chart'
+    PAGE_IFRAME = 'iframe'
     PAGE_CHOICES = [
         [PAGE_LIST, '列表页'], 
         [PAGE_DETAIL, '详情页'], 
         [PAGE_ADMIN_CONFIG, '页面配置面板'], 
         [PAGE_AUTO, '自定义页面'], 
         [PAGE_CHART, '自定义图表'], 
+        [PAGE_IFRAME, 'Iframe页面'],
     ]
 
     TYPE_ITEM = 'item'

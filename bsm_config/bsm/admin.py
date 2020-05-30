@@ -25,7 +25,7 @@ class MenuAdmin(BSMAdmin):
         {'name': 'type', 'widget': 'Radio'},
         {'name': 'page', 'show': '${type} === "item"'},
         {'name': 'model', 'widget': 'ModelSelect', 'show': '(${page} === "list" || ${page} === "detail") && ${type} === "item"'},
-        {'name': 'path', 'show': '${page} === "auto"'},
+        {'name': 'path', 'show': '${page} === "auto" || ${page} === "iframe"'},
         'groups'
     ]
     inlineFormFields = ['sequence']
