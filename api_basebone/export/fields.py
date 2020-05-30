@@ -290,7 +290,7 @@ def get_model_field_config(model):
             if item.many_to_many:
                 reverse_config['type'] = 'mref'
 
-            meta = model._meta
+            meta = item.related_model._meta
             reverse_config['displayName'] = meta.verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
             reverse_config['refField'] = item.remote_field.name
