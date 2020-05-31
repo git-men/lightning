@@ -24,8 +24,9 @@ def business_exception_handler(exc, context):
 
 def exception_handler(exc, context):
     """异常接收处理器"""
-    import traceback
-    traceback.print_exc()
+    if settings.DEBUG:
+        import traceback
+        traceback.print_exc()
     if isinstance(exc, BusinessException):
         return business_exception_handler(exc, context)
 
@@ -56,6 +57,10 @@ def exception_handler(exc, context):
             error_message=exc.default_detail
         )
         return business_exception_handler(api_exception, context)
+
+    if not settings.DEBUG:
+        import traceback
+        traceback.print_exc()
 
     # 可自由配置是否直接抛出严重的错误
     CLOSE_DIRECT_SERIOUS_ERROR_SHOW = getattr(

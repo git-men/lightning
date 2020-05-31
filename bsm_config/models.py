@@ -185,7 +185,7 @@ class Admin(models.Model):
 
 class Setting(models.Model):
     key = models.CharField('配置键', max_length=30, unique=True, blank=False)
-    value = models.CharField('配置值', max_length=255, null=True, blank=False)
+    value = models.TextField('配置值', null=True, blank=False)
     type = models.CharField('键类型', max_length=30, default='string', choices=[
         ('string', '字符串'),
         ('text', '文本'),
