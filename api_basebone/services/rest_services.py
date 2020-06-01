@@ -178,7 +178,7 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
         if 'Content-disposition' in result.headers:
             response['Content-disposition'] = result.headers.get('Content-disposition')
         return response
-    if isinstance(result, list) or isinstance(result, dict):
+    if isinstance(result, list) or isinstance(result, dict) or isinstance(result, str) or isinstance(result, bytes):
         return success_response(result)
     return success_response()
 
