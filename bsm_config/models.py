@@ -74,7 +74,7 @@ class Menu(models.Model):
     type = models.CharField('菜单类型', max_length=20, default='item', choices=TYPE_CHOICES)
     groups = models.ManyToManyField(
         Group, 
-        related_name='groups', 
+        related_name='menus', 
         blank=True, 
         verbose_name='关联角色',
         help_text='设置可查看此菜单的角色',
