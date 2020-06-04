@@ -36,14 +36,13 @@ from django.db.models.signals import m2m_changed
 from django.contrib.auth.models import Permission, Group
 
 
-def menu_changed(instance, model, pk_set, action, **kwargs):
-    # raise Exception('jfsdfjsdaa')
-    if action in ('post_add', 'post_remove'):
-        # menu = Menu.objects.get(sender.menu_id)
+@receiver(m2m_changed, sender=Menu.groups.through, dispatch_uid='menu_changed')
+def menu_changed(sender, instance, model, pk_set, action, **kwargs):
+    if model==Group and action in ('post_add', 'post_remove'):
         groups = model.objects.filter(pk__in=list(pk_set))
+        print(sender, instance, model, pk_set, action, kwargs)
         permission, _ = get_permission(instance)
         if action == 'post_add':
             permission.group_set.add(*groups)
         if action == 'post_remove':
             permission.group_set.remove(*groups)
-m2m_changed.connect(menu_changed, sender=Menu.groups.through)

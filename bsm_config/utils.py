@@ -49,7 +49,6 @@ def create_menus_permission(menus):
 def get_permission(menu):
     if menu.page in MODEL_PAGES:
         app, model = menu.model.split('__')
-        
     content_model = Menu
 
     if not menu.permission:
@@ -57,7 +56,7 @@ def get_permission(menu):
         if menu.page in MODEL_PAGES:
             content_model = apps.get_app_config(app).get_model(model) 
             content_type = ContentType.objects.get_for_model(content_model) 
-            permission = Permission.objects.get(codename=f'view_{model}', content_type=content_type)
+            permission = Permission.objects.get_or_create(codename=f'view_{model}', content_type=content_type)
      
         if menu.page in ORDER_PAGES or menu.type == Menu.TYPE_GROUP:
             codename = f'menu_view_{menu.page or menu.type}_{menu.id}'   
