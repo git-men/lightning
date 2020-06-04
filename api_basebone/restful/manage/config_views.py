@@ -18,6 +18,7 @@ from api_basebone.export.setting import get_settins
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, tree_parent_field
 from bsm_config.models import Menu
+from api_basebone.utils import queryset as queryset_utils
 
 
 class ConfigViewSet(viewsets.GenericViewSet):
@@ -64,17 +65,21 @@ class ConfigViewSet(viewsets.GenericViewSet):
 
     def _get_menu_from_database(self):
         """从数据库中获取菜单"""
-        tree_data = tree_parent_field(Menu, 'parent')
-        serializer_class = create_serializer_class(
-            Menu,
-            tree_structure=tree_data,
-            action='list',
-            end_slug=MANAGE_END_SLUG,
-            exclude_fields={'bsm_config__menu': ['parent', 'permission']},
-        )
         permissions = self.request.user.get_all_permissions()
-        queryset = Menu.objects.filter(Q(permission=None) | Q(permission='') | Q(permission__in=permissions), parent=None).order_by('sequence','id').all()
-        return success_response(serializer_class(queryset, many=True).data)
+        queryset = Menu.objects.filter(Q(permission=None) | Q(permission='') | Q(permission__in=permissions), parent=None).all()
+        fields =  {field.name for field in Menu._meta.fields } - {'id','parent', 'permission', 'name'}
+        def get_menus_data(menus):
+            data = []
+            for menu in queryset_utils.annotate(menus, fields=['display_name']).order_by('sequence','id'):
+                item = {field: getattr(menu, field) for field in fields }
+                item['name'] = menu.display_name
+                children =  menu.children.all()
+                if children:
+                    item['children'] = get_menus_data(children)
+                data.append(item)
+            return data
+        return success_response(get_menus_data(queryset))
+            
 
     def _get_menu_from_custom(self):
         """从自定义的菜单配置中获取菜单"""
