@@ -66,14 +66,15 @@ class ConfigViewSet(viewsets.GenericViewSet):
     def _get_menu_from_database(self):
         """从数据库中获取菜单"""
         permissions = self.request.user.get_all_permissions()
-        queryset = Menu.objects.filter(Q(permission=None) | Q(permission='') | Q(permission__in=permissions), parent=None).all()
+        permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
+        queryset = Menu.objects.filter(permission_filter, parent=None).all()
         fields =  {field.name for field in Menu._meta.fields } - {'id','parent', 'permission', 'name'}
         def get_menus_data(menus):
             data = []
             for menu in queryset_utils.annotate(menus, fields=['display_name']).order_by('sequence','id'):
                 item = {field: getattr(menu, field) for field in fields }
                 item['name'] = menu.display_name
-                children =  menu.children.all()
+                children =  menu.children.filter(permission_filter).all()
                 if children:
                     item['children'] = get_menus_data(children)
                 data.append(item)
