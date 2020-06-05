@@ -32,7 +32,10 @@ OPERATOR_MAP = {
 def get_expression_value(item, context):
     """获取表达式的值"""
     if 'expression_type' not in item:
-        return resolve_expression(item['expression'], context)
+        class Context:
+            def __getattr__(self, key):
+                return context[key]
+        return resolve_expression(item['expression'], Context())
     object_key, attrs = None, None
     expression, expression_type = item.get('expression'), item.get('expression_type')
     if expression_type == 'object_attr':
