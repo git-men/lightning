@@ -67,19 +67,15 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """从数据库中获取菜单"""
         permissions = self.request.user.get_all_permissions()
         permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
-        queryset = Menu.objects.filter(permission_filter, parent=None).all()
-        fields =  {field.name for field in Menu._meta.fields } - {'id','parent', 'permission', 'name'}
-        def get_menus_data(menus):
-            data = []
-            for menu in queryset_utils.annotate(menus, fields=['display_name']).order_by('sequence','id'):
-                item = {field: getattr(menu, field) for field in fields }
-                item['name'] = menu.display_name
-                children =  menu.children.filter(permission_filter).all()
-                if children:
-                    item['children'] = get_menus_data(children)
-                data.append(item)
-            return data
-        return success_response(get_menus_data(queryset))
+        menus = Menu.objects.filter(permission_filter).prefetch_related('parent').order_by('sequence','id').all()
+        fields =  { field.name for field in Menu._meta.fields } - {'id', 'parent',  'permission', 'name'}
+        menus_map = { menu.id: dict({ field: getattr(menu, field) for field in fields }, **{ 'name': menu.display_name, 'parent_id': menu.parent_id, 'children': [] }) for menu in menus }
+        for _, menu in menus_map.items():
+            parent_id = menu['parent_id']
+            if parent_id and parent_id in menus_map:
+                menus_map[parent_id]['children'].append(menu)
+        menus_data = [ m for _, m in menus_map.items() if not m.get('parent_id')] 
+        return success_response(menus_data)
             
 
     def _get_menu_from_custom(self):
