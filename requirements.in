@@ -15,6 +15,6 @@ openpyxl==2.5.12
 raven==6.9.0
 Werkzeug==0.14.1
 pydash==4.7.4
-django-guardian==1.5.1
+django-guardian==2.3.0
 django-redis
 https://github.com/wechatpy/wechatpy/archive/master.zip

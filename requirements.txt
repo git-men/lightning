@@ -21,7 +21,7 @@ django-celery-beat==1.4.0  # via -r requirements.in
 django-cors-headers==2.4.0  # via -r requirements.in
 django-environ==0.4.5     # via -r requirements.in
 django-extensions==2.1.3  # via -r requirements.in
-django-guardian==1.5.1    # via -r requirements.in
+django-guardian==2.3.0    # via -r requirements.in
 django-redis==4.11.0      # via -r requirements.in
 django-rest-swagger==2.2.0  # via -r requirements.in
 django-timezone-field==3.1  # via django-celery-beat
