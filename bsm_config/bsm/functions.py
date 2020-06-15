@@ -48,7 +48,10 @@ def update_user(user=None, **kwargs):
 
 @bsm_func(staff_required=True, name='get_assign_permissions', model=Permission)
 def get_assign_permissions(user, **kwargs):
-    permissions = get_objects_for_user(user, 'auth.permission_assign').select_related('content_type')
+    from db_tool.utils import get_default_group
+    group = get_default_group()
+    permissions = Permission.objects.filter(group=group)
+    # permissions = get_objects_for_user(group, 'auth.permission_assign').select_related('content_type')
     serializer_class = multiple_create_serializer_class( 
         Permission, 
         expand_fields=['content_type'], 
