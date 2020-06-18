@@ -173,7 +173,7 @@ def create_meta_class(
             for f in model._meta.get_fields()
             if f.concrete and not isinstance(f, OneToOneField)
         ]
-    
+
     if extra_fields:
         flat_fields += extra_fields
 
@@ -185,7 +185,12 @@ def create_meta_class(
 
 
 def create_serializer_class(
-    model, exclude_fields=None, tree_structure=None, action=None, end_slug=None, attrs=None,
+    model,
+    exclude_fields=None,
+    tree_structure=None,
+    action=None,
+    end_slug=None,
+    attrs=None,
 ):
     """构建序列化类
 
@@ -250,17 +255,24 @@ def create_serializer_class(
             new_attr[name] = ComputedFieldTypeSerializerMap[field['type']](read_only=True)
 
     class_name = f'{model.__name__}ModelSerializer'
-    return type(class_name, (BaseModelSerializerMixin, CustomModelSerializer), {
-        'Meta': create_meta_class(
-            model, exclude_fields=exclude_fields, extra_fields=extra_fields, action=action
-        ),
-        'action': action,
-        'basebone_model': model,
-        'basebone_end_slug': end_slug,
-        '__init__': __init__,
-        **new_attr,
-        **attrs,
-    })
+    return type(
+        class_name,
+        (BaseModelSerializerMixin, CustomModelSerializer),
+        {
+            'Meta': create_meta_class(
+                model,
+                exclude_fields=exclude_fields,
+                extra_fields=extra_fields,
+                action=action,
+            ),
+            'action': action,
+            'basebone_model': model,
+            'basebone_end_slug': end_slug,
+            '__init__': __init__,
+            **new_attr,
+            **attrs,
+        },
+    )
 
 
 def get_field(model, field_name):
@@ -375,7 +387,11 @@ def create_nested_serializer_class(
                 end_slug=end_slug,
             )(many=many)
     return create_serializer_class(
-        model, exclude_fields=exclude_fields, action=action, end_slug=end_slug, attrs=attrs
+        model,
+        exclude_fields=exclude_fields,
+        action=action,
+        end_slug=end_slug,
+        attrs=attrs,
     )
 
 
@@ -415,7 +431,9 @@ def multiple_create_serializer_class(
     )
 
 
-def get_export_serializer_class(model, serialier_class, custom_serializer_class=None):
+def get_export_serializer_class(
+    model, serialier_class, custom_serializer_class=None, version=None
+):
     """获取导出的序列化类
 
     如果用户有自定义的导出类，则合并序列化类和用户自定义的，如果没有，则使用默认的序列化类
@@ -429,6 +447,8 @@ def get_export_serializer_class(model, serialier_class, custom_serializer_class=
     """
     custom_export_mixin = None
     class_name = '{}ExportSerializer'.format(model.__name__)
+    if version:
+        class_name = f'{class_name}{version}'
 
     if custom_serializer_class is None:
         export_module = module.get_admin_module(

@@ -3,7 +3,8 @@ import json
 import logging
 
 from django.apps import apps
-from django.conf import settings
+
+# from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
 
@@ -11,8 +12,9 @@ from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.drf.response import success_response
-from api_basebone.export.fields import get_attr_in_gmeta_class
-from api_basebone.restful import batch_actions, renderers
+
+# from api_basebone.export.fields import get_attr_in_gmeta_class
+from api_basebone.restful import batch_actions, renderers, renderers_v2
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.mixins import (
     ActionLogMixin,
@@ -28,6 +30,7 @@ from api_basebone.restful.serializers import (
 )
 
 from api_basebone.utils import meta, module as basebone_module
+from api_basebone.utils.data import get_prefetch_fields_from_export_fields
 from api_basebone.utils.operators import build_filter_conditions2
 from api_basebone.restful.mixins import FormMixin
 from api_basebone.restful.viewsets import BSMModelViewSet
@@ -170,6 +173,7 @@ class QuerySetMixin:
                         tree_check(c['children'])
                     else:
                         fields.add(c['field'])
+
             tree_check(filter_conditions)
             self.basebone_check_distinct_queryset(list(fields))
             cons = build_filter_conditions2(
@@ -210,7 +214,7 @@ class QuerySetMixin:
 class GenericViewMixin:
     """重写 GenericAPIView 中的某些方法"""
 
-    def check_app_model(self):
+    def check_app_model(self, request):
         # 是否对结果集进行去重
         self.basebone_distinct_queryset = False
 
@@ -246,16 +250,41 @@ class GenericViewMixin:
 
                 self._export_type_config = valid_item
 
-                self.app_label = valid_item['app_label']
-                self.model_slug = valid_item['model_slug']
+                if request.method.lower() == 'get':
+                    if 'basebone_export_config' in list(dict(request.query_params)):
+                        try:
+                            basebone_export_config = json.loads(
+                                request.query_params.get('basebone_export_config')
+                            )
+                        except Exception:
+                            basebone_export_config = None
+                        self._export_type_config = basebone_export_config
+                elif request.method.lower() == 'post':
+                    if 'basebone_export_config' in request.data:
+                        basebone_export_config = request.data.get(
+                            'basebone_export_config'
+                        )
+                        if not isinstance(basebone_export_config, dict):
+                            basebone_export_config = None
+                        self._export_type_config = basebone_export_config
 
-                # 检测模型是否合法
-                try:
-                    self.model = apps.get_model(self.app_label, self.model_slug)
-                except LookupError:
+                if not self._export_type_config:
                     raise exceptions.BusinessException(
-                        error_code=exceptions.MODEL_SLUG_IS_INVALID
+                        error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                     )
+
+                # FIXME: 如果不是新版导出，则重置 app_label 和 model_slug
+                if self._export_type_config.get('version') != 'v2':
+                    self.app_label = self._export_type_config['app_label']
+                    self.model_slug = self._export_type_config['model_slug']
+
+                    # 检测模型是否合法
+                    try:
+                        self.model = apps.get_model(self.app_label, self.model_slug)
+                    except LookupError:
+                        raise exceptions.BusinessException(
+                            error_code=exceptions.MODEL_SLUG_IS_INVALID
+                        )
             else:
                 raise exceptions.BusinessException(
                     error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
@@ -274,7 +303,7 @@ class GenericViewMixin:
         """
         result = super().perform_authentication(request)
 
-        self.check_app_model()
+        self.check_app_model(request)
 
         self.get_expand_fields()
         self._get_data_with_tree(request)
@@ -311,13 +340,20 @@ class GenericViewMixin:
                     except Exception:
                         pass
         elif self.action == 'export_file':
-            self.expand_fields = copy.deepcopy(
-                renderers.get_export_config_by_key(
-                    self.model,
-                    gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS,
-                    self._export_type_config,
+            # FIXME: 如果不是新版导出，则直接从导出配置中识别出扩展字段
+            if self._export_type_config.get('version') != 'v2':
+                self.expand_fields = copy.deepcopy(
+                    renderers.get_export_config_by_key(
+                        self.model,
+                        gmeta.GMETA_MANAGE_EXPORT_EXPAND_FIELDS,
+                        self._export_type_config,
+                    )
                 )
-            )
+            else:
+                # 这里需要根据导出的字段自动识别出需要扩展的字段
+                self.expand_fields = get_prefetch_fields_from_export_fields(
+                    self.model, self._export_type_config['fields']
+                )
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
@@ -384,7 +420,11 @@ class GenericViewMixin:
         if expand_fields:
             expand_fields = self.translate_expand_fields(expand_fields)
             expand_dict = sort_expand_fields(expand_fields)
-            queryset = queryset.prefetch_related(*queryset_utils.expand_dict_to_prefetch(queryset.model, expand_dict, context=context))
+            queryset = queryset.prefetch_related(
+                *queryset_utils.expand_dict_to_prefetch(
+                    queryset.model, expand_dict, context=context
+                )
+            )
 
         queryset = queryset_utils.annotate(queryset, context=context)
         queryset = self._get_queryset(queryset)
@@ -405,6 +445,7 @@ class GenericViewMixin:
         # FIXME: 这里设置了一个默认值，是为了避免 swagger 报错
         model = getattr(self, 'model', get_user_model())
         tree_data = getattr(self, 'tree_data', None)
+
         # 如果没有展开字段，则直接创建模型对应的序列化类
         if not expand_fields:
             serializer_class = create_serializer_class(
@@ -454,17 +495,14 @@ class CommonManageViewSet(
 
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
-        # partial = kwargs.pop('partial', False)
         return rest_services.manage_update(self, request, False, request.data)
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
-        # kwargs['partial'] = True
         return rest_services.manage_update(self, request, True, request.data)
 
     @action(methods=['put'], detail=True, url_path='patch')
     def custom_patch(self, request, *args, **kwargs):
-        # kwargs['partial'] = True
         return rest_services.manage_update(self, request, True, request.data)
 
     @action(methods=['POST', 'GET'], detail=False, url_path='update_sort')
@@ -512,12 +550,30 @@ class CommonManageViewSet(
                 error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
             )
 
+        if not self._export_type_config:
+            raise exceptions.BusinessException(
+                error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+            )
+
         csv_file, excel_file = 'csv', 'excel'
         valid_list = (csv_file, excel_file)
 
         file_type = self._export_type_config['file_type']
         file_type = file_type if file_type in valid_list else csv_file
         queryset = self.filter_queryset(self.get_queryset())
+
+        export_version = self._export_type_config.get('version')
+        if export_version == 'v2':
+            serializer_class = get_export_serializer_class(
+                self.model, self.get_serializer_class(), version=export_version
+            )
+
+            return renderers_v2.csv_render(
+                self.model,
+                queryset,
+                serializer_class,
+                export_config=self._export_type_config,
+            )
 
         serializer_queryset_handler = self._export_type_config.get(
             'serializer_queryset_handler'
@@ -553,4 +609,3 @@ class CommonManageViewSet(
         return rest_services.manage_func(
             self, request.user, app, model, func_name, params
         )
-
