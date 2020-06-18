@@ -76,7 +76,7 @@ def get_merge_fields(model, serializer_class, export_config):
         if isinstance(item, (list, tuple)):
             fields[item[0]] = item[1]
         else:
-            fields[item] = default_fields[item]
+            fields[item] = default_fields.get(item, item)
     return fields
 
 
@@ -193,7 +193,7 @@ def get_no_merge_fields(model, serializer_class, export_config):
                     parent_verbose_name, child_relation_field.verbose_name
                 )
             else:
-                fields[item] = default_fields[item]
+                fields[item] = default_fields.get(item, item)
     return fields
 
 
