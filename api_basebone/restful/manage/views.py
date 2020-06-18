@@ -235,55 +235,75 @@ class GenericViewMixin:
 
         if self.action == 'export_file':
             admin_class = self.get_bsm_model_admin()
+            self._export_type_config = None
             if admin_class:
                 exportable = getattr(admin_class, admin.BSM_EXPORTABLE, False)
-                if not exportable:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
-                    )
-                exportable_map = {item['key']: item for item in exportable}
-                file_type = self.request.query_params.get('fileformat')
-                if file_type in exportable_map:
-                    valid_item = exportable_map[file_type]
-                else:
-                    valid_item = [item for item in exportable if item['default']][0]
+                if exportable:
+                    exportable_map = {item['key']: item for item in exportable}
+                    file_type = self.request.query_params.get('fileformat')
+                    if file_type in exportable_map:
+                        valid_item = exportable_map[file_type]
+                    else:
+                        valid_item = [item for item in exportable if item['default']][0]
 
-                self._export_type_config = valid_item
+                    self._export_type_config = valid_item
 
-                if request.method.lower() == 'get':
-                    if 'basebone_export_config' in list(dict(request.query_params)):
-                        try:
-                            basebone_export_config = json.loads(
-                                request.query_params.get('basebone_export_config')
+                    if request.method.lower() == 'get':
+                        if 'basebone_export_config' in list(dict(request.query_params)):
+                            try:
+                                basebone_export_config = json.loads(
+                                    request.query_params.get('basebone_export_config')
+                                )
+                            except Exception:
+                                basebone_export_config = None
+                            self._export_type_config = basebone_export_config
+                    elif request.method.lower() == 'post':
+                        if 'basebone_export_config' in request.data:
+                            basebone_export_config = request.data.get(
+                                'basebone_export_config'
                             )
-                        except Exception:
-                            basebone_export_config = None
-                        self._export_type_config = basebone_export_config
-                elif request.method.lower() == 'post':
-                    if 'basebone_export_config' in request.data:
-                        basebone_export_config = request.data.get(
-                            'basebone_export_config'
-                        )
-                        if not isinstance(basebone_export_config, dict):
-                            basebone_export_config = None
-                        self._export_type_config = basebone_export_config
+                            if not isinstance(basebone_export_config, dict):
+                                basebone_export_config = None
+                            self._export_type_config = basebone_export_config
 
-                if not self._export_type_config:
-                    raise exceptions.BusinessException(
-                        error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
-                    )
-
-                # FIXME: 如果不是新版导出，则重置 app_label 和 model_slug
-                if self._export_type_config.get('version') != 'v2':
-                    self.app_label = self._export_type_config['app_label']
-                    self.model_slug = self._export_type_config['model_slug']
-
-                    # 检测模型是否合法
-                    try:
-                        self.model = apps.get_model(self.app_label, self.model_slug)
-                    except LookupError:
+                    if not self._export_type_config:
                         raise exceptions.BusinessException(
-                            error_code=exceptions.MODEL_SLUG_IS_INVALID
+                            error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+                        )
+
+                    # FIXME: 如果不是新版导出，则重置 app_label 和 model_slug
+                    if self._export_type_config.get('version') != 'v2':
+                        self.app_label = self._export_type_config['app_label']
+                        self.model_slug = self._export_type_config['model_slug']
+
+                        # 检测模型是否合法
+                        try:
+                            self.model = apps.get_model(self.app_label, self.model_slug)
+                        except LookupError:
+                            raise exceptions.BusinessException(
+                                error_code=exceptions.MODEL_SLUG_IS_INVALID
+                            )
+                else:
+                    if request.method.lower() == 'get':
+                        if 'basebone_export_config' in list(dict(request.query_params)):
+                            try:
+                                basebone_export_config = json.loads(
+                                    request.query_params.get('basebone_export_config')
+                                )
+                            except Exception:
+                                basebone_export_config = None
+                            self._export_type_config = basebone_export_config
+                    elif request.method.lower() == 'post':
+                        if 'basebone_export_config' in request.data:
+                            basebone_export_config = request.data.get(
+                                'basebone_export_config'
+                            )
+                            if not isinstance(basebone_export_config, dict):
+                                basebone_export_config = None
+                            self._export_type_config = basebone_export_config
+                    if not self._export_type_config:
+                        raise exceptions.BusinessException(
+                            error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                         )
             else:
                 raise exceptions.BusinessException(
