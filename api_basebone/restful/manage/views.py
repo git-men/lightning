@@ -306,9 +306,27 @@ class GenericViewMixin:
                             error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                         )
             else:
-                raise exceptions.BusinessException(
-                    error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
-                )
+                if request.method.lower() == 'get':
+                    if 'basebone_export_config' in list(dict(request.query_params)):
+                        try:
+                            basebone_export_config = json.loads(
+                                request.query_params.get('basebone_export_config')
+                            )
+                        except Exception:
+                            basebone_export_config = None
+                        self._export_type_config = basebone_export_config
+                elif request.method.lower() == 'post':
+                    if 'basebone_export_config' in request.data:
+                        basebone_export_config = request.data.get(
+                            'basebone_export_config'
+                        )
+                        if not isinstance(basebone_export_config, dict):
+                            basebone_export_config = None
+                        self._export_type_config = basebone_export_config
+                if not self._export_type_config:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+                    )
 
     def perform_authentication(self, request):
         """
@@ -557,6 +575,7 @@ class CommonManageViewSet(
             fileformat string csv | excel 形式使用 querystring 的形式
         ```
         """
+        print(self._export_type_config, 'this is export type config')
         # 检测是否支持导出
         admin_class = self.get_bsm_model_admin()
         if self._export_type_config.get('version') != 'v2':
