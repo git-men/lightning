@@ -539,16 +539,17 @@ class CommonManageViewSet(
         """
         # 检测是否支持导出
         admin_class = self.get_bsm_model_admin()
-        if admin_class:
-            exportable = getattr(admin_class, admin.BSM_EXPORTABLE, False)
-            if not exportable:
+        if self._export_type_config.get('version') != 'v2':
+            if admin_class:
+                exportable = getattr(admin_class, admin.BSM_EXPORTABLE, False)
+                if not exportable:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+                    )
+            else:
                 raise exceptions.BusinessException(
                     error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                 )
-        else:
-            raise exceptions.BusinessException(
-                error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
-            )
 
         if not self._export_type_config:
             raise exceptions.BusinessException(
