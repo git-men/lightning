@@ -29,8 +29,9 @@ def set_menu_permission(sender, instance, update_fields = [], **kwargs):
 @receiver(pre_delete, sender=Menu, dispatch_uid='delete_menu_permission')
 def delete_menu_permission(sender, instance, **kwargs):
     permission, _ = get_permission(instance)
-    permission.group_set.remove(*instance.groups.all().exclude(name='系统管理员'))
-    remove_permission(instance)
+    if permission:
+        permission.group_set.remove(*instance.groups.all().exclude(name='系统管理员'))
+        remove_permission(instance)
 
 from django.db.models.signals import m2m_changed
 from django.contrib.auth.models import Permission, Group
