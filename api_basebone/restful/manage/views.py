@@ -362,31 +362,51 @@ class GenericViewMixin:
         if not settings.MANAGE_API_PERMISSION_VALIDATE_ENABLE:
             return
 
-        if self.action == 'func':
-            func_name = request.data.get('func_name', None) or request.GET.get(
-                'func_name', None
-            )
-            perm_list = [f'basebone_api_model_func_{func_name}']
-        else:
-            perm_map = {
-                'create': ['create'],
-                'list': ['list'],
-                'set': ['set'],
-                'destroy': ['retrieve', 'destroy'],
-                'update': ['retrieve', 'update'],
-                'partial_update': ['retrieve', 'partial_update'],
-                'custom_patch': ['retrieve', 'custom_patch'],
-                'update_sort': ['retrieve', 'update_sort'],
-                'batch': ['retrieve', 'batch'],
-                'export_file': ['export_file'],
-            }
+        # if self.action == 'func':
+        #     func_name = request.data.get('func_name', None) or request.GET.get(
+        #         'func_name', None
+        #     )
+        #     perm_list = [f'basebone_api_model_func_{func_name}']
+        # else:
+        #     perm_map = {
+        #         'create': ['create'],
+        #         'list': ['list'],
+        #         'set': ['set'],
+        #         'destroy': ['retrieve', 'destroy'],
+        #         'update': ['retrieve', 'update'],
+        #         'partial_update': ['retrieve', 'partial_update'],
+        #         'custom_patch': ['retrieve', 'custom_patch'],
+        #         'update_sort': ['retrieve', 'update_sort'],
+        #         'batch': ['retrieve', 'batch'],
+        #         'export_file': ['export_file'],
+        #     }
 
-            perm_list = [
-                f'basebone_api_model_{item}' for item in perm_map.get(self.action)
-            ]
-        check = request.user.has_perms(perm_list)
-        if not check:
-            raise exceptions.BusinessException(error_code=exceptions.REQUEST_FORBIDDEN)
+        #     perm_list = [
+        #         f'basebone_api_model_{item}' for item in perm_map.get(self.action)
+        #     ]
+        # check = request.user.has_perms(perm_list)
+        # if not check:
+        #     raise exceptions.BusinessException(error_code=exceptions.REQUEST_FORBIDDEN)
+
+        # TODO: 暂时提供测试而已，后面会改掉
+        perm_map = {
+            'retrieve': ['view'],
+            'create': ['add'],
+            'list': ['view'],
+            'update': ['view', 'change'],
+            'partial_update': ['view', 'change'],
+            'destroy': ['view', 'delete'],
+        }
+        perm_list = [
+            f'{item}_{self.model_slug}' for item in perm_map.get(self.action, [])
+        ]
+
+        if perm_list:
+            check = request.user.has_perms(perm_list)
+            if not check:
+                raise exceptions.BusinessException(
+                    error_code=exceptions.REQUEST_FORBIDDEN
+                )
 
     def get_expand_fields(self):
         """获取扩展字段并作为属性值赋予
