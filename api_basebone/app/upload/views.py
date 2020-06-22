@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 
 from api_basebone.drf.response import success_response
 from api_basebone.restful.serializers import create_serializer_class
+from api_basebone.utils import tencent
 from api_basebone.utils.aliyun import aliyun
 
 
@@ -43,10 +44,27 @@ class UploadViewSet(viewsets.GenericViewSet):
             }
         }
         ```
+
+        #### 腾讯云 COS 返回的数据结构如下
+        {
+            'startTime': 1592561936
+            'expiredTime': 1592561966,
+            'expiration': '2020-06-19T10:19:26Z',
+            'requestId': '4332ced3-50a7-48fb-a35a-cb9efcec95d9',
+            'bucket': 'test-20188932',
+            'region': 'ap-guangzhou',
+            'credentials': {
+                'sessionToken': 'kg1Mg_UmDtAJ3wQA',
+                'tmpSecretId': 'AKIDy_RmF9qEg1geYsrJ_UwR4WWYcDGM2iy71R',
+                'tmpSecretKey': 'Q5FPMVsD='
+            },
+        }
         """
         service = request.query_params.get('service', 'aliyun')
         if service == 'aliyun':
             result = aliyun.get_token()
+        elif service == 'tencent':
+            result = tencent.get_credential()
         else:
             result = {}
         return success_response(result)

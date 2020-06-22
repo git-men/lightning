@@ -65,3 +65,4 @@ werkzeug==0.14.1          # via -r requirements.in
 xmltodict==0.12.0         # via wechatpy
 zipp==0.6.0               # via importlib-metadata
 wechatpy
+qcloud-python-sts==3.0.3
