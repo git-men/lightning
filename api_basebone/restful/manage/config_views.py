@@ -19,6 +19,7 @@ from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, tree_parent_field
 from bsm_config.models import Menu
 from api_basebone.utils import queryset as queryset_utils
+from api_basebone.drf.permissions import IsAdminUser
 
 
 class ConfigViewSet(viewsets.GenericViewSet):
@@ -28,21 +29,21 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """加载 bsm admin 模块"""
         load_custom_admin_module()
 
-    @action(detail=False, url_path='schema')
+    @action(detail=False, url_path='schema', permission_classes = (IsAdminUser,))
     def get_schema(self, request, *args, **kwargs):
         """获取 schema 配置"""
         self._load_bsm_admin_module()
         data = get_app_field_schema()
         return success_response(data)
 
-    @action(detail=False, url_path='admin')
+    @action(detail=False, url_path='admin', permission_classes = (IsAdminUser,))
     def get_admin(self, request, *args, **kwargs):
         self._load_bsm_admin_module()
         """获取 admin 配置"""
         data = get_app_admin_config()
         return success_response(data)
 
-    @action(detail=False, url_path='all')
+    @action(detail=False, url_path='all', permission_classes = (IsAdminUser,))
     def get_all(self, request, *args, **kargs):
         """获取所有的客户端配置，包括schema, admin
         """
