@@ -15,6 +15,7 @@ from api_basebone.utils.meta import get_bsm_model_admin
 from api_basebone.models import AdminLog
 from api_basebone.settings import settings as basebone_settings
 from .forms import get_form_class
+from api_basebone.utils.operators import build_filter_conditions2
 
 
 class CheckValidateMixin:
@@ -154,6 +155,9 @@ class GroupStatisticsMixin:
             group_by = request.data.get('group_by')
             group = {'group': {'method': group_method, 'field': group_by}}
 
+        return self.get_group_data(group)
+
+    def get_group_data(self,group):
         group_functions = {
             'TruncDay': partial(TruncDay, tzinfo=pytz.UTC),
             'TruncMonth': partial(TruncMonth, tzinfo=pytz.UTC),
@@ -162,18 +166,13 @@ class GroupStatisticsMixin:
         }
 
         # TODO 解决重名的方法，例如供应商名称传过来的是'agency.name'，那么SQL应该同时group by agency_id 和 agency__name，而不单单是agency__name
-        return {
+        self.get_group_data = {
             k: group_functions[v.get('method', None)](v['field'].replace('.', '__'))
             for k, v in group.items()
         }
+        return self.get_group_data
 
-    def get_queryset_by_filter_conditions(self, queryset):
-        if self.action == 'group_statistics':
-            queryset = queryset.annotate(**self.get_group())
-        return super().get_queryset_by_filter_conditions(queryset)
-
-    @action(methods=['post'], detail=False, url_path='group_statistics')
-    def group_statistics(self, request, *args, **kwargs):
+    def group_statistics_data(self, fields, group_kwargs, *args, **kwargs):
         """
         分组统计
         """
@@ -187,12 +186,9 @@ class GroupStatisticsMixin:
             'Min': Min,
             None: F,
         }
-
-        fields = request.data.get('fields')
-        group_kwargs = self.get_group()
+        queryset = self.get_queryset().annotate(**group_kwargs).values(*group_kwargs.keys())
         result = (
-            self.get_queryset()
-            .values(*group_kwargs.keys())
+            queryset
             .annotate(
                 **{
                     key: methods[value.get('method', None)](
@@ -206,8 +202,70 @@ class GroupStatisticsMixin:
             )
             .order_by(*group_kwargs.keys())
         )
+        # 支持排序
+        sort_type = kwargs.get('sort_type',None)
+        sort_keys = kwargs.get('sort_keys',[])
+        top_max = kwargs.get('top_max',None)
+        SORT_ASCE= 'asce'
+        SORT_DESC = 'dest'
+        SORT_TYPE_CHOICES = (
+            (SORT_ASCE, '升序'),
+            (SORT_DESC, '降序')
+        )
+        all_keys = list(fields.keys()) + list(group_kwargs.keys())
+        if sort_type and sort_type in SORT_TYPE_CHOICES and sort_keys and (set(sort_keys) & set(all_keys) == set(sort_keys)):
+            result = result.order_by(*sort_keys)
+            if sort_type == SORT_DESC:
+                result = result.reverse()
+        # 支持对聚合后的数据进行filter
+        filters = kwargs.get('filters',[])
+        if filters:
+            con = build_filter_conditions2(filters)
+            result = result.filter(con)
+        # 筛选前N条
+        if top_max:
+            result = result[:top_max]
         # TODO 考虑使用DRF来序列化查询结果
-        return success_response(result)
+        
+        return result
+
+    @action(methods=['post'], detail=False, url_path='group_statistics')
+    def group_statistics(self, request, *args, **kwargs):
+        fields = request.data.get('fields')
+        group_kwargs = self.get_group()
+        
+        data = self.group_statistics_data(fields,group_kwargs)
+        return success_response(data)
+
+
+    @action(methods=['post'], detail=False, url_path='get_chart')
+    def get_chart(self, request, *args, **kwargs):
+
+        from chart.models import Chart
+        id = request.data['id']
+        chart = Chart.objects.prefetch_related('metrics', 'dimensions').get(id=id)
+        group = {}
+        fields = {}
+        for dimension in chart.dimensions.all():
+            field = { 'field': dimension.field, 'displayName': dimension.display_name }
+            if dimension.method:
+                field['method'] = dimension.method
+            if dimension.name == 'groupby': 
+                group[dimension.name] =  field
+            if dimension.name == 'legend': 
+                group[dimension.name] =  field
+
+        for metric in chart.metrics.all():
+            field = {
+                'field': metric.field,
+                'method': metric.method,
+                'displayName': metric.display_name,
+                'format': metric.format,
+            }
+            fields[metric.name] = field
+        group_kwargs = self.get_group_data(group)
+        data = self.group_statistics_data(fields, group_kwargs, sort_type=chart.sort_type, sort_keys=chart.sort_keys, top_max=chart.top_max, filters=list(chart.filters.all().values()))
+        return success_response(data)
 
 
 class ActionLogMixin:
