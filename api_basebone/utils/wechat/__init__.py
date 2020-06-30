@@ -2,7 +2,8 @@ from django.conf import settings
 from django.core.cache import cache
 from wechatpy.client import WeChatClient
 from wechatpy.client.api import WeChatWxa
-from wechatpy.session.redisstorage import RedisStorage, MemoryStorage
+from wechatpy.session.redisstorage import RedisStorage
+from wechatpy.session.memorystorage import MemoryStorage
 
 from django_redis import get_redis_connection
 

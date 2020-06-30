@@ -3,7 +3,8 @@ from optionaldict import optionaldict
 from django.conf import settings
 
 from wechatpy.client import WeChatClient
-from wechatpy.session.redisstorage import RedisStorage, MemoryStorage
+from wechatpy.session.redisstorage import RedisStorage
+from wechatpy.session.memorystorage import MemoryStorage
 
 from django_redis import get_redis_connection
 
