@@ -1,11 +1,14 @@
 from django.conf import settings
+from django.core.cache import cache
 from wechatpy.client import WeChatClient
 from wechatpy.client.api import WeChatWxa
-from wechatpy.session.redisstorage import RedisStorage
-from api_basebone.utils.redis import redis_client
+from wechatpy.session.redisstorage import RedisStorage, MemoryStorage
 
-session = RedisStorage(redis_client)
+from django_redis import get_redis_connection
 
+session = RedisStorage(get_redis_connection())\
+    if settings.CACHES['default']['BACKEND'] == 'django_redis.cache.RedisCache'\
+        else MemoryStorage()
 
 def wrap(api, app_id, app_secret=None):
     return api(

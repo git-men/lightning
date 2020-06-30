@@ -3,9 +3,9 @@ from optionaldict import optionaldict
 from django.conf import settings
 
 from wechatpy.client import WeChatClient
-from wechatpy.session.redisstorage import RedisStorage
+from wechatpy.session.redisstorage import RedisStorage, MemoryStorage
 
-from api_basebone.utils.redis import redis_client
+from django_redis import get_redis_connection
 
 from .form_id import FormID
 from api_basebone.utils.wechat import wxa
@@ -115,7 +115,10 @@ def mp_send_template_message(
     data = data if (data and isinstance(data, dict)) else {}
     try:
         appsecret = settings.WECHAT_APP_MAP[app_id]['appsecret']
-        client = WeChatClient(app_id, appsecret, session=RedisStorage(redis_client))
+        session = RedisStorage(get_redis_connection())\
+            if settings.CACHES['default']['BACKEND'] == 'django_redis.cache.RedisCache'\
+                else MemoryStorage()
+        client = WeChatClient(app_id, appsecret, session=session)
 
         return client.message.send_template(
             touser, template_id, data, url=url, mini_program=mini_program
