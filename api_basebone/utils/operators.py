@@ -34,6 +34,8 @@ def get_expression_value(item, context):
     if 'expression_type' not in item:
         class Context:
             def __getattr__(self, key):
+                if not isinstance(context, dict):
+                    return getattr(context, key)
                 return context[key]
         return resolve_expression(item['expression'], Context())
     object_key, attrs = None, None
