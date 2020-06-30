@@ -203,20 +203,17 @@ class GroupStatisticsMixin:
             .order_by(*group_kwargs.keys())
         )
         # 支持排序
-        sort_type = kwargs.get('sort_type',None)
         sort_keys = kwargs.get('sort_keys',[])
         top_max = kwargs.get('top_max',None)
         SORT_ASCE= 'asce'
         SORT_DESC = 'desc'
-        SORT_TYPE_CHOICES = (
-            (SORT_ASCE, '升序'),
-            (SORT_DESC, '降序')
-        )
         all_keys = list(fields.keys()) + list(group_kwargs.keys())
-        if sort_type and sort_type in SORT_TYPE_CHOICES and sort_keys and (set(sort_keys) & set(all_keys) == set(sort_keys)):
+        if sort_keys:
+            import re
+            keys_set = set([re.sub(r'-', "", key) for key in sort_keys])
+            if not (keys_set & set(all_keys) == keys_set):
+                pass
             result = result.order_by(*sort_keys)
-            if sort_type == SORT_DESC:
-                result = result.reverse()
         # 支持对聚合后的数据进行filter
         filters = kwargs.get('filters',[])
         if filters:
@@ -243,7 +240,7 @@ class GroupStatisticsMixin:
 
         from chart.models import Chart
         id = request.data['id']
-        chart = Chart.objects.prefetch_related('metrics', 'dimensions').get(id=id)
+        chart = Chart.objects.prefetch_related('metrics', 'dimensions' ,'chart_filters').get(id=id)
         group = {}
         fields = {}
         for dimension in chart.dimensions.all():
@@ -264,7 +261,7 @@ class GroupStatisticsMixin:
             }
             fields[metric.name] = field
         group_kwargs = self.get_group_data(group)
-        data = self.group_statistics_data(fields, group_kwargs, sort_type=chart.sort_type, sort_keys=chart.sort_keys, top_max=chart.top_max, filters=list(chart.filters.all().values()))
+        data = self.group_statistics_data(fields, group_kwargs, sort_keys=chart.sort_keys, top_max=chart.top_max, filters=list(chart.chart_filters.all().values()))
         return success_response(data)
 
 
