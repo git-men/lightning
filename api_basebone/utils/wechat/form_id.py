@@ -4,7 +4,6 @@ import redis
 from uuid import uuid4
 from django_redis import get_redis_connection
 
-redis_conn = get_redis_connection("default")
 logger = logging.getLogger("models")
 
 
@@ -16,7 +15,7 @@ class FormID(object):
     存储方式 (Redis):
     wxapp:formid:<uid> -> [expire form_id]
     """
-    r = redis_conn
+    r = None
     prefix = "wxapp:formid"
 
     USER_FORM_ID_KEY = '{}:{}'
@@ -24,6 +23,12 @@ class FormID(object):
     def __init__(self, form_id, expire):
         self._form_id = form_id
         self.expire = expire
+    
+    @classmethod
+    def redis(cls):
+        if not cls.r:
+            cls.r = get_redis_connection()
+        return cls.r
 
     @property
     def form_id(self):
@@ -50,7 +55,7 @@ class FormID(object):
             # 留两个小时作缓冲时间，否则可能会在临界点失效
             expire = arrow.utcnow().timestamp + 604800 - 3600 * 2
         if force or (not cls.__is_expired(expire)):
-            cls.r.zadd(cls.uid_form_id_key(uid), {form_id: expire})
+            cls.redis().zadd(cls.uid_form_id_key(uid), {form_id: expire})
 
     @classmethod
     def lpop(cls, uid, mock=False):
@@ -73,7 +78,7 @@ class FormID(object):
 
     @classmethod
     def __lpop(cls, uid):
-        with cls.r.pipeline(transaction=True) as pipe:
+        with cls.redis().pipeline(transaction=True) as pipe:
             key = cls.uid_form_id_key(uid)
             pipe.zremrangebyscore(key, "-inf", arrow.now().timestamp + 2)
             pipe.zrange(key, 0, 0, withscores=True)
@@ -95,7 +100,7 @@ class FormID(object):
                 result[uuid] = cls(uuid, uuid4())
             return result
 
-        with cls.r.pipeline(transaction=True) as pipe:
+        with cls.redis().pipeline(transaction=True) as pipe:
             pipe.multi()
             for uuid in uuids:
                 key = cls.uid_form_id_key(uuid)
@@ -124,7 +129,7 @@ class FormID(object):
         """ 删除这个操作要保持 atom
         """
         logger.info("delete key: %s", key)
-        with cls.r.pipeline(transaction=True) as pipe:
+        with cls.redis().pipeline(transaction=True) as pipe:
             try:
                 pipe.zremrangebyscore(key, "-inf", arrow.now().timestamp)
                 pipe.watch(key)
@@ -141,11 +146,11 @@ class FormID(object):
         if cls.__user_expired(key):
             cls.__delete(key)
         else:
-            cls.r.zremrangebyscore(key, "-inf", arrow.now().timestamp)
+            cls.redis().zremrangebyscore(key, "-inf", arrow.now().timestamp)
 
     @classmethod
     def __user_expired(cls, key):
-        result = cls.r.zrange(key, -1, -1, withscores=True)
+        result = cls.redis().zrange(key, -1, -1, withscores=True)
         if result == []:
             return True
         return cls.__is_expired(result[0][1])
@@ -160,6 +165,6 @@ class FormID(object):
     def batch_clear(cls):
         ''' 清理数据接口，为了保证写入的正确性，效率非常底，应该在用户不活跃，夜深人静的时候调用
         '''
-        for key in cls.r.scan_iter(cls.get_cache_key("*"), count=100):
+        for key in cls.redis().scan_iter(cls.get_cache_key("*"), count=100):
             logger.info("clear key: %s", key)
             cls.__clear(key)
