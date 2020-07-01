@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.core import exceptions
-from api_basebone.signals import post_bsm_create
+from api_basebone.signals import post_bsm_create, post_bsm_delete
 from api_basebone.restful.funcs import find_func
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.drf.response import success_response
@@ -207,7 +207,7 @@ def client_create(genericAPIView, request, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True)
+        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request, old_instance=None)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         serializer = genericAPIView.get_serializer(
             genericAPIView.get_queryset().get(pk=instance.pk)
@@ -238,7 +238,7 @@ def manage_create(genericAPIView, request, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True)
+        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request, old_instance=None)
     return success_response(serializer.data)
 
 
@@ -250,6 +250,7 @@ def client_update(genericAPIView, request, partial, set_data):
 
         # partial = kwargs.pop('partial', False)
         instance = genericAPIView.get_object()
+        old_instance = instance
 
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
             instance, data=set_data, partial=partial
@@ -266,7 +267,7 @@ def client_update(genericAPIView, request, partial, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False)
+        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False, request=genericAPIView.request, old_instance=old_instance)
 
         serializer = genericAPIView.get_serializer(
             genericAPIView.get_queryset().get(pk=instance.pk)
@@ -276,12 +277,13 @@ def client_update(genericAPIView, request, partial, set_data):
 
 def manage_update(genericAPIView, request, partial, set_data):
     """全量更新数据"""
-
+    print('进入全量更新了吗？')
     with transaction.atomic():
         forward_relation_hand(genericAPIView.model, set_data)
 
         # partial = kwargs.pop('partial', False)
         instance = genericAPIView.get_object()
+        old_instance = instance
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
             instance,
             data=set_data,
@@ -304,7 +306,7 @@ def manage_update(genericAPIView, request, partial, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False)
+        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False, old_instance=old_instance, request=genericAPIView.request)
     return success_response(serializer.data)
 
 def update_sort(genericAPIView, request, data):
@@ -340,6 +342,7 @@ def destroy(genericAPIView, request):
     """删除数据"""
     instance = genericAPIView.get_object()
     genericAPIView.perform_destroy(instance)
+    post_bsm_delete.send(sender=genericAPIView.model, instance=instance, request=genericAPIView.request)
     return success_response()
 
 
