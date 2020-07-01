@@ -1,4 +1,4 @@
-from django.conf import settings
+from django.conf import settings as django_settings
 from .models import Setting
 
 """
@@ -11,12 +11,16 @@ from .models import Setting
 
 如果不存在，则把键转换为大写，然后从 settings 中获取对应的配置
 """
-DINGDING_APP_KEY = 'dingding_app_key'
-DINGDING_APP_SECRET = 'dingding_app_secret'
-
-
-# 可以在数据库中配置的列表
-DB_KEY_LIST = [DINGDING_APP_KEY, DINGDING_APP_SECRET]
+# 钉钉移动接入应用登陆应用 key
+DINGDING_FLEXIBLE_LOGIN_APP_KEY = 'dingding_flexible_login_app_key'
+# 钉钉移动接入应用登陆应用 secret
+DINGDING_FLEXIBLE_LOGIN_APP_SECRET = 'dingding_flexible_login_app_secret'
+# 钉钉企业内部开发 H5 微应用 KEY
+DINGDING_ENTERPRISE_INNER_H5_APP_KEY = 'dingding_enterprise_inner_h5_app_key'
+# 钉钉企业内部开发 H5 微应用 SECRET
+DINGDING_ENTERPRISE_INNER_H5_APP_SECRET = 'dingding_enterprise_inner_h5_app_secret'
+# 钉钉企业唯一标识符
+DINGDING_CORP_ID = 'dingding_corp_id'
 
 
 class SettingClient:
@@ -26,15 +30,17 @@ class SettingClient:
 
     def __init__(self, *args, **kwargs):
         # 表明配置是否放在了数据库中
-        self._use_db = self.BSM_CONFIG_APP in settings.INSTALLED_APPS
+        self._use_db = self.BSM_CONFIG_APP in django_settings.INSTALLED_APPS
 
     def _get_config_from_settings(self, key):
         """从配置文件中获取对应的配置"""
-        return getattr(settings, key.upper())
+        return getattr(django_settings, key.upper())
 
-    def get_config(self, key):
+    def __getattr__(self, key):
         if not self._use_db:
             return self._get_config_from_settings(key)
+
+        key = key.lower()
 
         instance = Setting.objects.filter(key=key).first()
         if not instance:
@@ -42,4 +48,4 @@ class SettingClient:
         return instance.value
 
 
-settings_client = SettingClient()
+settings = SettingClient()
