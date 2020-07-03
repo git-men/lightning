@@ -207,7 +207,7 @@ def client_create(genericAPIView, request, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request)
+        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request, old_instance=None)
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         serializer = genericAPIView.get_serializer(
             genericAPIView.get_queryset().get(pk=instance.pk)
@@ -238,7 +238,7 @@ def manage_create(genericAPIView, request, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request)
+        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request, old_instance=None)
     return success_response(serializer.data)
 
 
