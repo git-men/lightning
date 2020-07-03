@@ -31,19 +31,16 @@ def update_setting(user, settings, **kwargs):
 
     return  result
 
-@bsm_func(staff_required=True, name='update_user', model=Setting)
-def update_user(user=None, **kwargs):
+@bsm_func(staff_required=True, name='update_user_password', model=Setting)
+def update_user(user, **kwargs):
     id = kwargs.get('id', None)
-    username = kwargs.get('username', None)
     old_passWord = kwargs.get('oldPassWord', None)
     new_passWord = kwargs.get('newPassWord', None)
-    user = User.objects.get(id=id)
     if user.check_password(old_passWord):
         user.set_password(new_passWord)
-        user.username = username
         user.save()
     else:
-        raise RuntimeError('old password error')
+        raise RuntimeError('旧密码错误')
     
 
 @bsm_func(staff_required=True, name='get_assign_permissions', model=Permission)
