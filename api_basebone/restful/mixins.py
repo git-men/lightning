@@ -1,4 +1,5 @@
 from functools import partial
+import logging
 
 import pytz
 from django.db.models import Sum, Count, Value, F, Avg, Max, Min
@@ -17,6 +18,7 @@ from api_basebone.settings import settings as basebone_settings
 from .forms import get_form_class
 from api_basebone.utils.operators import build_filter_conditions2
 
+log = logging.getLogger(__name__)
 
 class CheckValidateMixin:
     """检测校验"""
@@ -239,8 +241,15 @@ class GroupStatisticsMixin:
     def get_chart(self, request, *args, **kwargs):
 
         from chart.models import Chart
+        from django.core.cache import cache
         id = request.data['id']
-        chart = Chart.objects.prefetch_related('metrics', 'dimensions' ,'chart_filters').get(id=id)
+        chart = cache.get(f'chart_config:{id}', None)
+        log.debug(f'chart get from cache: {chart}')
+        if chart is None:
+            chart = Chart.objects.prefetch_related('metrics', 'dimensions' ,'chart_filters').get(id=id)
+            cache.set(f'chart_config:{id}', chart, 600)
+            log.debug('cached Chart')
+
         group = {}
         fields = {}
         for dimension in chart.dimensions.all():
@@ -261,7 +270,10 @@ class GroupStatisticsMixin:
             }
             fields[metric.name] = field
         group_kwargs = self.get_group_data(group)
-        data = self.group_statistics_data(fields, group_kwargs, sort_keys=chart.sort_keys, top_max=chart.top_max, filters=list(chart.chart_filters.all().values()))
+        filters = [{
+            'field': ft.field, 'operator': ft.operator, 'value': ft.value
+            } for ft in chart.chart_filters.all()]
+        data = self.group_statistics_data(fields, group_kwargs, sort_keys=chart.sort_keys, top_max=chart.top_max, filters=filters)
         return success_response(data)
 
 
