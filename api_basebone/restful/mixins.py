@@ -96,6 +96,7 @@ class StatisticsMixin:
             ...
         }
         """
+        log.debug(f'statistics action: {self.action}')
         configs = request.data.get('fields', None)
         if not configs:
             configs = self.basebone_get_statistics_config()
@@ -239,7 +240,7 @@ class GroupStatisticsMixin:
 
     @action(methods=['post'], detail=False, url_path='get_chart')
     def get_chart(self, request, *args, **kwargs):
-
+        log.debug(f'get_chart action: {self.action}')
         from chart.models import Chart
         from django.core.cache import cache
         id = request.data['id']

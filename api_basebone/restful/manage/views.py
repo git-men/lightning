@@ -206,12 +206,14 @@ class QuerySetMixin:
 
         # 权限中配置是否去重
         role_config = self.basebone_get_model_role_config()
+        log.debug(f'role_config: {role_config}')
         role_distict = False
         if role_config and isinstance(role_config, dict):
             role_distict = role_config.get(
                 basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
             )
         if self.basebone_distinct_queryset or role_distict:
+            log.debug(f'basebone distinct queryset or role_distinct: {self.basebone_distinct_queryset}, {role_distict}')
             return queryset.distinct()
         return queryset
 
@@ -468,8 +470,8 @@ class GenericViewMixin:
                     queryset.model, expand_dict, context=context
                 )
             )
-
-        queryset = queryset_utils.annotate(queryset, context=context)
+        if self.action not in ['get_chart', 'group_statistics']:
+            queryset = queryset_utils.annotate(queryset, context=context)
         queryset = self._get_queryset(queryset)
 
         if admin_get_queryset:
