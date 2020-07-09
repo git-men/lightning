@@ -1,3 +1,4 @@
+import os
 from django.conf import settings as django_settings
 from .models import Setting
 
@@ -34,7 +35,11 @@ class SettingClient:
 
     def _get_config_from_settings(self, key):
         """从配置文件中获取对应的配置"""
-        return getattr(django_settings, key.upper())
+        key = key.upper()
+        try:
+            return getattr(django_settings, key)
+        except Exception:
+            return os.environ.get(key)
 
     def __getattr__(self, key):
         if not self._use_db:
