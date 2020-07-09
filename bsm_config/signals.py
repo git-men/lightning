@@ -68,7 +68,7 @@ def create_inline_action_permission(app, model, config):
         )
         permission.save()
         if action['groups']:
-            permission.group_set.set(*action['groups'])
+            permission.group_set.set(action['groups'])
 
 
 def update_inline_action_permission(app, model, new_config, old_config):
@@ -99,7 +99,7 @@ def update_inline_action_permission(app, model, new_config, old_config):
             )
             permission.save()
             if action['groups']:
-                permission.group_set.set(*action['groups'])
+                permission.group_set.set(action['groups'])
     
     if update:
         ids = [action['id'] for action in update]
@@ -124,7 +124,8 @@ def update_inline_action_permission(app, model, new_config, old_config):
                 )
                 permission.save()
                 if action['groups']:
-                    permission.group_set.set(*action['groups'])  # TODO 没有生效。 
+                    log.debug(f'groups: {action["groups"]}')
+                    permission.group_set.set(action['groups'])  # TODO 没有生效。 
 
     if delete:
         ids = [action['id'] for action in delete]
