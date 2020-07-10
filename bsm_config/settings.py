@@ -25,6 +25,8 @@ DINGDING_CORP_ID = 'dingding_corp_id'
 
 
 class DataConvert:
+    """数据转换器"""
+
     def string_handler(self, value):
         return value
 
