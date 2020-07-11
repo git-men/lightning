@@ -3,6 +3,7 @@ import logging
 
 import pytz
 from django.db.models import Sum, Count, Value, F, Avg, Max, Min
+from django.db.models.fields.related import ManyToManyField, ManyToManyRel, ManyToOneRel, ForeignKey, OneToOneField, OneToOneRel
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncHour
 
 from rest_framework.decorators import action
@@ -15,6 +16,7 @@ from api_basebone.utils.meta import get_all_relation_fields
 from api_basebone.utils.meta import get_bsm_model_admin
 from api_basebone.models import AdminLog
 from api_basebone.settings import settings as basebone_settings
+from api_basebone.services.expresstion import resolve_expression
 from .forms import get_form_class
 from api_basebone.utils.operators import build_filter_conditions2
 
@@ -160,7 +162,7 @@ class GroupStatisticsMixin:
 
         return self.get_group_data(group)
 
-    def get_group_data(self,group):
+    def get_group_data(self, group):
         group_functions = {
             'TruncDay': partial(TruncDay, tzinfo=pytz.UTC),
             'TruncMonth': partial(TruncMonth, tzinfo=pytz.UTC),
@@ -169,11 +171,17 @@ class GroupStatisticsMixin:
         }
 
         # TODO 解决重名的方法，例如供应商名称传过来的是'agency.name'，那么SQL应该同时group by agency_id 和 agency__name，而不单单是agency__name
-        self.get_group_data = {
-            k: group_functions[v.get('method', None)](v['field'].replace('.', '__'))
-            for k, v in group.items()
-        }
-        return self.get_group_data
+        # 支持一下使用计算字段作为
+        data = {}
+        for k, v in group.items():
+            if v['expression']:
+                expression = resolve_expression(v['expression'])
+                log.debug(f'expression before: {v["expression"]} after resolve: {expression}')
+                data[k] = expression
+            else:
+                data[k] = group_functions[v.get('method', None)](v['field'].replace('.', '__'))
+            
+        return data
 
     def group_statistics_data(self, fields, group_kwargs, *args, **kwargs):
         """
@@ -189,6 +197,7 @@ class GroupStatisticsMixin:
             'Min': Min,
             None: F,
         }
+        log.debug(f'static parameters, fields: {fields}, groups: {group_kwargs}')
         queryset = self.get_queryset().annotate(**group_kwargs).values(*group_kwargs.keys())
         result = (
             queryset
@@ -254,7 +263,7 @@ class GroupStatisticsMixin:
         group = {}
         fields = {}
         for dimension in chart.dimensions.all():
-            field = { 'field': dimension.field, 'displayName': dimension.display_name }
+            field = { 'field': dimension.field, 'displayName': dimension.display_name, 'expression': dimension.expression }
             if dimension.method:
                 field['method'] = dimension.method
             if dimension.name == 'groupby': 
@@ -266,6 +275,7 @@ class GroupStatisticsMixin:
             field = {
                 'field': metric.field,
                 'method': metric.method,
+                'expression': metric.expression,
                 'displayName': metric.display_name,
                 'format': metric.format,
             }
