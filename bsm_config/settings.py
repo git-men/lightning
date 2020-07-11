@@ -24,6 +24,25 @@ DINGDING_ENTERPRISE_INNER_H5_APP_SECRET = 'dingding_enterprise_inner_h5_app_secr
 DINGDING_CORP_ID = 'dingding_corp_id'
 
 
+class DataConvert:
+    """数据转换器"""
+
+    def string_handler(self, value):
+        return value
+
+    def integer_handler(self, value):
+        return int(value)
+
+    def handler(self, value, value_type):
+        func = getattr(self, f'{value_type}_handler', None)
+        if func:
+            return func(value)
+        return value
+
+
+data_convert = DataConvert()
+
+
 class SettingClient:
     """配置访问器"""
 
@@ -50,7 +69,7 @@ class SettingClient:
         instance = Setting.objects.filter(key=key).first()
         if not instance:
             return self._get_config_from_settings(key)
-        return instance.value
+        return data_convert.handler(instance.value, instance.type)
 
 
 settings = SettingClient()
