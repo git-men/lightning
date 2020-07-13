@@ -83,5 +83,5 @@ class ArrayField(JSONField):
             try:
                 return json.loads(value)
             except:
-                return {}
+                return []
         return value

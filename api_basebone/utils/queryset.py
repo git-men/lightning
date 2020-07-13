@@ -4,6 +4,7 @@ from .operators import build_filter_conditions2
 from ..export.fields import get_attr_in_gmeta_class
 from ..core import gmeta
 from ..restful.serializers import multiple_create_serializer_class, get_field
+from ..services.expresstion import resolve_expression
 
 __all__ = ['filter', 'serialize', 'annotate']
 
@@ -106,7 +107,13 @@ def annotate_queryset(queryset, fields=None, context=None):
     if fields is not None:
         annotated_fields = {k: v for k, v in annotated_fields.items() if k in fields}
     if annotated_fields:
-        return queryset.annotate(**{name: field['annotation'] if not callable(field['annotation']) else field['annotation'](context or {}) for name, field in annotated_fields.items()})
+        params = {}
+        for name, field in annotated_fields.items():
+            if 'annotation' in field:
+                params[name] = field['annotation'] if not callable(field['annotation']) else field['annotation'](context or {})
+            elif 'expression' in field:
+                params[name] = resolve_expression(field['expression'], context)
+        return queryset.annotate(**params) if params else queryset
     return queryset
 
 

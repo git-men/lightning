@@ -1,6 +1,6 @@
 import inspect
 import types
-
+import logging
 from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
 
@@ -16,6 +16,8 @@ from api_basebone.utils.meta import (
 from api_basebone.core.fields import ObjectField, ArrayField
 
 from .specs import FIELDS
+
+log = logging.getLogger(__name__)
 
 # 默认的 django 字段类型
 DEFAULT_DJANOG_FIELD_TYPE = 'Text'
@@ -258,7 +260,10 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
-    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, model._meta.pk.name)
+    log.debug(f'meta: {dir(model._meta)}')
+    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, None)
+    if title_field is None:
+        title_field = model._meta.pk.name if getattr(model._meta, 'pk', None) else None
 
     config = []
     for item in fields:
@@ -334,7 +339,10 @@ def get_model_field_config(model):
         attrs = {'required': False, 'readonly': True, 'name': name}
         attrs.update({underline_to_camel(k): v for k, v in field.items()})
         attrs.setdefault('displayName', name)
-        del attrs['annotation']
+        if 'annotation' in attrs:
+            del attrs['annotation']
+        if 'expression' in attrs:
+            del attrs['expression']
         config.append(attrs)
 
     ret = {
@@ -385,6 +393,7 @@ def get_app_json_field_schema():
                             if isinstance(field, ArrayField)]
             for field in array_fields:
                 if field.item_model:
+                    log.debug(f'Array Field item model:{field}, {field.item_model}')
                     config.update(get_model_field_config(field.item_model))
         return config
 

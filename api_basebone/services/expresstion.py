@@ -1,11 +1,14 @@
 import re
 import json
+import logging
 import operator
 from decimal import Decimal
 from functools import reduce
 from django.utils import timezone
-from django.db.models import F, Value
+from django.db.models import F, Value, Count, Sum, Avg, Max, Min, StdDev, Variance
 from django.db.models.functions import Concat
+
+log = logging.getLogger(__name__)
 
 
 def reduce_wrap(func):
@@ -46,6 +49,13 @@ FUNCS = {
     'F': F,
     'Concat': Concat,
     'Value': Value,
+    'Count': Count,
+    'Sum': Sum,
+    'Avg': Avg,
+    'Max': Max,
+    'Min': Min,
+    'StdDev': StdDev,
+    'Variance': Variance
 }
 
 
@@ -84,17 +94,25 @@ def resolve_expression(expression, variables=None):
         return json.loads(expression)
     except json.JSONDecodeError:
         pass
-
+    log.debug(f'resolving expression: {expression}')
     matched = re.match('^(\w+)\((.*)\)$', expression)
     if matched:
         func, arg_str = matched.groups()
         if func == '__variables__':
             return variables
         args = [resolve_expression(buffer, variables=variables) for buffer in split_expression(arg_str, ',')]
+        log.debug(f'returning calling Fun: {FUNCS[func]} with args: {args}')
         return FUNCS[func](*args)
+
+    # 如果是常量字符串，直接当参数传回。    
+    is_str = re.match(r'^(\'|\")(.*)(\'|\")$', expression)
+    if is_str:
+        exp = expression.replace("'", '"')
+        return json.loads(exp)
 
     # 点操作符，getattr的语法糖
     exp = '__variables__()'
     for path_item in expression.split('.'):
         exp = f'__getattr__({exp}, "{path_item}")'
+    log.debug(f'exp: {exp}')
     return resolve_expression(exp, variables=variables)

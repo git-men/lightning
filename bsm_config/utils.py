@@ -67,7 +67,10 @@ def get_permission(menu):
         # 通过menu.permission字符串获取权限实例
         _ , codename = menu.permission.split('.')
         if menu.page in MODEL_PAGES:
-            content_model = apps.get_app_config(app).get_model(model) 
+            try:
+                content_model = apps.get_app_config(app).get_model(model) 
+            except Exception:
+                return False, False
         content_type = ContentType.objects.get_for_model(content_model)        
         permission = Permission.objects.get(codename=codename, content_type=content_type)
     

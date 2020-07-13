@@ -202,6 +202,7 @@ class Setting(models.Model):
     display_name = models.CharField('中文名', max_length=30)
     is_admin = models.BooleanField('仅管理员可看', default=False)
     help_text = models.CharField('提示信息', null=True, blank=True, max_length=225)
+    extra_data = JSONField(default={}, blank=True)
 
 
     class Meta:

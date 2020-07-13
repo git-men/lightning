@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from api_basebone.core.admin import BSMAdmin, register
 from api_basebone.core.widgets import widgets
 
-from bsm_config.models import Menu
+from bsm_config.models import Menu, Admin
 
 @register
 class MenuAdmin(BSMAdmin):
@@ -37,6 +37,17 @@ class MenuAdmin(BSMAdmin):
     class Meta:
         model = Menu
 
+@register
+class AdminConfigAdmin(BSMAdmin):
+    display = ['model', {'name': "config", 'fields': {'value': "config"}, 'widget': "longtext", 'textType': "jsonText"}]
+    form_fields = [
+        'model',
+        {'name': "config", 'widget': "JsonEditor"}
+    ]
+    inline_actions = ['edit']
+
+    class Meta:
+        model = Admin
 
 # @register
 # class PermissionAdmin(BSMAdmin):
