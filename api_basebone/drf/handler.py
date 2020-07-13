@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -26,7 +27,8 @@ def exception_handler(exc, context):
     """异常接收处理器"""
     if settings.DEBUG:
         import traceback
-        traceback.print_exc()
+        t, v, tb = sys.exc_info()
+        traceback.print_tb(tb)
     if isinstance(exc, BusinessException):
         return business_exception_handler(exc, context)
 
@@ -60,7 +62,8 @@ def exception_handler(exc, context):
 
     if not settings.DEBUG:
         import traceback
-        traceback.print_exc()
+        t, v, tb = sys.exc_info()
+        traceback.print_tb(tb)
 
     # 可自由配置是否直接抛出严重的错误
     CLOSE_DIRECT_SERIOUS_ERROR_SHOW = getattr(
