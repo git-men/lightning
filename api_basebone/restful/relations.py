@@ -2,8 +2,9 @@ from api_basebone.utils import meta
 from api_basebone.core import exceptions
 from api_basebone.restful.serializers import (
     create_serializer_class,
-    multiple_create_serializer_class
+    multiple_create_serializer_class,
 )
+from api_basebone.restful.relation import reverse_many_to_many
 
 
 def forward_many_to_many(field, value, update_data):
@@ -55,7 +56,7 @@ def forward_many_to_many(field, value, update_data):
         if queryset.count() != len(update_list):
             raise exceptions.BusinessException(
                 error_code=exceptions.OBJECT_NOT_FOUND,
-                error_data=f'{key}: {update_list} 存在不合法的数据'
+                error_data=f'{key}: {update_list} 存在不合法的数据',
             )
 
         for instance in queryset.iterator():
@@ -63,7 +64,9 @@ def forward_many_to_many(field, value, update_data):
 
             # FIXME: 嵌套处理
             forward_relation_hand(model, item_data)
-            serializer = create_serializer_class(model)(instance=instance, data=item_data, partial=True)
+            serializer = create_serializer_class(model)(
+                instance=instance, data=item_data, partial=True
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
         pure_data += update_data_map.keys()
@@ -99,13 +102,15 @@ def forward_one_to_many(field, value, update_data):
     if not instance:
         raise exceptions.BusinessException(
             error_code=exceptions.OBJECT_NOT_FOUND,
-            error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+            error_data=f'{key}: {value} 指定的主键找不到对应的数据',
         )
 
     # FIXME: 嵌套处理
     forward_relation_hand(model, value)
 
-    serializer = create_serializer_class(model)(instance=instance, data=value, partial=True)
+    serializer = create_serializer_class(model)(
+        instance=instance, data=value, partial=True
+    )
     serializer.is_valid(raise_exception=True)
     serializer.save()
     update_data[key] = value[pk_field_name]
@@ -154,7 +159,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
     if not isinstance(value, list):
         raise exceptions.BusinessException(
             error_code=exceptions.PARAMETER_FORMAT_ERROR,
-            error_data=f'{key}: {value} 只能是列表'
+            error_data=f'{key}: {value} 只能是列表',
         )
 
     # 这里需要判断创造和更新
@@ -172,8 +177,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
                         return
             except Exception as e:
                 raise exceptions.BusinessException(
-                    error_code=exceptions.PARAMETER_FORMAT_ERROR,
-                    error_data=str(e)
+                    error_code=exceptions.PARAMETER_FORMAT_ERROR, error_data=str(e)
                 )
     else:
         # 如果是创建，如果传进来的值为空
@@ -197,7 +201,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
             if not detail and pk_field_name in item:
                 raise exceptions.BusinessException(
                     error_code=exceptions.PARAMETER_BUSINESS_ERROR,
-                    error_data=f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据'
+                    error_data=f'{key}: {value} 当前为 create 操作，不能传入包含主键的数据',
                 )
 
         for item_value in object_data_list:
@@ -207,17 +211,19 @@ def reverse_one_to_many(field, value, instance, detail=True):
 
                 filter_params = {
                     pk_field_name: pk_value,
-                    field.remote_field.name: instance
+                    field.remote_field.name: instance,
                 }
                 obj = model.objects.filter(**filter_params).first()
                 if not obj:
                     raise exceptions.BusinessException(
                         error_code=exceptions.OBJECT_NOT_FOUND,
-                        error_data=f'{key}: {value} 指定的主键找不到对应的数据'
+                        error_data=f'{key}: {value} 指定的主键找不到对应的数据',
                     )
 
                 item_value[field.remote_field.name] = instance.pk
-                serializer = create_serializer_class(model)(instance=obj, data=item_value, partial=True)
+                serializer = create_serializer_class(model)(
+                    instance=obj, data=item_value, partial=True
+                )
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
             else:
@@ -244,8 +250,12 @@ def reverse_one_to_many(field, value, instance, detail=True):
         relation = meta.get_relation_field_related_name(model, field.remote_field.name)
 
         if relation:
-            model.objects.filter(pk__in=pure_id_list).update(**{relation[1].name: instance})
-            getattr(instance, relation[0]).exclude(**{f'{pk_field_name}__in': pure_id_list}).delete()
+            model.objects.filter(pk__in=pure_id_list).update(
+                **{relation[1].name: instance}
+            )
+            getattr(instance, relation[0]).exclude(
+                **{f'{pk_field_name}__in': pure_id_list}
+            ).delete()
     elif pure_id_list:
         # 如果是创建，则需要创建对应的数据
         pure_id_list = [model._meta.pk.to_python(item) for item in pure_id_list]
@@ -297,7 +307,14 @@ def forward_relation_hand(model, data):
 
 
 def reverse_relation_hand(model, data, instance, detail=True):
-    """反向关系字段的处理"""
+    """反向关系字段的处理
+
+    Params:
+        model object 模型类
+        data list | dict 数据
+        instance object 数据对象
+        detail bool 更新或者创建
+    """
     if not (data and isinstance(data, (dict, list))):
         return
 
@@ -311,6 +328,8 @@ def reverse_relation_hand(model, data, instance, detail=True):
             # 这里说明反向字段肯定传了进来，值的校验放在各个处理方法中
             if not field.many_to_many:
                 reverse_one_to_many(field, value, instance, detail=detail)
+            else:
+                reverse_many_to_many(instance, field, value)
 
 
 data = [
@@ -319,16 +338,9 @@ data = [
         "level": 0,
         "values": [
             {
-                "cover": {
-                    "name": "wwwwwww-3",
-                    "url": "http://fjadskfasd.com"
-                },
-                "value": {
-                    "id": 1,
-                    "value": "黄色",
-                    "key": 1
-                }
+                "cover": {"name": "wwwwwww-3", "url": "http://fjadskfasd.com"},
+                "value": {"id": 1, "value": "黄色", "key": 1},
             }
-        ]
+        ],
     }
 ]

@@ -225,3 +225,12 @@ def get_model_gmeta_config(model, config_key):
         return
 
     return getattr(gmeta_class, config_key)
+
+
+def get_accessor_name(field):
+    """
+    反向字段获取 accessor name
+
+    TAG: 元工具函数
+    """
+    return field.get_accessor_name()
