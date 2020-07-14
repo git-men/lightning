@@ -57,4 +57,6 @@ def get_credential():
 
     sts = Sts(config)
     token_config = sts.get_credential()
+    token_config['bucket'] = config['bucket']
+    token_config['region'] = config['region']
     return token_config
