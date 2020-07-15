@@ -260,7 +260,6 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
-    log.debug(f'meta: {dir(model._meta)}')
     title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, None)
     if title_field is None:
         title_field = model._meta.pk.name if getattr(model._meta, 'pk', None) else None

@@ -83,7 +83,7 @@ def update_inline_action_permission(app, model, new_config, old_config):
         old_actions = set([action['id'] for action in actions])
     create = [action for action in new_config.get('inlineActions', []) if action['id'] in list(new_actions - old_actions)]
     update = [action for action in new_config.get('inlineActions', []) if action['id'] in list(new_actions & old_actions)]
-    delete = [action for action in old_config.get('inlineActions', []) if action['id'] in list(old_actions - new_actions)]
+    delete = [action for action in old_config.get('inlineActions', []) if isinstance(action, dict) and action['id'] in list(old_actions - new_actions)]
     log.debug(f'ations of create: {create}, update: {update}, delete: {delete}')
     content_type = ContentType.objects.get(app_label=app, model=model)
 
