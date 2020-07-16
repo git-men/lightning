@@ -64,7 +64,7 @@ class UploadViewSet(viewsets.GenericViewSet):
         if service == 'aliyun':
             result = aliyun.get_token()
         elif service == 'tencent':
-            result = tencent.get_credential()
+            result = tencent.post_object_token()
         else:
             result = {}
         return success_response(result)
