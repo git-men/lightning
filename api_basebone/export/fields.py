@@ -49,7 +49,8 @@ DJANGO_FIELD_TYPE_MAP = {
     'BoneImageUrlField': 'Image',
     'BoneFileUrlField': 'File',
     'JsonObjectField': 'Object',
-    'JsonArrayField': 'Array'
+    'JsonArrayField': 'Array',
+    'BoneTimeStampField': 'Integer',
 }
 
 VALIDATOR_MAP = {
@@ -378,8 +379,11 @@ def get_app_json_field_schema():
     def generate_object_field_schema(models):
         config = {}
         for model in models:
-            object_fields = [field for field in get_concrete_fields(model)
-                             if isinstance(field, ObjectField)]
+            object_fields = [
+                field
+                for field in get_concrete_fields(model)
+                if isinstance(field, ObjectField)
+            ]
             for field in object_fields:
                 if field.object_model:
                     config.update(get_model_field_config(field.object_model))
@@ -388,8 +392,11 @@ def get_app_json_field_schema():
     def generate_array_field_schema(models):
         config = {}
         for model in models:
-            array_fields = [field for field in get_concrete_fields(model)
-                            if isinstance(field, ArrayField)]
+            array_fields = [
+                field
+                for field in get_concrete_fields(model)
+                if isinstance(field, ArrayField)
+            ]
             for field in array_fields:
                 if field.item_model:
                     log.debug(f'Array Field item model:{field}, {field.item_model}')
@@ -409,5 +416,6 @@ def get_app_json_field_schema():
 
     return (
         {f'object_model{key}': value for key, value in object_field_config.items()},
-        {f'array_item_model{key}': value for key, value in array_field_config.items()}
-        )
+        {f'array_item_model{key}': value for key, value in array_field_config.items()},
+    )
+

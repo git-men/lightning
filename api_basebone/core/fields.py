@@ -2,6 +2,42 @@ import json
 from django.db import models
 from jsonfield import JSONField as OriginJSONField
 from api_basebone.core.object_model import ObjectModel
+from api_basebone.utils.timezone import local_timestamp
+
+
+class BoneTimeStampField(models.BigIntegerField):
+    description = "时间戳字段"
+
+    def __init__(
+        self, verbose_name=None, name=None, auto_now=False, auto_now_add=False, **kwargs
+    ):
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now_add
+        if self.auto_now or self.auto_now_add:
+            kwargs['null'] = True
+            kwargs['blank'] = True
+        super().__init__(verbose_name, name, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if self.auto_now:
+            kwargs['auto_now'] = False
+        if self.auto_now_add:
+            kwargs['auto_now_add'] = False
+        return name, path, args, kwargs
+
+    def get_bsm_internal_type(self):
+        return "BoneTimeStampField"
+
+    def pre_save(self, model_instance, add):
+        print(model_instance, self.attname, add, getattr(model_instance, self.attname))
+
+        if self.auto_now or (self.auto_now_add and add):
+            value = local_timestamp()
+            setattr(model_instance, self.attname, value)
+            return value
+        else:
+            return super().pre_save(model_instance, add)
 
 
 class BoneRichTextField(models.TextField):
@@ -69,8 +105,9 @@ class ObjectField(JSONField):
 
 
 class ArrayField(JSONField):
-
-    def __init__(self, item_model: ObjectModel = None, item_type: str = 'string', **kwargs):
+    def __init__(
+        self, item_model: ObjectModel = None, item_type: str = 'string', **kwargs
+    ):
         self.item_model = item_model or ObjectModel()
         self.item_type = item_type
         super(ArrayField, self).__init__(**kwargs)

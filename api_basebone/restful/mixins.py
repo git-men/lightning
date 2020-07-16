@@ -3,7 +3,14 @@ import logging
 
 import pytz
 from django.db.models import Sum, Count, Value, F, Avg, Max, Min
-from django.db.models.fields.related import ManyToManyField, ManyToManyRel, ManyToOneRel, ForeignKey, OneToOneField, OneToOneRel
+from django.db.models.fields.related import (
+    ManyToManyField,
+    ManyToManyRel,
+    ManyToOneRel,
+    ForeignKey,
+    OneToOneField,
+    OneToOneRel,
+)
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncHour
 
 from rest_framework.decorators import action
@@ -22,6 +29,7 @@ from api_basebone.utils.operators import build_filter_conditions2
 
 log = logging.getLogger(__name__)
 
+
 class CheckValidateMixin:
     """检测校验"""
 
@@ -38,6 +46,17 @@ class CheckValidateMixin:
         - 多对一
         - 多对多
         """
+        # 如果动作是创建或者跟单条数据相关的，不在进行去重操作
+        if self.action in [
+            'create',
+            'retrieve',
+            'destroy',
+            'custom_patch',
+            'update',
+            'partial_update',
+        ]:
+            return
+
         if not fields:
             return
 
@@ -176,11 +195,15 @@ class GroupStatisticsMixin:
         for k, v in group.items():
             if v['expression']:
                 expression = resolve_expression(v['expression'])
-                log.debug(f'expression before: {v["expression"]} after resolve: {expression}')
+                log.debug(
+                    f'expression before: {v["expression"]} after resolve: {expression}'
+                )
                 data[k] = expression
             else:
-                data[k] = group_functions[v.get('method', None)](v['field'].replace('.', '__'))
-            
+                data[k] = group_functions[v.get('method', None)](
+                    v['field'].replace('.', '__')
+                )
+
         return data
 
     def group_statistics_data(self, fields, group_kwargs, *args, **kwargs):
@@ -198,36 +221,35 @@ class GroupStatisticsMixin:
             None: F,
         }
         log.debug(f'static parameters, fields: {fields}, groups: {group_kwargs}')
-        queryset = self.get_queryset().annotate(**group_kwargs).values(*group_kwargs.keys())
-        result = (
-            queryset
-            .annotate(
-                **{
-                    key: methods[value.get('method', None)](
-                        value['field'].replace('.', '__'),
-                        distinct=value.get('distinct', False),
-                    )
-                    for key, value in fields.items()
-                    # 排除exclude_fields
-                    if value['field'] not in get_model_exclude_fields(self.model, None)
-                }
-            )
-            .order_by(*group_kwargs.keys())
+        queryset = (
+            self.get_queryset().annotate(**group_kwargs).values(*group_kwargs.keys())
         )
+        result = queryset.annotate(
+            **{
+                key: methods[value.get('method', None)](
+                    value['field'].replace('.', '__'),
+                    distinct=value.get('distinct', False),
+                )
+                for key, value in fields.items()
+                # 排除exclude_fields
+                if value['field'] not in get_model_exclude_fields(self.model, None)
+            }
+        ).order_by(*group_kwargs.keys())
         # 支持排序
-        sort_keys = kwargs.get('sort_keys',[])
-        top_max = kwargs.get('top_max',None)
-        SORT_ASCE= 'asce'
+        sort_keys = kwargs.get('sort_keys', [])
+        top_max = kwargs.get('top_max', None)
+        SORT_ASCE = 'asce'
         SORT_DESC = 'desc'
         all_keys = list(fields.keys()) + list(group_kwargs.keys())
         if sort_keys:
             import re
+
             keys_set = set([re.sub(r'-', "", key) for key in sort_keys])
             if not (keys_set & set(all_keys) == keys_set):
                 pass
             result = result.order_by(*sort_keys)
         # 支持对聚合后的数据进行filter
-        filters = kwargs.get('filters',[])
+        filters = kwargs.get('filters', [])
         if filters:
             con = build_filter_conditions2(filters)
             result = result.filter(con)
@@ -235,41 +257,47 @@ class GroupStatisticsMixin:
         if top_max:
             result = result[:top_max]
         # TODO 考虑使用DRF来序列化查询结果
-        
+
         return result
 
     @action(methods=['post'], detail=False, url_path='group_statistics')
     def group_statistics(self, request, *args, **kwargs):
         fields = request.data.get('fields')
         group_kwargs = self.get_group()
-        
-        data = self.group_statistics_data(fields,group_kwargs)
-        return success_response(data)
 
+        data = self.group_statistics_data(fields, group_kwargs)
+        return success_response(data)
 
     @action(methods=['post'], detail=False, url_path='get_chart')
     def get_chart(self, request, *args, **kwargs):
         log.debug(f'get_chart action: {self.action}')
         from chart.models import Chart
         from django.core.cache import cache
+
         id = request.data['id']
         chart = cache.get(f'chart_config:{id}', None)
         log.debug(f'chart get from cache: {chart}')
         if chart is None:
-            chart = Chart.objects.prefetch_related('metrics', 'dimensions' ,'chart_filters').get(id=id)
+            chart = Chart.objects.prefetch_related(
+                'metrics', 'dimensions', 'chart_filters'
+            ).get(id=id)
             cache.set(f'chart_config:{id}', chart, 600)
             log.debug('cached Chart')
 
         group = {}
         fields = {}
         for dimension in chart.dimensions.all():
-            field = { 'field': dimension.field, 'displayName': dimension.display_name, 'expression': dimension.expression }
+            field = {
+                'field': dimension.field,
+                'displayName': dimension.display_name,
+                'expression': dimension.expression,
+            }
             if dimension.method:
                 field['method'] = dimension.method
-            if dimension.name == 'groupby': 
-                group[dimension.name] =  field
-            if dimension.name == 'legend': 
-                group[dimension.name] =  field
+            if dimension.name == 'groupby':
+                group[dimension.name] = field
+            if dimension.name == 'legend':
+                group[dimension.name] = field
 
         for metric in chart.metrics.all():
             field = {
@@ -281,10 +309,17 @@ class GroupStatisticsMixin:
             }
             fields[metric.name] = field
         group_kwargs = self.get_group_data(group)
-        filters = [{
-            'field': ft.field, 'operator': ft.operator, 'value': ft.value
-            } for ft in chart.chart_filters.all()]
-        data = self.group_statistics_data(fields, group_kwargs, sort_keys=chart.sort_keys, top_max=chart.top_max, filters=filters)
+        filters = [
+            {'field': ft.field, 'operator': ft.operator, 'value': ft.value}
+            for ft in chart.chart_filters.all()
+        ]
+        data = self.group_statistics_data(
+            fields,
+            group_kwargs,
+            sort_keys=chart.sort_keys,
+            top_max=chart.top_max,
+            filters=filters,
+        )
         return success_response(data)
 
 
