@@ -71,7 +71,7 @@ def get_credential():
 def post_object_token():
     now_time = datetime.datetime.now()
     expiration = (
-        (now_time + datetime.timedelta(days=1)).replace(microsecond=0).isoformat()
+        (now_time + datetime.timedelta(minutes=30)).replace(microsecond=0).isoformat()
     )
     expiration = f'{expiration}.000Z'
 
@@ -89,8 +89,6 @@ def post_object_token():
         ],
     }
 
-    print(policy)
-
     # 使用 HMAC-SHA1 以 SecretKey 为密钥，以 KeyTime 为消息，计算消息摘要（哈希值），即为 SignKey。
     sign_key = hmac.new(
         settings.QCLOUD_SECRET_KEY.encode('utf-8'),
@@ -104,11 +102,14 @@ def post_object_token():
         sign_key.encode('utf-8'), msg=string_to_sign.encode('utf-8'), digestmod='sha1'
     ).hexdigest()
 
+    bucket = settings.QCLOUD_COS_BUCKET
+    region = settings.QCLOUD_COS_REGION
+
     return {
         'policy': base64.b64encode(json.dumps(policy).encode('utf-8')).decode(),
         'q_ak': settings.QCLOUD_SECRET_ID,
         'key_time': key_time,
         'signature': signature,
-        'host': 'https://test-1255222202.cos.ap-shanghai.myqcloud.com',
+        'host': f'https://{bucket}.cos.{region}.myqcloud.com',
         'dir': 'media/',
     }

@@ -213,7 +213,9 @@ class QuerySetMixin:
                 basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
             )
         if self.basebone_distinct_queryset or role_distict:
-            log.debug(f'basebone distinct queryset or role_distinct: {self.basebone_distinct_queryset}, {role_distict}')
+            log.debug(
+                f'basebone distinct queryset or role_distinct: {self.basebone_distinct_queryset}, {role_distict}'
+            )
             return queryset.distinct()
         return queryset
 
@@ -349,7 +351,8 @@ class GenericViewMixin:
         result = super().perform_authentication(request)
 
         self.check_app_model(request)
-        self.validate_call_api_permission(request)
+        # TODO: 暂时取消检测，因为联调进度
+        # self.validate_call_api_permission(request)
 
         self.get_expand_fields()
         self._get_data_with_tree(request)
