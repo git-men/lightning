@@ -50,7 +50,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'BoneFileUrlField': 'File',
     'JsonObjectField': 'Object',
     'JsonArrayField': 'Array',
-    'BoneTimeStampField': 'Integer',
+    'BoneTimeStampField': 'TimeStamp',
 }
 
 VALIDATOR_MAP = {

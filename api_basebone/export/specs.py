@@ -144,4 +144,8 @@ FIELDS = {
     'Array': {
         'name': 'array',
     },
+    'TimeStamp': {
+        'name': 'timestamp',
+        'displayName': '时间戳'
+    }
 }
