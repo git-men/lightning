@@ -64,3 +64,4 @@ https://github.com/wechatpy/wechatpy/archive/master.zip  # via -r requirements.i
 werkzeug==0.14.1          # via -r requirements.in
 xmltodict==0.12.0         # via wechatpy
 zipp==0.6.0               # via importlib-metadata
+qcloud-python-sts==3.0.3
