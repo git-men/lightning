@@ -26,10 +26,10 @@ def update_setting(user, settings, model, **kwargs):
     result = {}
     with transaction.atomic():
         for key, value in settings.items():
-            setting = Setting.objects.filter(key=key)
-            if setting.exists():
-                setting.update(key=key, value_json = {'value':value})
-                result.update({setting.first().key: setting.first().value}) 
+            setting, create = Setting.objects.get_or_create(key=key)
+            setting.value_json = {'value':value}
+            setting.save()
+            result.update({setting.key: setting.value}) 
     return  result
 
 @bsm_func(staff_required=True, name='update_user_password', model=Setting)
