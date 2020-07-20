@@ -1,5 +1,6 @@
-from django.conf import settings
+
 from bsm_config.models import Setting
+from bsm_config.const import SETTINGS_CONFIG
 
 
 def get_settins():
@@ -7,8 +8,8 @@ def get_settins():
     data_map_key = {item['key']: item['value_json'].get('value',None) for item in data}
     setting_data = {}
     view_keys = []
-    if settings.SETTINGS_CONFIG:
-        for section in settings.SETTINGS_CONFIG:
+    if SETTINGS_CONFIG:
+        for section in SETTINGS_CONFIG:
             for field in section['fields']:
                 if field.get('public',False):
                     view_keys.append(field['name'])
@@ -25,8 +26,8 @@ def get_setting_config():
     config = []
     data = Setting.objects.values('key','value_json')
     data_map_key = {item['key']: item['value_json'].get('value',None) for item in data}
-    if settings.SETTINGS_CONFIG:
-        for section in settings.SETTINGS_CONFIG:
+    if SETTINGS_CONFIG:
+        for section in SETTINGS_CONFIG:
             values = {}
             fields = []
             formFields = []
@@ -57,7 +58,8 @@ def get_setting_config():
                 "title": section.get('title',None), "model": model,
                 "schemas": {model:{"fields":fields}},
                 'admins': {model: {"formFields": formFields}},
-                "values": values
+                "values": values,
+                "help_text": section.get('help_text',''),
             }
             config.append(setting)
 
