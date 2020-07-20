@@ -17,5 +17,5 @@ pydash==4.7.4
 django-guardian==2.3.0
 django-redis
 qcloud-python-sts==3.0.3
-https://github.com/wechatpy/wechatpy/archive/master.zip
+https://github.com/jeffkit/wechatpy/archive/v.18.13-work.zip
 psycopg2-binary==2.8.5
