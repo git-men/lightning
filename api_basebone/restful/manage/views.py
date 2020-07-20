@@ -4,10 +4,10 @@ import logging
 
 from django.apps import apps
 
-# from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
 
+from api_basebone.settings import settings
 from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.drf.permissions import IsAdminUser
@@ -151,6 +151,11 @@ class QuerySetMixin:
 
         role_filters = self.get_user_role_filters()
         filter_conditions = self.request.data.get(const.FILTER_CONDITIONS, [])
+        # FIXME: 如果是更新业务，则客户端无需传入过滤条件，为什么不像 create 直接返回呢
+        # 因为更新操作是需要一定的权限，比如 A 创建的数据， B 是否有权限进行更新呢，都需要
+        # 考量
+        if self.action in ['update', 'partial_update', 'custom_patch']:
+            filter_conditions = []
 
         admin_class = self.get_bsm_model_admin()
         if admin_class:
@@ -201,12 +206,16 @@ class QuerySetMixin:
 
         # 权限中配置是否去重
         role_config = self.basebone_get_model_role_config()
+        log.debug(f'role_config: {role_config}')
         role_distict = False
         if role_config and isinstance(role_config, dict):
             role_distict = role_config.get(
                 basebone_module.BSM_GLOBAL_ROLE_QS_DISTINCT, False
             )
         if self.basebone_distinct_queryset or role_distict:
+            log.debug(
+                f'basebone distinct queryset or role_distinct: {self.basebone_distinct_queryset}, {role_distict}'
+            )
             return queryset.distinct()
         return queryset
 
@@ -342,12 +351,72 @@ class GenericViewMixin:
         result = super().perform_authentication(request)
 
         self.check_app_model(request)
+        # TODO: 暂时取消检测，因为联调进度
+        # self.validate_call_api_permission(request)
 
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
         add_login_user_data(self, request.data)
         return result
+
+    def validate_call_api_permission(self, request):
+        """校验是否具有调用指定接口的权限
+
+        例如管理人员调用商品的列表接口，如果开启了使用接口校验，则需要校验此
+
+        用户是否具有调用此接口的权限，如果没有对应的权限，则就抛出没有权限
+
+        注意：如果是云函数，则另做处理
+        """
+        if not settings.MANAGE_API_PERMISSION_VALIDATE_ENABLE:
+            return
+
+        # if self.action == 'func':
+        #     func_name = request.data.get('func_name', None) or request.GET.get(
+        #         'func_name', None
+        #     )
+        #     perm_list = [f'basebone_api_model_func_{func_name}']
+        # else:
+        #     perm_map = {
+        #         'create': ['create'],
+        #         'list': ['list'],
+        #         'set': ['set'],
+        #         'destroy': ['retrieve', 'destroy'],
+        #         'update': ['retrieve', 'update'],
+        #         'partial_update': ['retrieve', 'partial_update'],
+        #         'custom_patch': ['retrieve', 'custom_patch'],
+        #         'update_sort': ['retrieve', 'update_sort'],
+        #         'batch': ['retrieve', 'batch'],
+        #         'export_file': ['export_file'],
+        #     }
+
+        #     perm_list = [
+        #         f'basebone_api_model_{item}' for item in perm_map.get(self.action)
+        #     ]
+        # check = request.user.has_perms(perm_list)
+        # if not check:
+        #     raise exceptions.BusinessException(error_code=exceptions.REQUEST_FORBIDDEN)
+
+        # TODO: 暂时提供测试而已，后面会改掉
+        perm_map = {
+            'retrieve': ['view'],
+            'create': ['add'],
+            'list': ['view'],
+            'update': ['view', 'change'],
+            'partial_update': ['view', 'change'],
+            'destroy': ['view', 'delete'],
+        }
+        perm_list = [
+            f'{item}_{self.model_slug}' for item in perm_map.get(self.action, [])
+        ]
+
+        if perm_list:
+            check = request.user.has_perms(perm_list)
+            if not check:
+                raise exceptions.BusinessException(
+                    error_code=exceptions.REQUEST_FORBIDDEN
+                )
 
     def get_expand_fields(self):
         """获取扩展字段并作为属性值赋予
@@ -463,8 +532,8 @@ class GenericViewMixin:
                     queryset.model, expand_dict, context=context
                 )
             )
-
-        queryset = queryset_utils.annotate(queryset, context=context)
+        if self.action not in ['get_chart', 'group_statistics']:
+            queryset = queryset_utils.annotate(queryset, context=context)
         queryset = self._get_queryset(queryset)
 
         if admin_get_queryset:
@@ -575,7 +644,6 @@ class CommonManageViewSet(
             fileformat string csv | excel 形式使用 querystring 的形式
         ```
         """
-        print(self._export_type_config, 'this is export type config')
         # 检测是否支持导出
         admin_class = self.get_bsm_model_admin()
         if self._export_type_config.get('version') != 'v2':

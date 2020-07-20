@@ -1,3 +1,4 @@
+import os
 from django.conf import settings as django_settings
 from .models import Setting
 
@@ -23,6 +24,25 @@ DINGDING_ENTERPRISE_INNER_H5_APP_SECRET = 'dingding_enterprise_inner_h5_app_secr
 DINGDING_CORP_ID = 'dingding_corp_id'
 
 
+class DataConvert:
+    """数据转换器"""
+
+    def string_handler(self, value):
+        return value
+
+    def integer_handler(self, value):
+        return int(value)
+
+    def handler(self, value, value_type):
+        func = getattr(self, f'{value_type}_handler', None)
+        if func:
+            return func(value)
+        return value
+
+
+data_convert = DataConvert()
+
+
 class SettingClient:
     """配置访问器"""
 
@@ -34,7 +54,11 @@ class SettingClient:
 
     def _get_config_from_settings(self, key):
         """从配置文件中获取对应的配置"""
-        return getattr(django_settings, key.upper())
+        key = key.upper()
+        try:
+            return getattr(django_settings, key)
+        except Exception:
+            return os.environ.get(key)
 
     def __getattr__(self, key):
         if not self._use_db:
@@ -45,7 +69,7 @@ class SettingClient:
         instance = Setting.objects.filter(key=key).first()
         if not instance:
             return self._get_config_from_settings(key)
-        return instance.value
+        return data_convert.handler(instance.value, instance.type)
 
 
 settings = SettingClient()

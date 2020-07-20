@@ -1,6 +1,6 @@
 import inspect
 import types
-
+import logging
 from django.apps import apps
 from django.db.models.fields import NOT_PROVIDED
 
@@ -16,6 +16,8 @@ from api_basebone.utils.meta import (
 from api_basebone.core.fields import ObjectField, ArrayField
 
 from .specs import FIELDS
+
+log = logging.getLogger(__name__)
 
 # 默认的 django 字段类型
 DEFAULT_DJANOG_FIELD_TYPE = 'Text'
@@ -47,7 +49,8 @@ DJANGO_FIELD_TYPE_MAP = {
     'BoneImageUrlField': 'Image',
     'BoneFileUrlField': 'File',
     'JsonObjectField': 'Object',
-    'JsonArrayField': 'Array'
+    'JsonArrayField': 'Array',
+    'BoneTimeStampField': 'TimeStamp',
 }
 
 VALIDATOR_MAP = {
@@ -258,7 +261,9 @@ def get_model_field_config(model):
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
 
-    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, model._meta.pk.name)
+    title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, None)
+    if title_field is None:
+        title_field = model._meta.pk.name if getattr(model._meta, 'pk', None) else None
 
     config = []
     for item in fields:
@@ -374,8 +379,11 @@ def get_app_json_field_schema():
     def generate_object_field_schema(models):
         config = {}
         for model in models:
-            object_fields = [field for field in get_concrete_fields(model)
-                             if isinstance(field, ObjectField)]
+            object_fields = [
+                field
+                for field in get_concrete_fields(model)
+                if isinstance(field, ObjectField)
+            ]
             for field in object_fields:
                 if field.object_model:
                     config.update(get_model_field_config(field.object_model))
@@ -384,10 +392,14 @@ def get_app_json_field_schema():
     def generate_array_field_schema(models):
         config = {}
         for model in models:
-            array_fields = [field for field in get_concrete_fields(model)
-                            if isinstance(field, ArrayField)]
+            array_fields = [
+                field
+                for field in get_concrete_fields(model)
+                if isinstance(field, ArrayField)
+            ]
             for field in array_fields:
                 if field.item_model:
+                    log.debug(f'Array Field item model:{field}, {field.item_model}')
                     config.update(get_model_field_config(field.item_model))
         return config
 
@@ -404,5 +416,6 @@ def get_app_json_field_schema():
 
     return (
         {f'object_model{key}': value for key, value in object_field_config.items()},
-        {f'array_item_model{key}': value for key, value in array_field_config.items()}
-        )
+        {f'array_item_model{key}': value for key, value in array_field_config.items()},
+    )
+

@@ -2,7 +2,8 @@ from django.conf import settings as django_settings
 
 DEFAULTS = {
     # 管理端是否使用日志记录器
-    'MANAGE_USE_ACTION_LOG': False
+    'MANAGE_USE_ACTION_LOG': False,
+    'MANAGE_API_PERMISSION_VALIDATE_ENABLE': False,
 }
 
 

@@ -1,5 +1,6 @@
 import requests
 import logging
+from copy import copy
 
 from django.db import transaction
 from django.http import HttpResponse
@@ -250,7 +251,7 @@ def client_update(genericAPIView, request, partial, set_data):
 
         # partial = kwargs.pop('partial', False)
         instance = genericAPIView.get_object()
-        old_instance = instance
+        old_instance = copy(instance)
 
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
             instance, data=set_data, partial=partial
@@ -283,7 +284,7 @@ def manage_update(genericAPIView, request, partial, set_data):
 
         # partial = kwargs.pop('partial', False)
         instance = genericAPIView.get_object()
-        old_instance = instance
+        old_instance = copy(instance)
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
             instance,
             data=set_data,
