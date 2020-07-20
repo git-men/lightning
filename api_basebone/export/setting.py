@@ -1,15 +1,15 @@
-
+from django.conf import settings
 from bsm_config.models import Setting
-from bsm_config.const import SETTINGS_CONFIG
 
+WEBSITE_CONFIG = settings.WEBSITE_CONFIG
 
 def get_settins():
     data = Setting.objects.values('key','value_json')
     data_map_key = {item['key']: item['value_json'].get('value',None) for item in data}
     setting_data = {}
     view_keys = []
-    if SETTINGS_CONFIG:
-        for section in SETTINGS_CONFIG:
+    if WEBSITE_CONFIG:
+        for section in WEBSITE_CONFIG:
             for field in section['fields']:
                 if field.get('public',False):
                     view_keys.append(field['name'])
@@ -26,8 +26,8 @@ def get_setting_config():
     config = []
     data = Setting.objects.values('key','value_json')
     data_map_key = {item['key']: item['value_json'].get('value',None) for item in data}
-    if SETTINGS_CONFIG:
-        for section in SETTINGS_CONFIG:
+    if WEBSITE_CONFIG:
+        for section in WEBSITE_CONFIG:
             values = {}
             fields = []
             formFields = []

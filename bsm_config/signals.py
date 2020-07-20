@@ -5,7 +5,6 @@ from django.contrib.auth.models import Permission, Group
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
-from bsm_config.const import SETTINGS_CONFIG
 from .models import Menu, Admin, Setting
 from .utils import remove_permission, check_page, get_permission
 from api_basebone.signals import post_bsm_create, post_bsm_delete
@@ -58,7 +57,7 @@ def update_setting_config_permission(sender, **kwargs):
     content_type = ContentType.objects.get_for_model(Setting)
     permissions = [*Permission.objects.filter(content_type=content_type).values_list('codename', flat=True)]
     
-    for setting in SETTINGS_CONFIG:
+    for setting in settings.WEBSITE_CONFIG:
         codename = setting.get('permission_code',None)
         if codename and (codename not in permissions):
             per = Permission.objects.create(content_type=content_type, codename=codename)
