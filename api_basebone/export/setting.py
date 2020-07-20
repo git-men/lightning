@@ -43,6 +43,8 @@ def get_setting_config():
                 }
                 if 'choices' in field:
                     f['choices'] = field['choices']
+                if 'default' in field:
+                    f['default'] = field['default']
                 fields.append(f)
                 formField = {'name': field.get('name',''),}
                 if 'widget' in field:
@@ -52,7 +54,7 @@ def get_setting_config():
                 if 'options' in field:
                     formField['options'] = field['options']
                 formFields.append(formField)
-                values[field['name']] = data_map_key.get(field['name'],None)
+                values[field['name']] = data_map_key.get(field['name'],None) or field.get('default',None)
 
             setting = {
                 "title": section.get('title',None), "model": model,
