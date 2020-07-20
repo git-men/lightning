@@ -52,7 +52,7 @@ def get_setting_config():
                 if 'options' in field:
                     formField['options'] = field['options']
                 formFields.append(formField)
-                values[field['name']] = data_map_key[field['name']]
+                values[field['name']] = data_map_key.get(field['name'],None)
 
             setting = {
                 "title": section.get('title',None), "model": model,
