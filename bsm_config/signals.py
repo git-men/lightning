@@ -1,8 +1,10 @@
 from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.contrib.auth.models import Permission, Group
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 
-from .models import Menu
+from .models import Menu, Admin, Setting
 from .utils import remove_permission, check_page, get_permission
 
 @receiver(pre_save, sender=Menu, dispatch_uid='remove_menu_permission')
@@ -47,3 +49,12 @@ def menu_changed(sender, instance, model, pk_set, action, **kwargs):
             permission.group_set.add(*groups)
         if action == 'post_remove':
             permission.group_set.remove(*groups)
+
+def update_setting_config_permission(sender, **kwargs):
+    content_type = ContentType.objects.get_for_model(Setting)
+    permissions = [*Permission.objects.filter(content_type=content_type).values_list('codename', flat=True)]
+    if settings.SETTINGS_CONFIG:
+        for setting in settings.SETTINGS_CONFIG:
+            codename = setting.get('permission_code',None)
+            if codename and (codename not in permissions):
+                per = Permission.objects.create(content_type=content_type, codename=codename)

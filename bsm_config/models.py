@@ -184,26 +184,10 @@ class Admin(models.Model):
         verbose_name_plural = 'Admin配置'
 
 class Setting(models.Model):
-    key = models.CharField('配置键', max_length=30, unique=True, blank=False)
+    key = models.CharField('配置键', max_length=100, unique=True, blank=False)
     value = models.TextField('配置值', null=True, blank=False)
-    type = models.CharField('键类型', max_length=30, default='string', choices=[
-        ('string', '字符串'),
-        ('text', '文本'),
-        ('integer', '整型'),
-        ('float', '浮点数'),
-        ('decimal', '小数'),
-        ('bool', 'Boolean值'),
-        ('time', '时间'),
-        ('date', '日期'),
-        ('datetime', '日期时间'),
-        ('image', '图片'),
-        ('file', '文件'),
-    ])
-    display_name = models.CharField('中文名', max_length=30)
-    is_admin = models.BooleanField('仅管理员可看', default=False)
-    help_text = models.CharField('提示信息', null=True, blank=True, max_length=225)
-    extra_data = JSONField(default={}, blank=True)
-
+    value_json = JSONField(verbose_name='配置值', default={})
+    groups = JSONField(verbose_name='指定角色可看', default=[])
 
     class Meta:
         verbose_name = '网站配置'

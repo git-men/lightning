@@ -1,6 +1,8 @@
 from django.db import transaction
-from django.contrib.auth.models import Permission
+from django.conf import settings as SETTINGS
+from django.contrib.auth.models import Permission, Group
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 
 from guardian.shortcuts import get_objects_for_user
 
@@ -20,15 +22,14 @@ def init_setting():
         setting.save()
 
 @bsm_func(staff_required=True, name='update_setting', model=Setting)
-def update_setting(user, settings, **kwargs):
+def update_setting(user, settings, model, **kwargs):
     result = {}
     with transaction.atomic():
         for key, value in settings.items():
             setting = Setting.objects.filter(key=key)
             if setting.exists():
-                setting.update(key=key, value= value)
+                setting.update(key=key, value_json = {'value':value})
                 result.update({setting.first().key: setting.first().value}) 
-
     return  result
 
 @bsm_func(staff_required=True, name='update_user_password', model=Setting)

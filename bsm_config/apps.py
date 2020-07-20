@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate
 
 
 class BsmConfigConfig(AppConfig):
@@ -14,3 +15,5 @@ class BsmConfigConfig(AppConfig):
                 'actions': ['retrieve', 'list', 'set']
             }
         })
+
+        post_migrate.connect(signals.update_setting_config_permission, sender=self)

@@ -14,7 +14,7 @@ from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.drf.response import success_response
 from api_basebone.export.admin import get_app_admin_config, get_json_field_admin_config
 from api_basebone.export.fields import get_app_field_schema, get_app_json_field_schema
-from api_basebone.export.setting import get_settins
+from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, tree_parent_field
 from bsm_config.models import Menu
@@ -64,6 +64,11 @@ class ConfigViewSet(viewsets.GenericViewSet):
         settings = get_settins()
         return success_response(settings)
 
+    @action(detail=False, url_path='setting_config')
+    def get_setting_config(self, request, *args, **kargs):
+        settings = get_setting_config()
+        return success_response(settings)
+    
     def _get_menu_from_database(self):
         """从数据库中获取菜单"""
         permissions = self.request.user.get_all_permissions()
