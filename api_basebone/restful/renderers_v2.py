@@ -7,7 +7,7 @@ from pydash import objects
 
 from api_basebone.core import gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
-from api_basebone.utils.gmeta import get_attr_in_gmeta_class, get_gmeta_config_by_key
+from api_basebone.utils.gmeta import get_attr_in_gmeta_class
 from api_basebone.utils.meta import get_all_relation_fields
 from api_basebone.utils.timezone import local_timestamp
 
@@ -70,7 +70,7 @@ def get_merge_fields(model, serializer_class, export_config):
         item_str = item[0] if isinstance(item, (list, tuple)) else item
         item_split = item_str.split('.')
         if item_split[0] in no_concrete_or_m2m_fields:
-            fields[item_split[0]] = default_fields[item_split[0]]
+            fields[item_str] = item_str
             continue
 
         if isinstance(item, (list, tuple)):
@@ -82,50 +82,26 @@ def get_merge_fields(model, serializer_class, export_config):
 
 def row_data_merge(model, fields, data, export_fields):
     """获取不合并的行数据"""
-    # return [objects.get(data, key) for key in fields.keys()]
-
     result = []
     # 反向和多对多的字段列表
     no_concrete_or_m2m_fields = get_no_concrete_or_m2m(model)
+
     for key in fields.keys():
-        if key in no_concrete_or_m2m_fields:
+        if key.split('.')[0] in no_concrete_or_m2m_fields:
             if not export_fields:
                 result.append('')
                 continue
 
-            inner_data = objects.get(data, key)
+            inner_data = get_data_from_dict(data, key)
             if not inner_data:
                 result.append('')
                 continue
 
-            inner_field_dict = {}
-            for export_item in export_fields:
-                if isinstance(export_item, tuple):
-                    if not export_item[0].startswith(key):
-                        continue
-                else:
-                    if not export_item.startswith(key):
-                        continue
-                    inner_item_split = export_item.split('.', 1)
-                    related_model = model._meta.get_field(key).related_model
-                    inner_field_dict[inner_item_split[1]] = related_model._meta.get_field(
-                        inner_item_split[1]
-                    ).verbose_name
-
-            inner_multiple_row = []
-            for item in inner_data:
-                inner_multiple_row.append(
-                    ' '.join(
-                        [
-                            '{}: {}'.format(value, item.get(key, ''))
-                            for key, value in inner_field_dict.items()
-                        ]
-                    )
-                )
-            result.append('\n'.join(inner_multiple_row))
-
+            result.append('\n'.join(inner_data))
         else:
-            result.append(objects.get(data, key))
+            item_data = get_data_from_dict(data, key)
+            row_item_data = item_data[0] if item_data else ''
+            result.append(row_item_data)
     return result
 
 
@@ -136,7 +112,7 @@ def get_no_merge_fields(model, serializer_class, export_config):
     获取指定模型的反向字段和多对多字段列表
 
     返回的是 {
-        field_nane: field_verbose_name
+        field_name: field_verbose_name
     }
     """
     default_fields = OrderedDict()
@@ -180,46 +156,23 @@ def get_no_merge_fields(model, serializer_class, export_config):
         else:
             item_split = item.split('.')
             if item_split[0] in no_concrete_or_m2m_fields:
-                relation_field = model._meta.get_field(item_split[0])
-                parent_verbose_name = getattr(relation_field, 'verbose_name', '')
-                if not parent_verbose_name:
-                    parent_verbose_name = relation_field.related_model.__name__
-
-                child_relation_field = relation_field.related_model._meta.get_field(
-                    item_split[1]
-                )
-
-                fields[item] = '{}.{}'.format(
-                    parent_verbose_name, child_relation_field.verbose_name
-                )
+                fields[item] = item
             else:
                 fields[item] = default_fields.get(item, item)
     return fields
 
 
-def row_data_no_merge(model, fields, data, export_fields, nest_list_fields, writer):
+def row_data_no_merge(model, fields, instance_data, export_fields, writer):
     """不合并行数据的处理"""
 
     result = []
     max_nest_list = 0
-    print(nest_list_fields)
-    for nest_key in nest_list_fields:
-        if nest_key in data:
-            nest_list_data = data.get(nest_key, [])
-            if not nest_list_data:
-                continue
-            clean_data_list = []
 
-            for item in nest_list_data:
-                item_data_dict = {
-                    f'{nest_key}.{key}': value for key, value in item.items()
-                }
-                clean_data_list.append(item_data_dict)
-            data[nest_key] = clean_data_list
-            if len(clean_data_list) > max_nest_list:
-                max_nest_list = len(clean_data_list)
-
-    print(max_nest_list, 'this is max nest list')
+    data = {}
+    for key in export_fields:
+        data[key] = get_data_from_dict(instance_data, key)
+        if len(data[key]) > max_nest_list:
+            max_nest_list = len(data[key])
 
     if max_nest_list == 0:
         writer.writerow([objects.get(data, key) for key in fields.keys()])
@@ -227,16 +180,52 @@ def row_data_no_merge(model, fields, data, export_fields, nest_list_fields, writ
         for index in range(0, max_nest_list):
             row_data = []
             for key in fields.keys():
-                key_split_str = key.split('.')[0]
-                if key_split_str in nest_list_fields:
-                    try:
-                        value = data[key_split_str][index].get(key)
-                    except Exception:
-                        value = ''
-                else:
-                    value = objects.get(data, key) if index == 0 else ''
+                try:
+                    value = data[key][index]
+                except Exception:
+                    value = ''
                 row_data.append(value)
             writer.writerow(row_data)
+    return result
+
+
+def get_data_from_dict(out_data, key):
+    """从字典中获取对应的数据
+
+    {
+        'age': [
+            {"staff": {"u": [{"mm": 45}]}},
+            {"staff": {"u": [{"mm": 46}]}}
+        ]
+    }
+
+    key 为 'age.staff.u.mm' 时
+
+    处理后返回 [45, 46]
+    """
+
+    result = []
+
+    key_split = key.split('.')
+
+    def inner_hand(data, index):
+        key = key_split[index]
+        value = objects.get(data, key)
+
+        if index == (len(key_split) - 1):
+            if value is not None:
+                result.append(str(value))
+            return
+
+        if isinstance(value, list):
+            k_index = index + 1
+            for item in value:
+                inner_hand(item, k_index)
+        else:
+            inner_hand(value, index + 1)
+
+    inner_hand(out_data, 0)
+
     return result
 
 
@@ -276,28 +265,10 @@ def csv_render(model, queryset, serializer_class, export_config=None):
         # 处理结果集
         queryset_iter = queryset if isinstance(queryset, list) else queryset.all()
 
-        export_fields = export_config['fields']
-        no_concrete_or_m2m_fields = get_no_concrete_or_m2m(model)
-
-        nest_list_fields = set()
-
-        if export_fields:
-            for item in export_fields:
-                item_str = item[0] if isinstance(item, (list, tuple)) else item
-                item_split = item_str.split('.')
-                if item_split[0] in no_concrete_or_m2m_fields:
-                    nest_list_fields.add(item_split[0])
-
         for instance in queryset_iter:
             instance_data = serializer_class(instance).data
-
             # 写入一行数据
             row_data_no_merge(
-                model,
-                fields,
-                instance_data,
-                export_config['fields'],
-                nest_list_fields,
-                writer,
+                model, fields, instance_data, export_config['fields'], writer,
             )
     return response

@@ -58,7 +58,9 @@ class SettingClient:
         try:
             return getattr(django_settings, key)
         except Exception:
-            return os.environ.get(key)
+            if key in os.environ:
+                return os.environ.get(key)
+        raise Exception(f'配置中找不到 {key} 对应的配置')
 
     def __getattr__(self, key):
         if not self._use_db:

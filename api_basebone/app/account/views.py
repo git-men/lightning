@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model, logout, models
+from django.contrib.auth import get_user_model, logout
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
@@ -10,7 +10,7 @@ from . import forms
 class ManageAccountViewSet(viewsets.GenericViewSet):
     """通用管理端账号接口"""
 
-    permission_classes = (permissions.IsAuthenticated, )
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_serializer_class(self):
         model = get_user_model()
@@ -49,13 +49,14 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
             object 用户数据结构
         ```
         """
-        serializer = forms.LoginForm(data=request.data, context=self.get_serializer_context())
+        serializer = forms.LoginForm(
+            data=request.data, context=self.get_serializer_context()
+        )
         serializer.is_valid(raise_exception=True)
 
         instance = serializer.save()
         serializer = self.get_serializer(instance)
         return success_response(serializer.data)
-
 
     @action(methods=['get'], detail=False)
     def permissions(self, request, *args, **kwargs):
