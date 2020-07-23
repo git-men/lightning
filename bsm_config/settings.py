@@ -69,7 +69,7 @@ class SettingClient:
         instance = Setting.objects.filter(key=key).first()
         if not instance:
             return self._get_config_from_settings(key)
-        return data_convert.handler(instance.value, instance.type)
+        return instance.value
 
 
 settings = SettingClient()
