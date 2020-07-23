@@ -4,8 +4,8 @@ from bsm_config.models import Setting
 WEBSITE_CONFIG = settings.WEBSITE_CONFIG
 
 def get_settins():
-    data = Setting.objects.values('key','value_json')
-    data_map_key = {item['key']: item['value_json'].get('value',None) for item in data}
+    data = Setting.objects.values('key','value')
+    data_map_key = {item['key']: item['value'] for item in data}
     setting_data = {}
     view_keys = []
     if WEBSITE_CONFIG:
@@ -24,8 +24,8 @@ def get_settins():
 
 def get_setting_config():
     config = []
-    data = Setting.objects.values('key','value_json')
-    data_map_key = {item['key']: item['value_json'].get('value',None) for item in data}
+    data = Setting.objects.values('key','value')
+    data_map_key = {item['key']: item['value'] for item in data}
     if WEBSITE_CONFIG:
         for section in WEBSITE_CONFIG:
             values = {}
@@ -54,7 +54,10 @@ def get_setting_config():
                 if 'options' in field:
                     formField['options'] = field['options']
                 formFields.append(formField)
-                values[field['name']] = data_map_key.get(field['name'],None) or field.get('default',None)
+                value = data_map_key.get(field['name'],None) 
+                if value==None:
+                    value = field.get('default',None)
+                values[field['name']] = value
 
             setting = {
                 "title": section.get('title',None), "model": model,

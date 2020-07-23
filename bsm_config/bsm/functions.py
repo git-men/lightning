@@ -27,7 +27,7 @@ def update_setting(user, settings, model, **kwargs):
     with transaction.atomic():
         for key, value in settings.items():
             setting, create = Setting.objects.get_or_create(key=key)
-            setting.value_json = {'value':value}
+            setting.value = value
             setting.save()
             result.update({setting.key: setting.value}) 
     return  result

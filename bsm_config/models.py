@@ -10,6 +10,7 @@ from django.db import models
 from django.contrib.auth.models import Permission, Group
 from django.contrib.contenttypes.models import ContentType
 from django.apps.registry import apps
+from jsonfield import JSONField as OriginJSONField
 
 from api_basebone.core.fields import JSONField
 from api_basebone.export.specs import FieldType
@@ -185,9 +186,8 @@ class Admin(models.Model):
 
 class Setting(models.Model):
     key = models.CharField('配置键', max_length=100, unique=True, blank=False)
-    value = models.TextField('配置值', null=True, blank=False)
-    value_json = JSONField(verbose_name='配置值', default={})
-    groups = JSONField(verbose_name='指定角色可看', default=[])
+    value = OriginJSONField('配置值', null=True, blank=False)
+
 
     class Meta:
         verbose_name = '网站配置'
