@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.apps import apps
 from bsm_config.models import Setting
 
 WEBSITE_CONFIG = settings.WEBSITE_CONFIG
@@ -38,7 +39,7 @@ def get_setting_config():
                     "displayName": field.get('displayName',''),
                     "help": field.get('help',''),
                     "name": field['name'],
-                    "type": field.get('type',''),
+                    "type": field.get('type','string'),
                     "required": field.get('required',False),
                 }
                 if 'choices' in field:
@@ -57,6 +58,15 @@ def get_setting_config():
                 value = data_map_key.get(field['name'],None) 
                 if value==None:
                     value = field.get('default',None)
+                if f['type'] in ('mref',):
+                    f['ref'] = field['ref']
+                    if not value:
+                        value = []
+                    if value:
+                        app, model = f['ref'].split('__')
+                        Model = apps.get_app_config(app).get_model(model.capitalize())
+                        print(Model)
+                        value = Model.objects.filter(pk__in=value).values()
                 values[field['name']] = value
 
             setting = {
@@ -67,5 +77,6 @@ def get_setting_config():
                 "help_text": section.get('help_text',''),
             }
             config.append(setting)
+            print(setting['model'],setting)
 
     return config
