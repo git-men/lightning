@@ -16,7 +16,7 @@ def update_value_jsonfield(apps, schema_editor):
     settings = Setting.objects.all()
     updata_settings = []
     for setting in settings:
-        if setting.value:
+        if setting.value or (setting.value_json and setting.value_json.get('value',None)):
             type = all_fields.get(setting.key,{}).get('type','string')
             value = setting.value
             if setting.value_json and setting.value_json.get('value',None):
