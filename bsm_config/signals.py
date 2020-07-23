@@ -60,7 +60,8 @@ def update_setting_config_permission(sender, **kwargs):
     for setting in settings.WEBSITE_CONFIG:
         codename = setting.get('permission_code',None)
         if codename and (codename not in permissions):
-            per = Permission.objects.create(content_type=content_type, codename=codename)
+            name = setting.get('title',None) or setting.get('key',None)
+            per = Permission.objects.create(content_type=content_type, codename=codename, name=name)
 
 def create_inline_action_permission(app, model, config):
     """找到inlineAction中，有groups的配置。生成Permission，并与Groups产生并联。
