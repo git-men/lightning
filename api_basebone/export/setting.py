@@ -75,6 +75,7 @@ def get_setting_config():
                 'admins': {model: {"formFields": formFields}},
                 "values": values,
                 "help_text": section.get('help_text',''),
+                "permission_code": f'bsm_config.{section.get("permission_code","")}'
             }
             config.append(setting)
             print(setting['model'],setting)
