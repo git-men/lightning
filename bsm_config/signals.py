@@ -5,7 +5,7 @@ from django.contrib.auth.models import Permission, Group
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
-from .models import Menu, Admin, Setting
+from bsm_config.models import Menu, Admin, Setting
 from .utils import remove_permission, check_page, get_permission
 from api_basebone.signals import post_bsm_create, post_bsm_delete
 log = logging.getLogger(__name__)
@@ -62,6 +62,11 @@ def update_setting_config_permission(sender, **kwargs):
         if codename and (codename not in permissions):
             name = setting.get('title',None) or setting.get('key',None)
             per = Permission.objects.create(content_type=content_type, codename=codename, name=name)
+            system_group =  Group.objects.filter(name='系统管理员').first()
+            if system_group:
+                per.group_set.add(system_group)
+                from guardian.shortcuts import assign_perm
+                assign_perm('auth.permission_assign', system_group,  obj=per)
 
 def create_inline_action_permission(app, model, config):
     """找到inlineAction中，有groups的配置。生成Permission，并与Groups产生并联。
