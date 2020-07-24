@@ -22,7 +22,7 @@ def init_setting():
         setting.save()
 
 @bsm_func(staff_required=True, name='update_setting', model=Setting)
-def update_setting(user, settings, model, **kwargs):
+def update_setting(user, settings, **kwargs):
     result = {}
     with transaction.atomic():
         for key, value in settings.items():

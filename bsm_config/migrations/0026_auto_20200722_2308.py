@@ -3,7 +3,6 @@
 from django.db import migrations
 import jsonfield.fields
 from django.conf import settings as SETTINGS
-from django.db.models import F
 import json
 
 def update_value_jsonfield(apps, schema_editor):
@@ -33,7 +32,13 @@ def update_value_jsonfield(apps, schema_editor):
 
 def reverse_update_value_jsonfield(apps, schema_editor):
     Setting = apps.get_app_config('bsm_config').get_model('Setting')
-    Setting.objects.all().update(value=json.loads(F('value')))
+    updata_settings = []
+    for setting  in Setting.objects.all():
+        print('-'*200,setting.value)
+        if setting.value != None:
+            setting.value = json.loads(setting.value)
+            updata_settings.append(setting)
+    Setting.objects.bulk_update(updata_settings, ['value'])
 
 class Migration(migrations.Migration):
 
