@@ -3,6 +3,7 @@
 from django.db import migrations
 import jsonfield.fields
 from django.conf import settings as SETTINGS
+from django.db.models import F
 import json
 
 def update_value_jsonfield(apps, schema_editor):
@@ -30,6 +31,10 @@ def update_value_jsonfield(apps, schema_editor):
             updata_settings.append(setting)
     Setting.objects.bulk_update(updata_settings, ['value'])
 
+def reverse_update_value_jsonfield(apps, schema_editor):
+    Setting = apps.get_app_config('bsm_config').get_model('Setting')
+    Setting.objects.all().update(value=json.loads(F('value')))
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -37,7 +42,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(update_value_jsonfield, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(update_value_jsonfield, reverse_code=reverse_update_value_jsonfield),
         migrations.RemoveField(
             model_name='setting',
             name='groups',
