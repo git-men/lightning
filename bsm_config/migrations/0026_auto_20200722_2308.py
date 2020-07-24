@@ -31,10 +31,10 @@ def update_value_jsonfield(apps, schema_editor):
     Setting.objects.bulk_update(updata_settings, ['value'])
 
 def reverse_update_value_jsonfield(apps, schema_editor):
+    print('回退')
     Setting = apps.get_app_config('bsm_config').get_model('Setting')
     updata_settings = []
     for setting  in Setting.objects.all():
-        print('-'*200,setting.value)
         if setting.value != None:
             setting.value = json.loads(setting.value)
             updata_settings.append(setting)
