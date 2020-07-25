@@ -4,6 +4,10 @@ DEFAULTS = {
     # 管理端是否使用日志记录器
     'MANAGE_USE_ACTION_LOG': False,
     'MANAGE_API_PERMISSION_VALIDATE_ENABLE': False,
+    # 管理端操作数据时权限检测
+    'MANAGE_GUARDIAN_DATA_PERMISSION_CHECK': False,
+    # 管理端使用 guardian 检测的应用模型，元素数据格式为 {app_name}__{model_name}
+    'MANAGE_GUARDIAN_DATA_APP_MODELS': [],
 }
 
 

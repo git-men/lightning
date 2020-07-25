@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from rest_framework.exceptions import PermissionDenied
 
 from api_basebone.core import exceptions
+from api_basebone.settings import settings
 from api_basebone.signals import post_bsm_create, post_bsm_delete
 from api_basebone.restful.funcs import find_func
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
@@ -179,7 +180,12 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
         if 'Content-disposition' in result.headers:
             response['Content-disposition'] = result.headers.get('Content-disposition')
         return response
-    if isinstance(result, list) or isinstance(result, dict) or isinstance(result, str) or isinstance(result, bytes):
+    if (
+        isinstance(result, list)
+        or isinstance(result, dict)
+        or isinstance(result, str)
+        or isinstance(result, bytes)
+    ):
         return success_response(result)
     return success_response()
 
@@ -208,7 +214,13 @@ def client_create(genericAPIView, request, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request, old_instance=None)
+        post_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=instance,
+            create=True,
+            request=genericAPIView.request,
+            old_instance=None,
+        )
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         serializer = genericAPIView.get_serializer(
             genericAPIView.get_queryset().get(pk=instance.pk)
@@ -239,7 +251,13 @@ def manage_create(genericAPIView, request, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=True, request=genericAPIView.request, old_instance=None)
+        post_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=instance,
+            create=True,
+            request=genericAPIView.request,
+            old_instance=None,
+        )
     return success_response(serializer.data)
 
 
@@ -268,7 +286,13 @@ def client_update(genericAPIView, request, partial, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False, request=genericAPIView.request, old_instance=old_instance)
+        post_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=instance,
+            create=False,
+            request=genericAPIView.request,
+            old_instance=old_instance,
+        )
 
         serializer = genericAPIView.get_serializer(
             genericAPIView.get_queryset().get(pk=instance.pk)
@@ -307,8 +331,15 @@ def manage_update(genericAPIView, request, partial, set_data):
             genericAPIView.model,
             instance,
         )
-        post_bsm_create.send(sender=genericAPIView.model, instance=instance, create=False, old_instance=old_instance, request=genericAPIView.request)
+        post_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=instance,
+            create=False,
+            old_instance=old_instance,
+            request=genericAPIView.request,
+        )
     return success_response(serializer.data)
+
 
 def update_sort(genericAPIView, request, data):
     if data.get('dragId') == data.get('hoverId'):
@@ -317,33 +348,41 @@ def update_sort(genericAPIView, request, data):
     admin = genericAPIView.get_bsm_model_admin()
     sort_key = admin.sort_key
     from django.db.models import F, Q
+
     with transaction.atomic():
         dragItem = instance.objects.filter(id=data['dragId']).first()
         hoverItem = instance.objects.filter(id=data['hoverId']).first()
         dragIndex = getattr(dragItem, sort_key)
         hoveIndex = getattr(hoverItem, sort_key)
-        isDownward = dragIndex < hoveIndex or (dragIndex == hoveIndex and dragItem.id < hoverItem.id)
-        instance.objects.filter(id=data['dragId']).update(**{'parent': hoverItem.parent, sort_key: hoveIndex + 1})
-        
+        isDownward = dragIndex < hoveIndex or (
+            dragIndex == hoveIndex and dragItem.id < hoverItem.id
+        )
+        instance.objects.filter(id=data['dragId']).update(
+            **{'parent': hoverItem.parent, sort_key: hoveIndex + 1}
+        )
+
         instance.objects.filter(
-            Q(parent = hoverItem.parent), 
-            ~Q(id = dragItem.id), 
-            Q(**{f'{sort_key}__gt': hoveIndex})
+            Q(parent=hoverItem.parent),
+            ~Q(id=dragItem.id),
+            Q(**{f'{sort_key}__gt': hoveIndex}),
         ).update(**{f'{sort_key}': F(f'{sort_key}') + 2})
-        up = Q(id__gt = hoverItem.id) if isDownward else Q(id__gte = hoverItem.id)
+        up = Q(id__gt=hoverItem.id) if isDownward else Q(id__gte=hoverItem.id)
         instance.objects.filter(
-            Q(parent = hoverItem.parent), 
-            ~Q(id = dragItem.id), 
-            Q(**{f'{sort_key}': hoveIndex}), 
-            up
+            Q(parent=hoverItem.parent),
+            ~Q(id=dragItem.id),
+            Q(**{f'{sort_key}': hoveIndex}),
+            up,
         ).update(**{f'{sort_key}': F(f'{sort_key}') + 2})
     return success_response(instance.objects.all().values())
+
 
 def destroy(genericAPIView, request):
     """删除数据"""
     instance = genericAPIView.get_object()
     genericAPIView.perform_destroy(instance)
-    post_bsm_delete.send(sender=genericAPIView.model, instance=instance, request=genericAPIView.request)
+    post_bsm_delete.send(
+        sender=genericAPIView.model, instance=instance, request=genericAPIView.request
+    )
     return success_response()
 
 

@@ -353,7 +353,6 @@ class GenericViewMixin:
         self.check_app_model(request)
         # TODO: 暂时取消检测，因为联调进度
         # self.validate_call_api_permission(request)
-
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
@@ -539,6 +538,48 @@ class GenericViewMixin:
         if admin_get_queryset:
             queryset = admin_get_queryset(queryset, self.request, self)
 
+        # 如果开启了 guardian 数据权限检测，那么这里会进行必要的筛选
+        if settings.MANAGE_GUARDIAN_DATA_PERMISSION_CHECK:
+            # 如果不是超级用户，则进行对应的数据筛选
+            # FIXME: 目前只做查询类
+            app_models = settings.MANAGE_GUARDIAN_DATA_APP_MODELS
+            check_model = (
+                isinstance(app_models, (list, set))
+                and f'{self.app_label}__{self.model_slug}' in app_models
+            )
+            check_not_is_superuser = not self.request.user.is_superuser
+            check_action = self.action in ['retrieve', 'list', 'set']
+
+            if check_not_is_superuser and check_action and check_model:
+                from guardian.ctypes import get_content_type
+                from guardian.models import UserObjectPermission, GroupObjectPermission
+                from django.contrib.auth.models import Permission
+
+                content_type = get_content_type(self.model)
+                permission = Permission.objects.filter(
+                    codename=f'view_{self.model_slug}', content_type=content_type
+                ).first()
+
+                content_object_set = set()
+
+                # 如果存在对应的权限
+                if permission:
+                    permission_object_list = UserObjectPermission.objects.filter(
+                        user=self.request.user, permission=permission
+                    ).values('object_pk')
+                    for item in permission_object_list:
+                        content_object_set.add(item['object_pk'])
+
+                user_groups = self.request.user.groups.all()
+                if user_groups:
+                    group_object_list = GroupObjectPermission.objects.filter(
+                        permission=permission, group__in=user_groups
+                    ).values('object_pk')
+                    for item in group_object_list:
+                        content_object_set.add(item['object_pk'])
+
+                if content_object_set:
+                    queryset = queryset.filter(id__in=content_object_set)
         return queryset
 
     def get_serializer_class(self, expand_fields=None):
