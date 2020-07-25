@@ -1,4 +1,5 @@
 import os
+import collections
 from django.conf import settings as django_settings
 from .models import Setting
 
@@ -73,3 +74,26 @@ class SettingClient:
 
 
 settings = SettingClient()
+
+
+class SiteSetting:
+    def __getitem__(self, item):
+        if isinstance(item, collections.Iterable):
+            setting_list = Setting.objects.filter(key__in=item).values_list('key', 'value')
+            setting_dict = dict(setting_list)
+            for i in item:
+                yield setting_dict.get(i, None)
+        else:
+            setting = Setting.objects.filter(key=item).first()
+            return setting and setting.value
+
+    def __setitem__(self, key, value):
+        setting = Setting.objects.filter(key=key).first()
+        if setting:
+            setting.value = value
+            setting.save(update_fields=['value'])
+        else:
+            Setting.objects.create(key=key, value=value)
+
+
+site_setting = SiteSetting()

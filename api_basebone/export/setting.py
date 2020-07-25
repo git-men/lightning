@@ -46,6 +46,8 @@ def get_setting_config():
                     f['choices'] = field['choices']
                 if 'default' in field:
                     f['default'] = field['default']
+                if 'validators' in field:
+                    f['validators'] = field['validators']
                 fields.append(f)
                 formField = {'name': field.get('name',''),}
                 if 'widget' in field:
