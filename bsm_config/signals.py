@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import Permission, Group
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.signals import post_migrate
 
 from bsm_config.models import Menu, Admin, Setting
 from .utils import remove_permission, check_page, get_permission
@@ -53,10 +54,12 @@ def menu_changed(sender, instance, model, pk_set, action, **kwargs):
         if action == 'post_remove':
             permission.group_set.remove(*groups)
 
+@receiver(post_migrate)
 def update_setting_config_permission(sender, **kwargs):
     content_type = ContentType.objects.get_for_model(Setting)
     permissions = [*Permission.objects.filter(content_type=content_type).values_list('codename', flat=True)]
-    
+    permission_assign_content_type = ContentType.objects.get_for_model(Permission)
+    Permission.objects.get_or_create(content_type=permission_assign_content_type, codename='permission_assign', name='权限分配')
     for setting in settings.WEBSITE_CONFIG:
         codename = setting.get('permission_code',None)
         if codename and (codename not in permissions):
