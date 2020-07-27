@@ -67,7 +67,6 @@ def get_setting_config():
                     if value:
                         app, model = f['ref'].split('__')
                         Model = apps.get_app_config(app).get_model(model.capitalize())
-                        print(Model)
                         value = Model.objects.filter(pk__in=value).values()
                 values[field['name']] = value
 
@@ -80,6 +79,5 @@ def get_setting_config():
                 "permission_code": f'bsm_config.{section.get("permission_code","")}'
             }
             config.append(setting)
-            print(setting['model'],setting)
 
     return config
