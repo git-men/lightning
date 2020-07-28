@@ -24,6 +24,7 @@ DEFAULT_DJANOG_FIELD_TYPE = 'Text'
 
 DJANGO_FIELD_TYPE_MAP = {
     'AutoField': 'Integer',
+    'BigAutoField': 'String',
     'BooleanField': 'Bool',
     'NullBooleanField': 'Bool',
     'CharField': 'String',
