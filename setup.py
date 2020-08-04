@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 NAME = 'api_basebone'
-VERSION = '0.0.1'
+VERSION = '1.0.0'
 
 
 def get_packages():
@@ -25,11 +25,11 @@ with open('README.md', 'r') as file:
 
 
 setup(
-    name='drf-api-basebone',
+    name='baseman',
     version=VERSION,
-    url='https://github.com/git-men/sky',
-    author='Kycool',
-    author_email='kycoolcool@gmail.com',
+    #url='https://github.com/git-men/sky',
+    #author='Kycool',
+    #author_email='kycoolcool@gmail.com',
     description='基于 Django, DRF 通用的接口解决方案',
     long_description=long_description,
     long_description_content_type='text/markdown',
