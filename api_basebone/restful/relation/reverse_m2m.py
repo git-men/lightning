@@ -63,8 +63,9 @@ def reverse_many_to_many(instance, field, data):
         )
 
     # TODO: 如果使用了自定义的中间表，此种业务暂时不做处理
-    if field.through_fields:
-        return
+    # TODO: 支持自定义中间表，如果非单纯中间表让它自行报异常，中间表必填值以后可以考虑使用 through_defaults
+    # if field.through_fields:
+    #     return
 
     model = field.related_model
     related_name = meta.get_accessor_name(field)
@@ -80,30 +81,32 @@ def reverse_many_to_many(instance, field, data):
     # 传入数据不为空的情况下
     pk_field_name = model._meta.pk.name
     # 迭代处理反向数据，这个时候还没有处理数据和对象的关系
-
     reverse_object_list = set()
     for item_value in data:
-        if pk_field_name not in item_value:
-            # 创建反向模型的数据
-            serializer = create_serializer_class(model)(data=item_value)
-            serializer.is_valid(raise_exception=True)
-            item_instance = serializer.save()
-        else:
-            # 更新反向模型的数据
-            item_instance = model.objects.filter(
-                **{pk_field_name: item_value[pk_field_name]}
-            ).first()
-            if not item_instance:
-                raise exceptions.BusinessException(
-                    error_code=exceptions.OBJECT_NOT_FOUND,
-                    error_data=f'{pk_field_name}: {item_value} 指定的主键找不到对应的数据',
+        if  isinstance(item_value, dict):
+            if  pk_field_name not in item_value:
+                # 创建反向模型的数据
+                serializer = create_serializer_class(model)(data=item_value)
+                serializer.is_valid(raise_exception=True)
+                item_instance = serializer.save()
+            else:
+                # 更新反向模型的数据
+                item_instance = model.objects.filter(
+                    **{pk_field_name: item_value[pk_field_name]}
+                ).first()
+                if not item_instance:
+                    raise exceptions.BusinessException(
+                        error_code=exceptions.OBJECT_NOT_FOUND,
+                        error_data=f'{pk_field_name}: {item_value} 指定的主键找不到对应的数据',
+                    )
+                serializer = create_serializer_class(model)(
+                    instance=item_instance, data=item_value, partial=True
                 )
-            serializer = create_serializer_class(model)(
-                instance=item_instance, data=item_value, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-        reverse_object_list.add(item_instance.pk)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            reverse_object_list.add(item_instance.pk)
+        else:
+            reverse_object_list.add(item_value)
 
     # 处理数据和 instance 之间的关系
     if reverse_manager:
