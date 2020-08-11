@@ -186,10 +186,10 @@ def build_conditions_in_item(trans_cons, item, context=None):
             item_value = item.get("value")
 
         if item["operator"] in ["!=", "!==", "<>"]:
-            trans_cons.append(~Q(**{item["field"]: item_value}))
+            trans_cons.append(~Q(**{item["field"].replace('.', '__'): item_value}))
         else:
             operate = OPERATOR_MAP.get(item["operator"], "")
-            field = item["field"]
+            field = item["field"].replace('.', '__')
             key = f"{field}{operate}"
             trans_cons.append(Q(**{key: item_value}))
 
