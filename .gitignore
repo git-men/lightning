@@ -1,0 +1,17 @@
+__pycache__
+.env
+.venv
+.vscode
+.venv
+*.sqlite3
+license*
+.python-version
+*.rdb
+*.pyc
+xsettings.py
+Dockerfile
+build*
+config.py
+deploy.sh
+staticfiles
+lightning_sample

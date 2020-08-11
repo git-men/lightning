@@ -1,0 +1,1 @@
+(window["webpackJsonp"]=window["webpackJsonp"]||[]).push([[9],{HKnz:function(e,a,n){"use strict";n.r(a);var t=n("qE61"),r=n.n(t),l=n("7gdK"),c=n("SMXX");a["default"]=function(e){var a=e.match.params.model;return r.a.createElement(r.a.Fragment,null,r.a.createElement(c["a"],e),r.a.createElement(l["a"],{model:a,key:a,defaultTab:"detail"}))}}}]);
