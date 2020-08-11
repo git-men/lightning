@@ -111,8 +111,8 @@ def create_admin_config(app_labels, exist_model):
 def generate_configs(app_labels=[]):
     menus = Menu.objects.all()
     if not menus:
-        print('menus ', menus)
         create_default_menu()
+        create_menus_permission(Menu.objects.all())
     
     admins = Admin.objects.all()
     for app in app_labels:
