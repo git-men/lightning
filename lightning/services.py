@@ -121,4 +121,5 @@ def generate_configs(app_labels=[]):
     if new_meus:
         # 创建新增菜单的资源
         create_menus_permission(new_meus)
+    return new_permission, new_meus
     
