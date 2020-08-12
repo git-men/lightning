@@ -80,11 +80,10 @@ settings = SettingClient()
 
 class SiteSetting:
     def __getitem__(self, item):
-        if isinstance(item, collections.Iterable):
+        if isinstance(item, tuple):
             setting_list = Setting.objects.filter(key__in=item).values_list('key', 'value')
             setting_dict = dict(setting_list)
-            for i in item:
-                yield setting_dict.get(i, None)
+            return [setting_dict.get(i, None) for i in item]
         else:
             setting = Setting.objects.filter(key=item).first()
             return setting and setting.value
