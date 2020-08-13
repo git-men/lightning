@@ -1,13 +1,11 @@
 from django.conf import settings
 from django.apps import apps
 from bsm_config.models import Setting
+from bsm_config.settings import site_setting
 
 WEBSITE_CONFIG = settings.WEBSITE_CONFIG
 
 def get_settins():
-    data = Setting.objects.values('key','value')
-    data_map_key = {item['key']: item['value'] for item in data}
-    setting_data = {}
     view_keys = []
     if WEBSITE_CONFIG:
         for section in WEBSITE_CONFIG:
@@ -15,18 +13,12 @@ def get_settins():
                 if field.get('public',False):
                     view_keys.append(field['name'])
     
-    for key in view_keys:
-        if key in data_map_key:
-            setting_data.update({
-                key: data_map_key[key]
-            })
+    setting_dict = site_setting.get_values(view_keys)
 
-    return setting_data
+    return setting_dict
 
 def get_setting_config():
     config = []
-    data = Setting.objects.values('key','value')
-    data_map_key = {item['key']: item['value'] for item in data}
     if WEBSITE_CONFIG:
         for section in WEBSITE_CONFIG:
             values = {}
@@ -57,7 +49,7 @@ def get_setting_config():
                 if 'options' in field:
                     formField['options'] = field['options']
                 formFields.append(formField)
-                value = data_map_key.get(field['name'],None) 
+                value = site_setting[field['name']] 
                 if value==None:
                     value = field.get('default',None)
                 if f['type'] in ('mref',):

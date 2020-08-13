@@ -1,8 +1,11 @@
 import os
 import collections
+import logging
+
 from django.conf import settings as django_settings
 from .models import Setting
 
+log = logging.getLogger('bsm')
 """
 环境变量中的 KEY 和 数据库中配置 KEY 的映射
 
@@ -44,49 +47,75 @@ class DataConvert:
 data_convert = DataConvert()
 
 
-class SettingClient:
-    """配置访问器"""
+# class SettingClient:
+#     """配置访问器"""
 
-    BSM_CONFIG_APP = 'bsm_config'
+#     BSM_CONFIG_APP = 'bsm_config'
 
-    def __init__(self, *args, **kwargs):
-        # 表明配置是否放在了数据库中
-        self._use_db = self.BSM_CONFIG_APP in django_settings.INSTALLED_APPS
+#     def __init__(self, *args, **kwargs):
+#         # 表明配置是否放在了数据库中
+#         self._use_db = self.BSM_CONFIG_APP in django_settings.INSTALLED_APPS
+
+#     def _get_config_from_settings(self, key):
+#         """从配置文件中获取对应的配置"""
+#         key = key.upper()
+#         try:
+#             return getattr(django_settings, key)
+#         except Exception:
+#             if key in os.environ:
+#                 return os.environ.get(key)
+#         raise Exception(f'配置中找不到 {key} 对应的配置')
+
+#     def __getattr__(self, key):
+#         if not self._use_db:
+#             return self._get_config_from_settings(key)
+
+#         key = key.lower()
+
+#         instance = Setting.objects.filter(key=key).first()
+#         if not instance:
+#             return self._get_config_from_settings(key)
+#         return instance.value
+
+
+# settings = SettingClient()
+
+
+class SiteSetting:
+    """项目配置统一使用SiteSetting获取和设值"""
 
     def _get_config_from_settings(self, key):
         """从配置文件中获取对应的配置"""
         key = key.upper()
         try:
-            return getattr(django_settings, key)
+            SITE_SETTING = django_settings.SITE_SETTING
+            return SITE_SETTING[key]
         except Exception:
             if key in os.environ:
                 return os.environ.get(key)
-        raise Exception(f'配置中找不到 {key} 对应的配置')
-
-    def __getattr__(self, key):
-        if not self._use_db:
-            return self._get_config_from_settings(key)
-
-        key = key.lower()
-
-        instance = Setting.objects.filter(key=key).first()
-        if not instance:
-            return self._get_config_from_settings(key)
-        return instance.value
+        return None
+        log.warning(f'配置中找不到 {key} 对应的配置')
 
 
-settings = SettingClient()
 
-
-class SiteSetting:
+    
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            setting_list = Setting.objects.filter(key__in=item).values_list('key', 'value')
+            setting_list = Setting.objects.filter(key__in=[i.lower()for i in item]).values_list('key', 'value')
             setting_dict = dict(setting_list)
-            return [setting_dict.get(i, None) for i in item]
+
+            value = []
+            for key in item:
+                if key not in setting_dict:
+                    value.append(self._get_config_from_settings(key))
+                else:
+                    value.append(setting_dict[key])
+            return value
         else:
-            setting = Setting.objects.filter(key=item).first()
-            return setting and setting.value
+            setting = Setting.objects.filter(key=item.lower()).first()
+            if setting:
+                return setting.value
+            return self._get_config_from_settings(item)
 
     def __setitem__(self, key, value):
         setting = Setting.objects.filter(key=key).first()
@@ -96,5 +125,17 @@ class SiteSetting:
         else:
             Setting.objects.create(key=key, value=value)
 
+    def get_values(self,item):
+        values_dict = {}
+        keys = tuple(item) if isinstance(item, list) else tuple([item])
+        
+        values = self.__getitem__(keys)
+        print(keys,values)
+        for index,key in enumerate(keys):
+            print(key,index,values[index])
+            values_dict[key] = values[index]
+        print(values_dict)
+        return values_dict
+    
 
 site_setting = SiteSetting()

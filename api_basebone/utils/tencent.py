@@ -5,13 +5,13 @@ import hmac
 import json
 import datetime
 from sts.sts import Sts
-from bsm_config.settings import settings
+from bsm_config.settings import site_setting
 from api_basebone.utils.timezone import local_timestamp
 
 """
 腾讯参考文档 https://github.com/tencentyun/qcloud-cos-sts-sdk/tree/master/python
 
-在 settings.py 中进行配置
+在 site_settings.py 中 进行配置
 env = environ.Env(
     ...
     QCLOUD_APPID=(int, 1255222202),
@@ -23,28 +23,35 @@ env = environ.Env(
     ...
 )
 
-# 腾讯云 COS 配置
-QCLOUD_APPID = env.int('QCLOUD_APPID')
-QCLOUD_SECRET_ID = env('QCLOUD_SECRET_ID')
-QCLOUD_SECRET_KEY = env('QCLOUD_SECRET_KEY')
-QCLOUD_COS_BUCKET = env('QCLOUD_COS_BUCKET')
-QCLOUD_COS_DURATION_SECONDS = env('QCLOUD_COS_DURATION_SECONDS')
-QCLOUD_COS_REGION = env('QCLOUD_COS_REGION')
+setting = {
+    ...
+    # 腾讯 COS 配置
+    'QCLOUD_APPID',
+    'QCLOUD_SECRET_ID',
+    'QCLOUD_SECRET_KEY',
+    'QCLOUD_COS_BUCKET',
+    'QCLOUD_COS_DURATION_SECONDS',
+    'QCLOUD_COS_REGION',
+    # 上传供应商
+    'UPLOAD_PROVIDER',
+    ...
+}
+SITE_SETTING = {e:env(e) for e in setting}
 """
 
 
 def get_credential():
     config = {
         # 临时密钥有效时长，单位是秒
-        'duration_seconds': settings.QCLOUD_COS_DURATION_SECONDS,
+        'duration_seconds': site_setting['QCLOUD_COS_DURATION_SECONDS'],
         # 固定密钥 id
-        'secret_id': settings.QCLOUD_SECRET_ID,
+        'secret_id': site_setting['QCLOUD_SECRET_ID'],
         # 固定密钥 key
-        'secret_key': settings.QCLOUD_SECRET_KEY,
+        'secret_key': site_setting['QCLOUD_SECRET_KEY'],
         # 换成你的 bucket
-        'bucket': settings.QCLOUD_COS_BUCKET,
+        'bucket': site_setting['QCLOUD_COS_BUCKET'],
         # 换成 bucket 所在地区
-        'region': settings.QCLOUD_COS_REGION,
+        'region': site_setting['QCLOUD_COS_REGION'],
         # 这里改成允许的路径前缀，可以根据自己网站的用户登录态判断允许上传的目录，例子：* 或者 a/* 或者 a.jpg
         'allow_prefix': '*',
         # 密钥的权限列表。简单上传和分片需要以下的权限，其他权限列表请看 https://cloud.tencent.com/document/product/436/31923
@@ -82,16 +89,16 @@ def post_object_token():
     policy = {
         "expiration": expiration,
         "conditions": [
-            {"bucket": settings.QCLOUD_COS_BUCKET},
+            {"bucket": site_setting['QCLOUD_COS_BUCKET']},
             {"q-sign-algorithm": "sha1"},
-            {"q-ak": settings.QCLOUD_SECRET_ID},
+            {"q-ak": site_setting['QCLOUD_SECRET_ID']},
             {"q-sign-time": key_time},
         ],
     }
 
     # 使用 HMAC-SHA1 以 SecretKey 为密钥，以 KeyTime 为消息，计算消息摘要（哈希值），即为 SignKey。
     sign_key = hmac.new(
-        settings.QCLOUD_SECRET_KEY.encode('utf-8'),
+        site_setting['QCLOUD_SECRET_KEY'].encode('utf-8'),
         msg=key_time.encode('utf-8'),
         digestmod='sha1',
     ).hexdigest()
@@ -102,12 +109,12 @@ def post_object_token():
         sign_key.encode('utf-8'), msg=string_to_sign.encode('utf-8'), digestmod='sha1'
     ).hexdigest()
 
-    bucket = settings.QCLOUD_COS_BUCKET
-    region = settings.QCLOUD_COS_REGION
+    bucket = site_setting['QCLOUD_COS_BUCKET']
+    region = site_setting['QCLOUD_COS_REGION']
 
     return {
         'policy': base64.b64encode(json.dumps(policy).encode('utf-8')).decode(),
-        'q_ak': settings.QCLOUD_SECRET_ID,
+        'q_ak': site_setting['QCLOUD_SECRET_ID'],
         'key_time': key_time,
         'signature': signature,
         'host': f'https://{bucket}.cos.{region}.myqcloud.com',
