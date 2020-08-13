@@ -130,11 +130,8 @@ class SiteSetting:
         keys = tuple(item) if isinstance(item, list) else tuple([item])
         
         values = self.__getitem__(keys)
-        print(keys,values)
         for index,key in enumerate(keys):
-            print(key,index,values[index])
             values_dict[key] = values[index]
-        print(values_dict)
         return values_dict
     
 
