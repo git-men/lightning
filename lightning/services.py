@@ -7,6 +7,7 @@ from django.db.models import F, Q, Value, TextField, URLField, AutoField, BigAut
 from django.contrib.auth.models import Permission
 from django.db import transaction
 from django.apps import apps
+from django.conf import settings
 
 from bsm_config.models import Menu, Admin, Setting
 from bsm_config.utils import create_menus_permission
@@ -18,7 +19,8 @@ User = get_user_model()
 def create_default_menu():
     menus_data = []
     menus_mapping = {}
-    for menu_data in DEFAULT_MENU:
+    cust_menus = getattr(settings, 'LIGHTNING_MENUS', DEFAULT_MENU)
+    for menu_data in cust_menus:
         default = dict(menu_data)
         children = menu_data.get('children', None)
         if children:
@@ -115,6 +117,7 @@ def generate_configs(app_labels=[]):
         create_menus_permission(Menu.objects.all())
     
     admins = Admin.objects.all()
+    old_models = []
     for app in app_labels:
         old_models = [admin.model for admin in admins if admin.model.startswith(f'{app}__')]
     new_permission, new_meus = create_admin_config(app_labels, old_models)
@@ -122,4 +125,3 @@ def generate_configs(app_labels=[]):
         # 创建新增菜单的资源
         create_menus_permission(new_meus)
     return new_permission, new_meus
-    
