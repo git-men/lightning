@@ -46,7 +46,8 @@ def get_user_group_map():
     if record:
         return record
     result = defaultdict(set)
-    for user, group_name in get_user_model().groups.through.objects.values_list('user', 'group__name'):
+    groups = get_user_model().groups
+    for user, group_name in groups.through.objects.values_list(groups.field.m2m_field_name(), 'group__name'):
         result[user].add(group_name)
     cache.set(cache_key, result, 600)
     return result

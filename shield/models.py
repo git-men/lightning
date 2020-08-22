@@ -3,7 +3,6 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 
 from api_basebone.utils.operators import OPERATOR_MAP
-from meta.models import Model
 
 
 class Rule(models.Model):

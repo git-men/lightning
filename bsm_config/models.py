@@ -177,7 +177,7 @@ setattr(Group, 'GMeta', GroupGMeta)
 
 
 class Admin(models.Model):
-    model = models.CharField('模型名称', max_length=100)
+    model = models.CharField('模型名称', max_length=100, unique=True)
     config = JSONField(default={})
 
     class Meta:
