@@ -60,7 +60,7 @@ def update_setting_config_permission(sender, **kwargs):
     permissions = [*Permission.objects.filter(content_type=content_type).values_list('codename', flat=True)]
     permission_assign_content_type = ContentType.objects.get_for_model(Permission)
     Permission.objects.get_or_create(content_type=permission_assign_content_type, codename='permission_assign', name='权限分配')
-    for setting in settings.WEBSITE_CONFIG:
+    for setting in getattr(settings, 'WEBSITE_CONFIG', []):
         codename = setting.get('permission_code',None)
         if codename and (codename not in permissions):
             name = setting.get('title',None) or setting.get('key',None)
