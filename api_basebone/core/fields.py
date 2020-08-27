@@ -109,7 +109,7 @@ class ArrayField(JSONField):
         self, item_model: ObjectModel = None, item_type: str = 'string', **kwargs
     ):
         self.item_model = item_model or ObjectModel()
-        self.item_type = item_type
+        self.item_type = 'object' if item_model else item_type
         super(ArrayField, self).__init__(**kwargs)
 
     def get_bsm_internal_type(self):

@@ -2,7 +2,7 @@ from django.conf import settings
 from django.apps import apps
 from bsm_config.models import Setting
 
-WEBSITE_CONFIG = settings.WEBSITE_CONFIG
+WEBSITE_CONFIG = getattr(settings, 'WEBSITE_CONFIG', [])
 
 def get_settins():
     data = Setting.objects.values('key','value')
