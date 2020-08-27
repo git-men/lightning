@@ -233,7 +233,7 @@ class FieldConfig:
         return base
 
     def object_params(self, field, data_type):
-        """小数类型的配置获取
+        """对象类型的配置获取
         """
         base = self._get_common_field_params(field, data_type)
         base['ref'] = f'object_model__{field.name}'
@@ -241,10 +241,10 @@ class FieldConfig:
         return base
 
     def array_params(self, field, data_type):
-        """小数类型的配置获取
+        """数组类型的配置获取
         """
         base = self._get_common_field_params(field, data_type)
-        base['ref'] = f'array_item_model__{field.name}'
+        base['ref'] = f'array_item_model__{field.item_model.__name__}'.lower()
         base['item_type'] = field.item_type
         base.update(self.reset_field_config(field, data_type))
         return base
@@ -261,6 +261,8 @@ def get_model_field_config(model):
     """
     fields = get_concrete_fields(model)
     key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
+    if (not model._meta.app_label):
+        key = model._meta.model_name
 
     title_field = get_attr_in_gmeta_class(model, gmeta.GMETA_TITLE_FIELD, None)
     if title_field is None:
@@ -269,7 +271,6 @@ def get_model_field_config(model):
     config = []
     for item in fields:
         field_type = None
-
         # 抓取 internal_type
         field_type_func = getattr(item, 'get_bsm_internal_type', None)
         if field_type_func:
@@ -400,7 +401,6 @@ def get_app_json_field_schema():
             ]
             for field in array_fields:
                 if field.item_model:
-                    log.debug(f'Array Field item model:{field}, {field.item_model}')
                     config.update(get_model_field_config(field.item_model))
         return config
 
@@ -417,6 +417,6 @@ def get_app_json_field_schema():
 
     return (
         {f'object_model{key}': value for key, value in object_field_config.items()},
-        {f'array_item_model{key}': value for key, value in array_field_config.items()},
+        {f'array_item_model__{key}': value for key, value in array_field_config.items()},
     )
 

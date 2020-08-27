@@ -9,7 +9,7 @@ def update_value_jsonfield(apps, schema_editor):
     print('更新update_value_jsonfield')
     Setting = apps.get_app_config('bsm_config').get_model('Setting')
     all_fields = {}
-    if SETTINGS.WEBSITE_CONFIG:
+    if getattr(SETTINGS, 'WEBSITE_CONFIG', None):
         for section in SETTINGS.WEBSITE_CONFIG:
             for field in section['fields']:
                 all_fields[field['name']] = field

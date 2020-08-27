@@ -6,15 +6,15 @@ class Options:
     为了满足api_basebone.export.fields.get_model_field_config
     可能需要添加其他方法
     """
-    def __init__(self, fields):
+    def __init__(self, fields, model):
         self.fields = fields
+        self.model = model
         self.attach_field_attr()
 
     def attach_field_attr(self):
         for field in self.fields:
             field.concrete = True
-            field.model = None
-
+            field.model = self.model
 
     def get_fields(self):
         return self.fields
@@ -29,8 +29,9 @@ class ModelBase(type):
         meta = attrs.pop('Meta')
         for key, value in attrs.items():
             if isinstance(value, Field):
+                value.name = key
                 fields.append(value)
-        _meta = Options(fields)
+        _meta = Options(fields, cls)
         _meta.model_name = name.lower()
         _meta.verbose_name = getattr(meta, 'verbose_name', _meta.model_name)
         _meta.app_label = ''

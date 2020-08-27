@@ -52,6 +52,22 @@ def menu_changed(sender, instance, model, pk_set, action, **kwargs):
         if action == 'post_remove':
             permission.group_set.remove(*groups)
 
+@receiver(post_migrate)
+def update_setting_config_permission(sender, **kwargs):
+    content_type = ContentType.objects.get_for_model(Setting)
+    permissions = [*Permission.objects.filter(content_type=content_type).values_list('codename', flat=True)]
+    permission_assign_content_type = ContentType.objects.get_for_model(Permission)
+    Permission.objects.get_or_create(content_type=permission_assign_content_type, codename='permission_assign', name='权限分配')
+    for setting in getattr(settings, 'WEBSITE_CONFIG', []):
+        codename = setting.get('permission_code',None)
+        if codename and (codename not in permissions):
+            name = setting.get('title',None) or setting.get('key',None)
+            per = Permission.objects.create(content_type=content_type, codename=codename, name=name)
+            system_group =  Group.objects.filter(name='系统管理员').first()
+            if system_group:
+                per.group_set.add(system_group)
+                from guardian.shortcuts import assign_perm
+                assign_perm('auth.permission_assign', system_group,  obj=per)
 
 def create_inline_action_permission(app, model, config):
     """找到inlineAction中，有groups的配置。生成Permission，并与Groups产生并联。
