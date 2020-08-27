@@ -43,6 +43,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'TextField': 'Text',
     'TimeField': 'Time',
     'URLField': 'String',
+    'UUIDField': 'String',
     'ForeignKey': 'Ref',
     'OneToOneField': 'Ref',
     'ManyToManyField': 'RefMult',
@@ -295,6 +296,9 @@ def get_model_field_config(model):
 
             if item.many_to_many:
                 reverse_config['type'] = 'mref'
+
+            elif item.one_to_one:
+                reverse_config['type'] = 'ref'
 
             meta = item.related_model._meta
             reverse_config['displayName'] = meta.verbose_name
