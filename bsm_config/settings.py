@@ -96,12 +96,9 @@ class SiteSetting:
         return None
         log.warning(f'配置中找不到 {key} 对应的配置')
 
-
-
-    
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            setting_list = Setting.objects.filter(key__in=[i.lower()for i in item]).values_list('key', 'value')
+            setting_list = Setting.objects.using('default').filter(key__in=[i.lower()for i in item]).values_list('key', 'value')
             setting_dict = dict(setting_list)
 
             value = []
@@ -112,18 +109,18 @@ class SiteSetting:
                     value.append(setting_dict[key])
             return value
         else:
-            setting = Setting.objects.filter(key=item.lower()).first()
+            setting = Setting.objects.using('default').filter(key=item.lower()).first()
             if setting:
                 return setting.value
             return self._get_config_from_settings(item)
 
     def __setitem__(self, key, value):
-        setting = Setting.objects.filter(key=key).first()
+        setting = Setting.objects.using('default').filter(key=key).first()
         if setting:
             setting.value = value
             setting.save(update_fields=['value'])
         else:
-            Setting.objects.create(key=key, value=value)
+            Setting.objects.using('default').create(key=key, value=value)
 
     def get_values(self,item):
         values_dict = {}
