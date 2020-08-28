@@ -98,7 +98,7 @@ class SiteSetting:
 
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            setting_list = Setting.objects.using('default').filter(key__in=[i.lower()for i in item]).values_list('key', 'value')
+            setting_list = Setting.objects.using('default').filter(key__in=item).values_list('key', 'value')
             setting_dict = dict(setting_list)
 
             value = []
@@ -130,6 +130,6 @@ class SiteSetting:
         for index,key in enumerate(keys):
             values_dict[key] = values[index]
         return values_dict
-    
+
 
 site_setting = SiteSetting()
