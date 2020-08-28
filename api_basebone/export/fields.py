@@ -236,7 +236,7 @@ class FieldConfig:
         """对象类型的配置获取
         """
         base = self._get_common_field_params(field, data_type)
-        base['ref'] = f'object_model__{field.name}'
+        base['ref'] = f'object_model__{field.item_model.__name__}'.lower()
         base.update(self.reset_field_config(field, data_type))
         return base
 
