@@ -109,7 +109,7 @@ class SiteSetting:
                     value.append(setting_dict[key])
             return value
         else:
-            setting = Setting.objects.using('default').filter(key=item.lower()).first()
+            setting = Setting.objects.using('default').filter(key=item).first()
             if setting:
                 return setting.value
             return self._get_config_from_settings(item)
