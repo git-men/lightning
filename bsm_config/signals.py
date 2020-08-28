@@ -1,10 +1,11 @@
 import logging
-from django.db.models.signals import post_save, pre_delete, pre_save
+from django.db.models.signals import post_save, pre_delete, pre_save, post_migrate
 from django.dispatch import receiver
 from django.contrib.auth.models import Permission, Group
 from django.contrib.contenttypes.models import ContentType
+from django.conf import settings
 
-from bsm_config.models import Menu, Admin
+from bsm_config.models import Menu, Admin, Setting
 from .utils import remove_permission, check_page, get_permission
 from api_basebone.signals import post_bsm_create, post_bsm_delete
 log = logging.getLogger(__name__)
