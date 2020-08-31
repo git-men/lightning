@@ -237,7 +237,7 @@ class FieldConfig:
         """对象类型的配置获取
         """
         base = self._get_common_field_params(field, data_type)
-        base['ref'] = f'object_model__{field.name}'
+        base['ref'] = f'object_model__{field.object_model.__name__}'.lower()
         base.update(self.reset_field_config(field, data_type))
         return base
 
@@ -420,7 +420,7 @@ def get_app_json_field_schema():
         array_field_config.update(generate_array_field_schema(models))
 
     return (
-        {f'object_model{key}': value for key, value in object_field_config.items()},
+        {f'object_model__{key}': value for key, value in object_field_config.items()},
         {f'array_item_model__{key}': value for key, value in array_field_config.items()},
     )
 
