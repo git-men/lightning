@@ -13,16 +13,39 @@ from api_basebone.utils import module
 from api_basebone.restful.const import MANAGE_END_SLUG
 
 
-def delete(request, queryset):
+def delete(request, queryset, *args):
     """默认的删除处理器"""
     queryset.delete()
 
 
+def patch(request, queryset, payload):
+    """批量修改数据。
+    """
+    fields = {field['name']: field['value'] for field in payload.get('fields', [])}
+    print('update these fields: ', fields)
+    queryset.update(**fields)
+
+# def create_relate(request, queryset, payload):
+#     """使用选中的数据创建关联数据。
+#     """
+#     model = payload.get('model', '')  # 要创建的模型
+#     field = payload.get('field', '')  # 所选数据关联至模型的哪个字段
+#     data = payload.get('data', {})  # 用于创建数据的字段值
+
+#     # 逻辑：通用Model和data创建！！咦，等等，好像不需要这样噢。。直接调用创建的接口就OK了啊。
+
+# def connect_relate(request, queryset, payload):
+#     """使用选中的数据关联至已有数据。
+#     """
+#     pass
+
 delete.short_description = '删除'
+patch.short_description = '更新'
 
 
 default_action_map = {
-    # 'delete': delete
+    'delete': delete,
+    'nowEdit': patch
 }
 
 
@@ -51,6 +74,7 @@ class BatchActionForm(serializers.Serializer):
 
     action = serializers.CharField(max_length=50)
     data = serializers.ListField(min_length=1)
+    payload = serializers.JSONField()
 
     def validate_action(self, value):
         """
@@ -84,11 +108,16 @@ class BatchActionForm(serializers.Serializer):
             )
         self.bsm_batch_queryset = queryset
         return value
+    
+    def validate_payload(self, value):
+        """校验Payload参数。
+        """
+        return value
 
     def handle(self):
         request = self.context['request']
         try:
-            return self.bsm_batch_action(request, self.bsm_batch_queryset)
+            return self.bsm_batch_action(request, self.bsm_batch_queryset, self.data['payload'])
         except Exception as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.BATCH_ACTION_HAND_ERROR,
