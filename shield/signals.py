@@ -24,7 +24,7 @@ def clean_rule_cache_by_save(sender, instance: Rule, create, request, old_instan
             model_name = old_instance.model.name.lower()
             app_name = old_instance.model.app.name
         else:
-            model_name, app_name = old_instance.model.split('__', 1)
+            app_name, model_name = old_instance.model.split('__', 1)
         cache_key = SHIELD_RULES_DICT_CACHE_KEY.format(app_label=app_name, model_slug=model_name)
         cache.delete(cache_key)
 
@@ -32,7 +32,7 @@ def clean_rule_cache_by_save(sender, instance: Rule, create, request, old_instan
         model_name = instance.model.name.lower()
         app_name = instance.model.app.name
     else:
-        model_name, app_name = instance.model.split('__', 1)
+        app_name, model_name = instance.model.split('__', 1)
     cache_key = SHIELD_RULES_DICT_CACHE_KEY.format(app_label=app_name, model_slug=model_name)
     cache.delete(cache_key)
 
@@ -44,7 +44,7 @@ def clean_rule_cache_by_delete(sender, instance: Rule, **kwargs):
         model_name = instance.model.name.lower()
         app_name = instance.model.app.name
     else:
-        model_name, app_name = instance.model.split('__', 1)
+        app_name, model_name = instance.model.split('__', 1)
     cache_key = SHIELD_RULES_DICT_CACHE_KEY.format(app_label=app_name, model_slug=model_name)
     cache.delete(cache_key)
 

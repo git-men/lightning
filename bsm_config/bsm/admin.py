@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
 from api_basebone.core.admin import BSMAdmin, register
@@ -60,3 +61,32 @@ class ContentType(BSMAdmin):
     
     class Meta:
         model = ContentType
+
+
+@register
+class GroupAdmin(BSMAdmin):
+    display = ['id', 'name']
+    modal_form = False
+    form_fields = [
+        'name',
+        {
+            'name': 'permissions',
+            'widget': 'PermissionSelect',
+            'params': {'titlefield': 'name', 'listStyle': {'width': 300, 'height': 400}},
+        },
+    ]
+
+    inline_actions = ['edit', 'delete']
+
+    class Meta:
+        model = Group
+
+
+@register
+class PermissionAdmin(BSMAdmin):
+    filter = ['name', 'content_type', 'codename']
+    display = ['id', 'name', 'display_name', 'content_type', 'content_type.app_label', 'codename']
+    form_fields = ['id', 'name', 'codename']
+
+    class Meta:
+        model = Permission

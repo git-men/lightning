@@ -10,7 +10,8 @@ class RuleAdmin(BSMAdmin):
     form_fields = [
         'model' if hasattr(settings, 'SHIELD_MODEL') else {'name': 'model', 'widget': 'ModelSelect'},
         'groups',
-        {'name': 'condition', 'params': {'canAdd': True, 'fields': ['field', 'operator', 'variable']}}
+        {'name': 'condition', 'params': {'canAdd': True, 'fields': ['field', 'operator', 'variable']}},
+        {'name': 'combinator', 'widget': 'Radio'},
     ]
     inline_actions = ['edit', 'delete']
 

@@ -29,13 +29,7 @@ def get_role_config_with_group(app_label, model_slug):
         return record
     model_q = Q(model__app__name=app_label, model__name__iexact=model_slug) if hasattr(settings, 'SHIELD_MODEL') else Q(model=f'{app_label}__{model_slug}')
     rules = Rule.objects.filter(model_q).prefetch_related('condition_set', 'groups').all()
-    result = []
-    for r in rules:
-        rule = {
-            'conditions': [c.to_dict() for c in r.condition_set.all()],
-            'groups': {r.name for r in r.groups.all()},
-        }
-        result.append(rule)
+    result = [r.get_rule() for r in rules]
     cache.set(cache_key, result, 600)
     return result
 
