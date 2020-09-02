@@ -349,17 +349,17 @@ class FormMixin(object):
 
     def get_create_form(self):
         """获取创建数据的验证表单"""
-        return get_form_class(self.model, 'create', end=self.end_slug)
+        return get_form_class(self.model, 'create', end=self.end_slug, request=self.request)
 
     def get_update_form(self):
         """获取更新数据的验证表单"""
-        return get_form_class(self.model, 'update', end=self.end_slug)
+        return get_form_class(self.model, 'update', end=self.end_slug, request=self.request)
 
     def get_partial_update_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
+        return get_form_class(self.model, 'update', end=self.end_slug, request=self.request)
 
     def get_custom_patch_form(self):
-        return get_form_class(self.model, 'update', end=self.end_slug)
+        return get_form_class(self.model, 'update', end=self.end_slug, request=self.request)
 
     def get_validate_form(self, action):
         """获取验证表单"""

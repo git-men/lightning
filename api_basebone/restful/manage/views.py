@@ -665,7 +665,8 @@ class CommonManageViewSet(
         ```python
         {
             action: 动作,
-            data: 主键的列表
+            data: 主键的列表,
+            payload: 其他参数。
         }
         ```
         """

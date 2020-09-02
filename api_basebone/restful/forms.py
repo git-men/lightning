@@ -2,12 +2,17 @@ import functools
 
 from rest_framework import serializers
 from rest_framework.utils.model_meta import get_field_info
+from rest_framework.serializers import raise_errors_on_nested_writes
+from rest_framework.utils import model_meta
 
 from api_basebone.core import drf_field, gmeta
 from api_basebone.core.fields import JSONField
 from api_basebone.restful.const import CLIENT_END_SLUG, MANAGE_END_SLUG
 from api_basebone.utils import module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
+from werkzeug import Local
+
+rfu_modes = Local()
 
 compare_funcs = {
     '=': lambda a, b: a == b,
@@ -141,7 +146,28 @@ def create_form_class(model, exclude_fields=None, **kwargs):
         self.serializer_field_mapping[JSONField] = drf_field.JSONField
         super(serializers.ModelSerializer, self).__init__(*args, **kwargs)
 
-    attrs = {'Meta': create_meta_class(model, exclude_fields=None), '__init__': __init__}
+    def update(self, instance, validated_data):
+        raise_errors_on_nested_writes('update', self, validated_data)
+        info = model_meta.get_field_info(instance)
+
+        for attr, value in validated_data.items():
+            if attr in info.relations and info.relations[attr].to_many:
+                field = getattr(instance, attr)
+                if rfu_modes.append and attr in rfu_modes.append:
+                    field.add(value)
+                else:
+                    field.add(value)
+            else:
+                setattr(instance, attr, value)
+        instance.save()
+
+        return instance
+
+    attrs = {
+        'Meta': create_meta_class(model, exclude_fields=None), 
+        '__init__': __init__,
+        'update': update
+    }
     attrs.update(kwargs)
 
     class_name = f'{model}ModelSerializer'
@@ -154,7 +180,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
     return type(class_name, (serializers.ModelSerializer,), attrs)
 
 
-def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kwargs):
+def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, request=None, **kwargs):
     """获取表单类
 
     如果用户有自定义的表单类，则优先返回用户自定义的表单，如果没有，则使用默认创建的表单
@@ -168,6 +194,13 @@ def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, **kw
     Returns:
         class 表单类
     """
+
+    # rfum_append=a,b
+    rfum_append = request.query_params.get('rfum_append', None)
+    if rfum_append:
+        rfu_modes.append = rfum_append.split(',')
+    else:
+        rfu_modes.append = []
 
     name_suffix_map = {MANAGE_END_SLUG: 'ManageForm', CLIENT_END_SLUG: 'ClientForm'}
 
