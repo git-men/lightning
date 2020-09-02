@@ -37,12 +37,13 @@ class BSMAdminConfig:
             if item in VALID_MANAGE_ATTRS:
                 config[underline_to_camel(item)] = getattr(cls, item, None)
 
-        model_actions = get_model_batch_actions(model)
-        if model_actions:
-            config[BSM_BATCH_ACTION] = [
-                [key, getattr(value, 'short_description', key)]
-                for key, value in model_actions.items()
-            ]
+        if BSM_BATCH_ACTION not in config:
+            model_actions = get_model_batch_actions(model)
+            if model_actions:
+                config[BSM_BATCH_ACTION] = [
+                    [key, getattr(value, 'short_description', key)]
+                    for key, value in model_actions.items()
+                ]
 
         return config
 

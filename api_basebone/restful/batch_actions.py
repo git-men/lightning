@@ -43,7 +43,7 @@ delete.short_description = '删除'
 patch.short_description = '更新'
 
 
-default_action_map = {
+common_action_map = {
     'delete': delete,
     'nowEdit': patch
 }
@@ -55,7 +55,6 @@ def get_model_batch_actions(model, end=MANAGE_END_SLUG):
     默认的动作和用户自定义的动作的结合，用户自定义的动作可以覆盖默认的动作
     """
     batch_actions = {}
-    batch_actions.update(default_action_map)
 
     action_module = module.get_admin_module(
         model._meta.app_config.name, module.BSM_BATCH_ACTION
@@ -83,6 +82,7 @@ class BatchActionForm(serializers.Serializer):
         """
         view = self.context['view']
         actions = get_model_batch_actions(view.model, end=view.end_slug)
+        actions.setdefault(common_action_map)
 
         if value not in actions:
             raise exceptions.BusinessException(
