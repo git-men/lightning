@@ -156,7 +156,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
                 if rfu_modes.append and attr in rfu_modes.append:
                     field.add(value)
                 else:
-                    field.add(value)
+                    field.set(value)
             else:
                 setattr(instance, attr, value)
         instance.save()
