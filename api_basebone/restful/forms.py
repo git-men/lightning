@@ -1,4 +1,6 @@
 import functools
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 
 from rest_framework import serializers
 from rest_framework.utils.model_meta import get_field_info
@@ -24,6 +26,12 @@ compare_funcs = {
     'include': lambda a, b: b in a,
 }
 
+class BulkCreateListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        result = [self.child.create(attrs) for attrs in validated_data]        
+        # self.child.Meta.model.objects.bulk_create(result, ignore_conflicts=False)
+        
+        return result
 
 def validate_condition_required(
     data, field=[], condition_field=None, operator=None, value=None
@@ -104,7 +112,7 @@ def get_validate(validators):
 
 def create_meta_class(model, exclude_fields=None):
     """构建序列化类的 Meta 类"""
-    attrs = {'model': model}
+    attrs = {'model': model, 'list_serializer_class': BulkCreateListSerializer}
 
     if exclude_fields is not None and isinstance(exclude_fields, (list, tuple)):
         attrs['exclude'] = exclude_fields

@@ -234,13 +234,20 @@ def manage_create(genericAPIView, request, set_data):
 
         原因：序列化类有可能嵌套
         """
+    many = isinstance(set_data, list)
     with transaction.atomic():
         forward_relation_hand(genericAPIView.model, set_data)
         serializer = genericAPIView.get_validate_form(genericAPIView.action)(
-            data=set_data, context=genericAPIView.get_serializer_context()
+            data=set_data, context=genericAPIView.get_serializer_context(),
+            many=many
         )
         serializer.is_valid(raise_exception=True)
         instance = genericAPIView.perform_create(serializer)
+
+        if many:
+            # 如果是批量插入，则直接返回
+            return success_response()
+
         # 如果有联合查询，单个对象创建后并没有联合查询
         instance = genericAPIView.get_queryset().filter(pk=instance.pk).first()
         serializer = genericAPIView.get_serializer(instance)

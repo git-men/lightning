@@ -463,6 +463,8 @@ class GenericViewMixin:
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
+        if isinstance(request.data, list):
+            return
         self.tree_data = None
 
         data_with_tree = False
