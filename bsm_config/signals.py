@@ -70,13 +70,19 @@ def update_setting_config_permission(sender, **kwargs):
                 from guardian.shortcuts import assign_perm
                 assign_perm('auth.permission_assign', system_group,  obj=per)
 
-def create_inline_action_permission(app, model, config):
+
+def get_actions(config):
+    return config.get('inlineActions', []) + config.get('actions', []) + config.get('tableActions', [])
+
+
+def create_action_permission(app, model, config):
     """找到inlineAction中，有groups的配置。生成Permission，并与Groups产生并联。
     """
-    if config.get('inlineActions', None) is None:
+    actions = get_actions(config)
+    if not actions:
         return
     content_type = ContentType.objects.get(app_label=app, model=model)
-    actions = [c for c in config['inlineActions'] if isinstance(c, dict) and 'groups' in c]
+    actions = [c for c in actions if isinstance(c, dict) and 'groups' in c]
     for action in actions:
         permission = Permission(
             name=action['title'],
@@ -88,30 +94,32 @@ def create_inline_action_permission(app, model, config):
             permission.group_set.set(action['groups'])
 
 
-def update_inline_action_permission(app, model, new_config, old_config):
+def update_action_permission(app, model, new_config, old_config):
     """更新inlineAction,对比新旧内容。新的、相同的使用新配置，旧的删除掉。
     """
-    new_actions, old_actions = set([]), set([])
-    if new_config.get('inlineActions', None):
-        actions = [c for c in new_config['inlineActions'] if isinstance(c, dict) and 'groups' in c]
-        new_actions = set([action['id'] for action in actions])
-    if old_config.get('inlineActions', None):
-        actions = [c for c in old_config['inlineActions'] if isinstance(c, dict) and 'groups' in c]
-        old_actions = set([action['id'] for action in actions])
-    create = [action for action in new_config.get('inlineActions', []) if action['id'] in list(new_actions - old_actions)]
-    update = [action for action in new_config.get('inlineActions', []) if action['id'] in list(new_actions & old_actions)]
-    delete = [action for action in old_config.get('inlineActions', []) if isinstance(action, dict) and action['id'] in list(old_actions - new_actions)]
+    new_action_ids, old_action_ids = set([]), set([])
+    new_actions = get_actions(new_config)
+    old_actions = get_actions(old_config)
+    if new_actions:
+        actions = [c for c in new_actions if isinstance(c, dict) and 'groups' in c]
+        new_action_ids = set([action['id'] for action in actions])
+    if old_actions:
+        actions = [c for c in old_actions if isinstance(c, dict) and 'groups' in c]
+        old_action_ids = set([action['id'] for action in actions])
+    create = [action for action in new_actions if action['id'] in list(new_action_ids - old_action_ids)]
+    update = [action for action in new_actions if action['id'] in list(new_action_ids & old_action_ids)]
+    delete = [action for action in old_actions if isinstance(action, dict) and action['id'] in list(old_action_ids - new_action_ids)]
     log.debug(f'ations of create: {create}, update: {update}, delete: {delete}')
     content_type = ContentType.objects.get(app_label=app, model=model)
 
     if create:
         ids = [action['id'] for action in create]
-        actions = [action for action in new_config.get('inlineActions', []) if action['id'] in ids]
+        actions = [action for action in new_actions if action['id'] in ids]
         for action in actions:
             log.debug(f'create permission for action: {action}')
             permission = Permission(
                 name=action['title'],
-                codename=f'{action["type"]}_{model}_{action["id"]}',
+                codename=f'{action["action"]}_{model}_{action["id"]}',
                 content_type=content_type
             )
             permission.save()
@@ -120,12 +128,12 @@ def update_inline_action_permission(app, model, new_config, old_config):
     
     if update:
         ids = [action['id'] for action in update]
-        actions = [action for action in new_config.get('inlineActions', []) if action['id'] in ids]
+        actions = [action for action in new_actions if action['id'] in ids]
         for action in actions:
             log.debug(f'update permission for action: {action}')
             try:
                 permission = Permission.objects.get(
-                    codename=f'{action["type"]}_{model}_{action["id"]}',
+                    codename=f'{action["action"]}_{model}_{action["id"]}',
                     content_type=content_type
                 )
                 if permission.name != action['title']:
@@ -136,7 +144,7 @@ def update_inline_action_permission(app, model, new_config, old_config):
                 log.error('update and set permission error', exc_info=True)
                 permission = Permission(
                     name=action['title'],
-                    codename=f'{action["type"]}_{model}_{action["id"]}',
+                    codename=f'{action["action"]}_{model}_{action["id"]}',
                     content_type=content_type
                 )
                 permission.save()
@@ -146,23 +154,23 @@ def update_inline_action_permission(app, model, new_config, old_config):
 
     if delete:
         ids = [action['id'] for action in delete]
-        actions = [action for action in old_config.get('inlineActions', []) if action['id'] in ids]
+        actions = [action for action in old_actions if action['id'] in ids]
         for action in actions:
             log.debug(f'delete permission for action: {action}')
             try:
                 permission = Permission.objects.get(
-                    codename=f'{action["type"]}_{model}_{action["id"]}',
+                    codename=f'{action["action"]}_{model}_{action["id"]}',
                     content_type=content_type
                 ).delete()
             except:
                 log.warn('delete permission error, may be does not exist')
 
 
-def delete_inline_action_permission(app, model, config):
-    if config.get('inlineActions', None):
+def delete_action_permission(app, model, config):
+    if get_actions(config):
         content_type = ContentType.objects.get(app_label=app, model=model)
-        actions = [c for c in config['inlineActions'] if isinstance(c, dict) and 'groups' in c]
-        filtered_actions = [f'{action["title"]}_{model}_{action["id"]}' for action in actions]
+        actions = [c for c in get_actions(config) if isinstance(c, dict) and 'groups' in c]
+        filtered_actions = [f'{action["action"]}_{model}_{action["id"]}' for action in actions]
         Permission.objects.filter(code_name__in=filtered_actions, content_type=content_type).delete()
 
 
@@ -173,14 +181,14 @@ def admin_change(sender, instance, create, request, old_instance, **kwargs):
     # 1. InlineAction对应的权限生成与修改。
     if create:
         log.debug('Admin create')
-        create_inline_action_permission(*instance.model.split('__'), instance.config)
+        create_action_permission(*instance.model.split('__'), instance.config)
     else:
         log.debug('Admin update')
-        update_inline_action_permission(*instance.model.split('__'), instance.config, old_instance.config)
+        update_action_permission(*instance.model.split('__'), instance.config, old_instance.config)
 
 @receiver(post_bsm_delete, sender=Admin, dispatch_uid='bsm_admin_delete')
 def admin_deleted(sender, instance, **kwargs):
     """Admin配置删除了
     """
     # 1. InlineAction对应权限的删除
-    delete_inline_action_permission(*instance.model.split('__'), instance.config)
+    delete_action_permission(*instance.model.split('__'), instance.config)
