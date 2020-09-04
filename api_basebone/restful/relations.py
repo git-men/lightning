@@ -306,6 +306,13 @@ def forward_relation_hand(model, data):
         return data
 
 
+def reverse_one_to_one(model, value):
+    if isinstance(value, dict):
+        pass  # TODO
+    else:
+        pass  # do nothing
+
+
 def reverse_relation_hand(model, data, instance, detail=True):
     """反向关系字段的处理
 
@@ -326,10 +333,12 @@ def reverse_relation_hand(model, data, instance, detail=True):
 
         if meta.check_field_is_reverse(field):
             # 这里说明反向字段肯定传了进来，值的校验放在各个处理方法中
-            if not field.many_to_many:
-                reverse_one_to_many(field, value, instance, detail=detail)
-            else:
+            if field.many_to_many:
                 reverse_many_to_many(instance, field, value)
+            elif field.one_to_many:
+                reverse_one_to_many(field, value, instance, detail=detail)
+            elif field.one_to_one:
+                reverse_one_to_one(field, value)
 
 
 data = [

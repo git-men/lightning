@@ -137,3 +137,6 @@ GMETA_MANAGE_REVERSE_FIELD = 'manage_export_reverse_field'
 manage_export_reverse_fields_map = []
 """
 GMETA_MANAGE_REVERSE_FIELDS_MAP = 'manage_export_reverse_fields_map'
+
+GMETA_CREATOR_FIELD = 'creator_field'
+GMETA_UPDATER_FIELD = 'updater_field'
