@@ -76,7 +76,7 @@ def create_admin_config(app_labels, exist_model):
 
             if type(field) in(TextField,):
                 detailFields.append(field.name)
-            elif field.many_to_many:
+            elif not field.many_to_many:
                 detailTableFields.append(field.name)
 
         if detailTableFields: 
