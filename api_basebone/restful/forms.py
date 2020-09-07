@@ -9,6 +9,8 @@ from rest_framework.utils import model_meta
 
 from api_basebone.core import drf_field, gmeta
 from api_basebone.core.fields import JSONField
+from jsonfield import JSONField as OriginJSONField
+from rest_framework.fields import JSONField as DrfJSONField
 from api_basebone.restful.const import CLIENT_END_SLUG, MANAGE_END_SLUG
 from api_basebone.utils import module
 from api_basebone.utils.gmeta import get_gmeta_config_by_key
@@ -152,6 +154,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
         重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
         """
         self.serializer_field_mapping[JSONField] = drf_field.JSONField
+        self.serializer_field_mapping[OriginJSONField] = DrfJSONField
         super(serializers.ModelSerializer, self).__init__(*args, **kwargs)
 
     def update(self, instance, validated_data):

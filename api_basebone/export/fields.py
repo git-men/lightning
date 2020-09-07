@@ -393,6 +393,7 @@ def get_app_json_field_schema():
             for field in object_fields:
                 if field.object_model:
                     config.update(get_model_field_config(field.object_model))
+                    config.update(generate_object_field_schema([field.object_model]))
         return config
 
     def generate_array_field_schema(models):

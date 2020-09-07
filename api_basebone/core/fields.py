@@ -1,4 +1,5 @@
 import json
+import typing
 from django.db import models
 from jsonfield import JSONField as OriginJSONField
 from api_basebone.core.object_model import ObjectModel
@@ -88,7 +89,7 @@ class ObjectField(JSONField):
     """
     """
 
-    def __init__(self, object_model: ObjectModel = None, **kwargs):
+    def __init__(self, object_model: typing.Type[ObjectModel] = None, **kwargs):
         self.object_model = object_model or ObjectModel()
         super(ObjectField, self).__init__(**kwargs)
 
@@ -106,7 +107,7 @@ class ObjectField(JSONField):
 
 class ArrayField(JSONField):
     def __init__(
-        self, item_model: ObjectModel = None, item_type: str = 'string', **kwargs
+        self, item_model: typing.Type[ObjectModel] = None, item_type: str = 'string', **kwargs
     ):
         self.item_model = item_model or ObjectModel()
         self.item_type = 'object' if item_model else item_type

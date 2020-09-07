@@ -13,6 +13,8 @@ from api_basebone.const.field_map import (
 from api_basebone.core import drf_field, gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
 from api_basebone.core.fields import JSONField
+from jsonfield import JSONField as OriginJSONField
+from rest_framework.fields import JSONField as DrfJSONField
 from api_basebone.drf.fields import CharIntegerField
 from api_basebone.export.fields import get_attr_in_gmeta_class
 from api_basebone.utils import meta, module
@@ -205,6 +207,7 @@ def create_serializer_class(
         重置导出的字段映射，因为类似 BooleanField 字段，显示为中文会比较友好
         """
         self.serializer_field_mapping[JSONField] = drf_field.JSONField
+        self.serializer_field_mapping[OriginJSONField] = DrfJSONField
         if self.action == 'export_file':
             self.serializer_field_mapping[
                 models.BooleanField
