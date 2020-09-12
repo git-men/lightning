@@ -28,6 +28,56 @@ def get_serializer_class(field_class):
     return ModelSerializer.serializer_field_mapping[models.TextField]
 
 
+class BSMFieldMixin:
+    to_type = None
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+        for k, v in instance.to_type.deconstruct()[-1].items():
+            setattr(instance, k, v)
+
+        if cls not in ModelSerializer.serializer_field_mapping or cls.__name__ not in DJANGO_FIELD_TYPE_MAP:
+            if instance.to_type is not None:
+                to = instance.to_type.__class__
+            else:
+                for to in cls.mro():
+                    if to not in [cls, BSMFieldMixin]:
+                        break
+
+            class FieldSerializerMixin(get_serializer_class(to)):
+                def to_internal_value(self, value):
+                    return cls.bsm_to_internal_value(self, value)
+
+                def to_representation(self, value):
+                    return cls.bsm_to_representation(self, value)
+
+            ModelSerializer.serializer_field_mapping[cls] = FieldSerializerMixin
+            DJANGO_FIELD_TYPE_MAP[cls.__name__] = DJANGO_FIELD_TYPE_MAP[instance.get_to_field()]
+        return instance
+
+    def get_bsm_internal_type(self):
+        return self.__class__.__name__
+
+    def get_to_field(self):
+        if self.to_type is not None:
+            if hasattr(self.to_type, 'get_bsm_internal_type'):
+                return self.to_type.gsm_bsm_internal_type()
+            else:
+                return self.to_type.get_internal_type()
+        elif hasattr(self, 'get_bsm_internal_type'):
+            return self.get_bsm_internal_type()
+        else:
+            return self.get_internal_type()
+
+    def bsm_to_internal_value(self, value):
+        print(value, 'bsm_to_internal_value', repr(value))
+        return value
+
+    def bsm_to_representation(self, value):
+        print(value, 'bsm_to_representation', repr(value))
+        return value
+
+
 def define_bsm_field(base, to_type=None, to_internal_value=None, to_representation=None):
     if to_type is None:
         to_type = base()
