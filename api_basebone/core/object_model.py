@@ -35,7 +35,9 @@ class ModelBase(type):
         _meta.verbose_name = getattr(attrs.pop('Meta'), 'verbose_name', _meta.model_name) if 'Meta' in attrs else _meta.model_name
         _meta.app_label = ''
         new_attrs['_meta'] = _meta
-        return super(ModelBase, cls).__new__(cls, name, bases, new_attrs)
+        new_attrs['__module__'] = attrs['__module__']
+        model = super(ModelBase, cls).__new__(cls, name, bases, new_attrs)
+        return model
 
 
 class ObjectModel(metaclass=ModelBase):

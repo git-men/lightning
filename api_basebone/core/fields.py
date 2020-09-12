@@ -113,6 +113,10 @@ class ArrayField(JSONField):
         self.item_type = 'object' if item_model else item_type
         super(ArrayField, self).__init__(**kwargs)
 
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        return name, path, [self.item_model], kwargs
+
     def get_bsm_internal_type(self):
         return 'JsonArrayField'
 
