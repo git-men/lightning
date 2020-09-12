@@ -28,8 +28,18 @@ def get_serializer_class(field_class):
     return ModelSerializer.serializer_field_mapping[models.TextField]
 
 
-class BSMFieldMixin:
+class BSMField:
     to_type = None
+
+    def super_serializer(self):
+        if self.to_type is not None:
+            to = type(self.to_type)
+        else:
+            for to in type(self).mro():
+                if to not in [type(self), BSMField]:
+                    break
+
+        return get_serializer_class(to)
 
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
@@ -37,26 +47,19 @@ class BSMFieldMixin:
             setattr(instance, k, v)
 
         if cls not in ModelSerializer.serializer_field_mapping or cls.__name__ not in DJANGO_FIELD_TYPE_MAP:
-            if instance.to_type is not None:
-                to = instance.to_type.__class__
-            else:
-                for to in cls.mro():
-                    if to not in [cls, BSMFieldMixin]:
-                        break
-
-            class FieldSerializerMixin(get_serializer_class(to)):
+            class BSMFieldSerializer(instance.super_serializer()):
                 def to_internal_value(self, value):
-                    return cls.bsm_to_internal_value(self, value)
+                    return instance.bsm_to_internal_value(super().to_internal_value(value))
 
                 def to_representation(self, value):
-                    return cls.bsm_to_representation(self, value)
+                    return super().to_representation(instance.bsm_to_representation(value))
 
-            ModelSerializer.serializer_field_mapping[cls] = FieldSerializerMixin
+            ModelSerializer.serializer_field_mapping[cls] = BSMFieldSerializer
             DJANGO_FIELD_TYPE_MAP[cls.__name__] = DJANGO_FIELD_TYPE_MAP[instance.get_to_field()]
         return instance
 
     def get_bsm_internal_type(self):
-        return self.__class__.__name__
+        return type(self).__name__
 
     def get_to_field(self):
         if self.to_type is not None:
@@ -70,11 +73,9 @@ class BSMFieldMixin:
             return self.get_internal_type()
 
     def bsm_to_internal_value(self, value):
-        print(value, 'bsm_to_internal_value', repr(value))
         return value
 
     def bsm_to_representation(self, value):
-        print(value, 'bsm_to_representation', repr(value))
         return value
 
 
