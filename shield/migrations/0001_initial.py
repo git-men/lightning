@@ -5,7 +5,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 from django.conf import settings
 
-model_field = partial(models.ForeignKey, on_delete=django.db.models.deletion.CASCADE, to='meta.Model') if hasattr(settings, 'SHIELD_MODEL') else partial(models.CharField, max_length=201)
+model_field = partial(models.ForeignKey, on_delete=django.db.models.deletion.CASCADE, to='meta.Model') if hasattr(settings, 'SHIELD_MODEL') else partial(models.CharField, max_length=191)
 
 
 class Migration(migrations.Migration):
