@@ -1,4 +1,6 @@
 import logging
+import uuid
+
 from django.db.models.signals import post_save, pre_delete, pre_save, post_migrate
 from django.dispatch import receiver
 from django.contrib.auth.models import Permission, Group
@@ -72,7 +74,11 @@ def update_setting_config_permission(sender, **kwargs):
 
 
 def get_actions(config):
-    return config.get('inlineActions', []) + config.get('actions', []) + config.get('tableActions', [])
+    result = []
+    for action in config.get('inlineActions', []) + config.get('actions', []) + config.get('tableActions', []):
+        if 'id' not in action:
+            action['id'] = str(uuid.uuid4().hex)
+    return result
 
 
 def create_action_permission(app, model, config):
