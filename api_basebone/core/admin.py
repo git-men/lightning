@@ -24,6 +24,8 @@ BSM_SORT_KEY = 'sort_key'
 
 BSM_INLINE_ACTIONS = 'inline_actions'
 
+BSM_MAX_INLINE_ACTIONS = 'max_inline_actions'
+
 BSM_TABLE_ACTIONS = 'table_actions'
 
 # 批量操作
@@ -73,6 +75,7 @@ VALID_MANAGE_ATTRS = [
     BSM_PARENT_FIELD,
     BSM_DISPLAY,
     BSM_INLINE_ACTIONS,
+    BSM_MAX_INLINE_ACTIONS,
     BSM_TABLE_ACTIONS,
     BSM_BATCH_ACTION,
     BSM_MODAL_FROM,
