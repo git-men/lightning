@@ -128,10 +128,25 @@ def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None):
         # 是否能节省资源？
         #     result.append(key)
         #     continue
-        qs = next_model.objects.prefetch_related(*pfs)
+        qs = next_model.objects.defer(*get_exclude_fields_by_model(next_model)).prefetch_related(*pfs)
+        # 使关联关系也能用annotated_field
         prefetch = Prefetch(key, queryset=annotate_queryset(qs, fields=next_fields, context=context))
         result.append(prefetch)
     return result
+
+
+def get_exclude_fields_by_model(model):
+    if not hasattr(model, 'GMeta'):
+        return []
+    return getattr(model.GMeta, gmeta.GMETA_SERIALIZER_EXCLUDE_FIELDS, [])
+
+
+def queryset_prefetch(queryset, expand_dict, context):
+    return queryset.defer(*get_exclude_fields_by_model(queryset.model)).prefetch_related(
+        *expand_dict_to_prefetch(
+            queryset.model, expand_dict, context=context
+        )
+    )
 
 
 # alias

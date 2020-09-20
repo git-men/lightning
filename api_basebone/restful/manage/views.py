@@ -528,11 +528,7 @@ class GenericViewMixin:
         if expand_fields:
             expand_fields = self.translate_expand_fields(expand_fields)
             expand_dict = sort_expand_fields(expand_fields)
-            queryset = queryset.prefetch_related(
-                *queryset_utils.expand_dict_to_prefetch(
-                    queryset.model, expand_dict, context=context
-                )
-            )
+            queryset = queryset_utils.queryset_prefetch(queryset, expand_dict, context)
         if self.action not in ['get_chart', 'group_statistics']:
             queryset = queryset_utils.annotate(queryset, context=context)
         queryset = self._get_queryset(queryset)

@@ -123,7 +123,15 @@ def tree_parent_field(model, field_name):
 
 def get_export_apps():
     """获取导出配置的 app"""
-    return getattr(settings, 'BSM_EXPORT_APPS', [])
+    if hasattr(settings, 'BSM_EXPORT_APPS'):
+        export_apps = settings.BSM_EXPORT_APPS
+    else:
+        export_apps = list(apps.app_configs.keys())
+
+    if hasattr(settings, 'BSM_EXPORT_APPS_EXCLUDE'):
+        export_apps = [e for e in export_apps if e not in settings.BSM_EXPORT_APPS_EXCLUDE]
+
+    return export_apps
 
 
 def get_bsm_model_admin(model):
