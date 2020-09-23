@@ -1,5 +1,6 @@
 from django.db.models.query import QuerySet, Prefetch
 from django.db.models import Manager
+
 from .operators import build_filter_conditions2
 from ..export.fields import get_attr_in_gmeta_class
 from ..core import gmeta
@@ -124,6 +125,8 @@ def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None, displ
         next_model = field.related_model
         next_fields = fields and [field.split('.', maxsplit=1)[-1] for field in fields if field.startswith(key+'.')]
         nested = nested_display_fields(model, display_fields, key)
+        if not field.concrete:
+            nested.append(field.field.name)
         pfs = expand_dict_to_prefetch(next_model, value, fields=next_fields, context=context, display_fields=nested)
         # if not pfs:
         # 是否能节省资源？
@@ -149,10 +152,18 @@ def queryset_only(queryset, display_fields):
     computed_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_COMPUTED_FIELDS, [])
     computed_field_names = {c['name'] for c in computed_fields}
     only = [d for d in display_fields if '.' not in d and d not in annotated_fields and d not in computed_field_names]
+    for d in display_fields:
+        if '.' in d:
+            field = get_field(queryset.model, d.split('.')[0])
+            if field:
+                if field.concrete:
+                    only.append(field.name)
+
     for c in computed_fields:
         only += c.get('deps', [])
     if '*' in only:
         return queryset
+    only.append('pk')
     return queryset.only(*only)
 
 
