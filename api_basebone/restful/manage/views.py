@@ -509,6 +509,9 @@ class GenericViewMixin:
             expand_fields[out_index] = '.'.join(field_list)
         return expand_fields
 
+    def get_display_fields(self):
+        return self.request.data.get(const.DISPLAY_FIELDS)
+
     def get_queryset(self):
         """动态的计算结果集
 
@@ -528,7 +531,8 @@ class GenericViewMixin:
         if expand_fields:
             expand_fields = self.translate_expand_fields(expand_fields)
             expand_dict = sort_expand_fields(expand_fields)
-            queryset = queryset_utils.queryset_prefetch(queryset, expand_dict, context)
+            display_fields = self.get_display_fields()
+            queryset = queryset_utils.queryset_prefetch(queryset, expand_dict, context, display_fields=display_fields)
         if self.action not in ['get_chart', 'group_statistics']:
             queryset = queryset_utils.annotate(queryset, context=context)
         queryset = self._get_queryset(queryset)
@@ -608,6 +612,7 @@ class GenericViewMixin:
                 tree_structure=tree_data,
                 action=self.action,
                 end_slug=self.end_slug,
+                display_fields=self.get_display_fields(),
             )
         return serializer_class
 
