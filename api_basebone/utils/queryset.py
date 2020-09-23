@@ -125,7 +125,7 @@ def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None, displ
         next_model = field.related_model
         next_fields = fields and [field.split('.', maxsplit=1)[-1] for field in fields if field.startswith(key+'.')]
         nested = nested_display_fields(model, display_fields, key)
-        if not field.concrete:
+        if nested is not None and not field.concrete:
             nested.append(field.field.name)
         pfs = expand_dict_to_prefetch(next_model, value, fields=next_fields, context=context, display_fields=nested)
         # if not pfs:
