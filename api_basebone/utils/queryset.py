@@ -151,6 +151,8 @@ def queryset_only(queryset, display_fields):
     only = [d for d in display_fields if '.' not in d and d not in annotated_fields and d not in computed_field_names]
     for c in computed_fields:
         only += c.get('deps', [])
+    if '*' in only:
+        return queryset
     return queryset.only(*only)
 
 

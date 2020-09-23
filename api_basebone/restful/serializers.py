@@ -176,7 +176,7 @@ def create_meta_class(
             if f.concrete and not isinstance(f, OneToOneField)
         ]
 
-    if display_fields is not None:
+    if display_fields is not None and '*' not in display_fields:
         flat_fields = list(set(flat_fields) & set(display_fields))
 
     if extra_fields:
