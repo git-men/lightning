@@ -148,7 +148,7 @@ class CustomModelSerializer(serializers.ModelSerializer):
 
 
 def create_meta_class(
-    model, exclude_fields=None, extra_fields=None, action=None, **kwargs
+    model, exclude_fields=None, extra_fields=None, action=None, display_fields=None, **kwargs
 ):
     """构建序列化类的 Meta
 
@@ -176,6 +176,9 @@ def create_meta_class(
             if f.concrete and not isinstance(f, OneToOneField)
         ]
 
+    if display_fields is not None and '*' not in display_fields:
+        flat_fields = list(set(flat_fields) & set(display_fields))
+
     if extra_fields:
         flat_fields += extra_fields
 
@@ -193,6 +196,7 @@ def create_serializer_class(
     action=None,
     end_slug=None,
     attrs=None,
+    display_fields=None,
 ):
     """构建序列化类
 
@@ -266,6 +270,7 @@ def create_serializer_class(
                 model,
                 exclude_fields=exclude_fields,
                 extra_fields=extra_fields,
+                display_fields=display_fields,
                 action=action,
             ),
             'action': action,
@@ -358,8 +363,27 @@ def sort_expand_fields(fields):
     return result
 
 
+def nested_display_fields(model, super_display_fields, key):
+    if not super_display_fields:
+        return None
+
+    reverse_fields = meta.get_reverse_fields(model)
+
+    reverse_field_map = {}
+    if reverse_fields:
+        for item in reverse_fields:
+            related_name = meta.get_relation_field_related_name(
+                item.related_model, item.remote_field.name
+            )
+            if related_name:
+                reverse_field_map[related_name[0]] = item.name
+    if key in reverse_field_map:
+        key = reverse_field_map[key]
+    return ['.'.join(d.split('.')[1:]) for d in super_display_fields if d.startswith(key+'.')]
+
+
 def create_nested_serializer_class(
-    model, field_list, exclude_fields=None, action=None, end_slug=None, **kwargs
+    model, field_list, exclude_fields=None, action=None, end_slug=None, display_fields=None, **kwargs
 ):
     """构建嵌套序列化类
 
@@ -380,6 +404,7 @@ def create_nested_serializer_class(
                 exclude_fields=exclude_fields,
                 action=action,
                 end_slug=end_slug,
+                display_fields=nested_display_fields(model, display_fields, key),
             )(many=many)
         else:
             attrs[key] = create_nested_serializer_class(
@@ -388,6 +413,7 @@ def create_nested_serializer_class(
                 exclude_fields=exclude_fields,
                 action=action,
                 end_slug=end_slug,
+                display_fields=nested_display_fields(model, display_fields, key),
             )(many=many)
     return create_serializer_class(
         model,
@@ -395,6 +421,7 @@ def create_nested_serializer_class(
         action=action,
         end_slug=end_slug,
         attrs=attrs,
+        display_fields=display_fields,
     )
 
 
@@ -405,6 +432,7 @@ def multiple_create_serializer_class(
     exclude_fields=None,
     action=None,
     end_slug=None,
+    display_fields=None,
 ):
     """多重创建序列化类"""
     attrs = {}
@@ -423,6 +451,7 @@ def multiple_create_serializer_class(
             exclude_fields=exclude_fields,
             action=action,
             end_slug=end_slug,
+            display_fields=nested_display_fields(model, display_fields, key)
         )(many=many)
     return create_serializer_class(
         model,
@@ -430,6 +459,7 @@ def multiple_create_serializer_class(
         tree_structure=tree_structure,
         action=action,
         end_slug=end_slug,
+        display_fields=display_fields,
         attrs=attrs,
     )
 

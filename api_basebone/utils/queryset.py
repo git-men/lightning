@@ -1,9 +1,10 @@
 from django.db.models.query import QuerySet, Prefetch
 from django.db.models import Manager
+
 from .operators import build_filter_conditions2
 from ..export.fields import get_attr_in_gmeta_class
 from ..core import gmeta
-from ..restful.serializers import multiple_create_serializer_class, get_field
+from ..restful.serializers import multiple_create_serializer_class, get_field, nested_display_fields
 from ..services.expresstion import resolve_expression
 
 __all__ = ['filter', 'serialize', 'annotate']
@@ -117,21 +118,63 @@ def annotate_queryset(queryset, fields=None, context=None):
     return queryset
 
 
-def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None):
+def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None, display_fields=None):
     result = []
     for key, value in expand_dict.items():
         field = get_field(model, key)
         next_model = field.related_model
         next_fields = fields and [field.split('.', maxsplit=1)[-1] for field in fields if field.startswith(key+'.')]
-        pfs = expand_dict_to_prefetch(next_model, value, fields=next_fields, context=context)
+        nested = nested_display_fields(model, display_fields, key)
+        if nested is not None and not field.concrete:
+            nested.append(field.field.name)
+        pfs = expand_dict_to_prefetch(next_model, value, fields=next_fields, context=context, display_fields=nested)
         # if not pfs:
         # 是否能节省资源？
         #     result.append(key)
         #     continue
-        qs = next_model.objects.prefetch_related(*pfs)
+        qs = next_model.objects.defer(*get_exclude_fields_by_model(next_model)).prefetch_related(*pfs)
+        if display_fields is not None and nested:
+            qs = queryset_only(qs, nested)
+        # 使关联关系也能用annotated_field
         prefetch = Prefetch(key, queryset=annotate_queryset(qs, fields=next_fields, context=context))
         result.append(prefetch)
     return result
+
+
+def get_exclude_fields_by_model(model):
+    if not hasattr(model, 'GMeta'):
+        return []
+    return getattr(model.GMeta, gmeta.GMETA_SERIALIZER_EXCLUDE_FIELDS, [])
+
+
+def queryset_only(queryset, display_fields):
+    annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    computed_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_COMPUTED_FIELDS, [])
+    computed_field_names = {c['name'] for c in computed_fields}
+    only = [d for d in display_fields if '.' not in d and d not in annotated_fields and d not in computed_field_names]
+    for d in display_fields:
+        if '.' in d:
+            field = get_field(queryset.model, d.split('.')[0])
+            if field:
+                if field.concrete:
+                    only.append(field.name)
+
+    for c in computed_fields:
+        only += c.get('deps', [])
+    if '*' in only:
+        return queryset
+    only.append('pk')
+    return queryset.only(*only)
+
+
+def queryset_prefetch(queryset, expand_dict, context, display_fields=None):
+    if display_fields is not None:
+        queryset = queryset_only(queryset, display_fields)
+    return queryset.defer(*get_exclude_fields_by_model(queryset.model)).prefetch_related(
+        *expand_dict_to_prefetch(
+            queryset.model, expand_dict, context=context, display_fields=display_fields,
+        )
+    )
 
 
 # alias

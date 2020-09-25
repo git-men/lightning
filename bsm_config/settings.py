@@ -98,7 +98,7 @@ class SiteSetting:
 
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            setting_list = Setting.objects.using('default').filter(key__in=item).values_list('key', 'value')
+            setting_list = Setting.objects.using('default').filter(key__in=map(str.lower, item)).values_list('key', 'value')
             setting_dict = dict(setting_list)
 
             value = []
@@ -109,7 +109,7 @@ class SiteSetting:
                     value.append(setting_dict[key])
             return value
         else:
-            setting = Setting.objects.using('default').filter(key=item).first()
+            setting = Setting.objects.using('default').filter(key=item.lower()).first()
             if setting:
                 return setting.value
             return self._get_config_from_settings(item)

@@ -269,6 +269,9 @@ class GenericViewMixin:
             expand_fields[out_index] = '.'.join(field_list)
         return expand_fields
 
+    def get_display_fields(self):
+        return self.request.data.get(const.DISPLAY_FIELDS)
+
     def get_queryset(self):
         """动态的计算结果集
 
@@ -333,6 +336,7 @@ class GenericViewMixin:
             exclude_fields=exclude_fields,
             tree_structure=tree_data,
             action=self.action,
+            display_fields=self.get_display_fields(),
         )
         return serializer_class
 

@@ -16,8 +16,8 @@ from api_basebone.export.admin import get_app_admin_config, get_json_field_admin
 from api_basebone.export.fields import get_app_field_schema, get_app_json_field_schema
 from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils import module
-from api_basebone.utils.meta import load_custom_admin_module, tree_parent_field
-from bsm_config.models import Menu
+from api_basebone.utils.meta import load_custom_admin_module, get_export_apps
+from bsm_config.models import Menu, Admin
 from api_basebone.utils import queryset as queryset_utils
 from api_basebone.drf.permissions import IsAdminUser
 
@@ -42,6 +42,13 @@ class ConfigViewSet(viewsets.GenericViewSet):
         """获取 admin 配置"""
         data = get_app_admin_config()
         return success_response(data)
+
+    @action(detail=False, methods=['put'], url_path='admin/(?P<model_name>[^/.]+)', permission_classes = (IsAdminUser,))
+    def admin(self, request, model_name):
+        model, created = Admin.objects.get_or_create(model=model_name)
+        model.config = dict(request.data)
+        model.save()
+        return success_response()
 
     @action(detail=False, url_path='all', permission_classes = (IsAdminUser,))
     def get_all(self, request, *args, **kargs):
@@ -108,7 +115,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
 
     def _get_menu_from_autobuild(self):
         """根据模型自定义菜单"""
-        export_apps = getattr(settings, 'BSM_EXPORT_APPS', None)
+        export_apps = get_export_apps()
         if not export_apps:
             return success_response([])
         try:

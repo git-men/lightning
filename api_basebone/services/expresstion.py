@@ -95,7 +95,7 @@ def resolve_expression(expression, variables=None):
     except json.JSONDecodeError:
         pass
     log.debug(f'resolving expression: {expression}')
-    matched = re.match('^(\w+)\((.*)\)$', expression)
+    matched = re.match(r'^(\w+)\((.*)\)$', expression)
     if matched:
         func, arg_str = matched.groups()
         if func == '__variables__':
@@ -103,12 +103,6 @@ def resolve_expression(expression, variables=None):
         args = [resolve_expression(buffer, variables=variables) for buffer in split_expression(arg_str, ',')]
         log.debug(f'returning calling Fun: {FUNCS[func]} with args: {args}')
         return FUNCS[func](*args)
-
-    # 如果是常量字符串，直接当参数传回。    
-    is_str = re.match(r'^(\'|\")(.*)(\'|\")$', expression)
-    if is_str:
-        exp = expression.replace("'", '"')
-        return json.loads(exp)
 
     # 点操作符，getattr的语法糖
     exp = '__variables__()'
