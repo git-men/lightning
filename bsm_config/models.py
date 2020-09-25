@@ -35,7 +35,7 @@ class Menu(models.Model):
         [PAGE_AUTO, '自定义页面'], 
         [PAGE_CHART, '自定义图表'], 
         [PAGE_IFRAME, 'Iframe页面'],
-        [PAGE_MAP, '地图页面']
+        # 先不放地图出去 [PAGE_MAP, '地图页面']
     ]
 
     TYPE_ITEM = 'item'
