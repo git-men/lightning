@@ -27,6 +27,7 @@ class Menu(models.Model):
     PAGE_AUTO = 'auto'
     PAGE_CHART = 'chart'
     PAGE_IFRAME = 'iframe'
+    PAGE_MAP = 'map'
     PAGE_CHOICES = [
         [PAGE_LIST, '列表页'], 
         [PAGE_DETAIL, '详情页'], 
@@ -34,6 +35,7 @@ class Menu(models.Model):
         [PAGE_AUTO, '自定义页面'], 
         [PAGE_CHART, '自定义图表'], 
         [PAGE_IFRAME, 'Iframe页面'],
+        [PAGE_MAP, '地图页面']
     ]
 
     TYPE_ITEM = 'item'

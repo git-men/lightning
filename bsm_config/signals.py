@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 
 from bsm_config.models import Menu, Admin, Setting
-from .utils import remove_permission, check_page, get_permission
+from .utils import remove_permission, check_page, get_permission, MODEL_PAGES
 from api_basebone.signals import post_bsm_create, post_bsm_delete
 log = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def remove_menu_permission(sender, instance, update_fields = [], **kwargs):
         if check_page(old_page, new_page, old_type, new_type):
             remove_permission(old_instance)
 
-        if new_page not in (Menu.PAGE_LIST, Menu.PAGE_DETAIL):
+        if new_page not in MODEL_PAGES:
             instance.model = ''
     
 
@@ -32,6 +32,7 @@ def remove_menu_permission(sender, instance, update_fields = [], **kwargs):
 def set_menu_permission(sender, instance, update_fields = [], **kwargs):
     _, permission_lable = get_permission(instance)
     Menu.objects.filter(id=instance.id).update(permission=permission_lable)
+
 
 @receiver(pre_delete, sender=Menu, dispatch_uid='delete_menu_permission')
 def delete_menu_permission(sender, instance, **kwargs):

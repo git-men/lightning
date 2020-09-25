@@ -4,8 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 
 from .models import Menu, Setting
 
-MODEL_PAGES = (Menu.PAGE_LIST, Menu.PAGE_DETAIL)
-ORDER_PAGES = (Menu.PAGE_ADMIN_CONFIG, Menu.PAGE_AUTO, Menu.PAGE_CHART, Menu.PAGE_IFRAME)
+MODEL_PAGES = (Menu.PAGE_LIST, Menu.PAGE_DETAIL, Menu.PAGE_MAP)
+ORDER_PAGES = (Menu.PAGE_ADMIN_CONFIG,  Menu.PAGE_AUTO, Menu.PAGE_CHART, Menu.PAGE_IFRAME)
 
 def remove_permission(menu):
     # 删除菜单权限
