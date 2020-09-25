@@ -142,6 +142,9 @@ class GenericViewMixin:
 
     def check_permissions(self, request):
         """校验权限"""
+        if not hasattr(self, 'model'):
+            return False
+
         action_skip = get_gmeta_config_by_key(
             self.model, gmeta.GMETA_CLIENT_API_PERMISSION_SKIP
         )

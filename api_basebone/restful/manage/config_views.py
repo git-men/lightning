@@ -43,6 +43,10 @@ class ConfigViewSet(viewsets.GenericViewSet):
         data = get_app_admin_config()
         return success_response(data)
 
+    def get_serializer(self):
+        # 去掉会导致无法生成swagger文档，详见 rest_framework.schemas.inspectors.AutoSchema.get_serializer_fields
+        return None
+
     @action(detail=False, methods=['put'], url_path='admin/(?P<model_name>[^/.]+)', permission_classes = (IsAdminUser,))
     def admin(self, request, model_name):
         model, created = Admin.objects.get_or_create(model=model_name)
