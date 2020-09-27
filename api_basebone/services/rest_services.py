@@ -1,5 +1,3 @@
-import inspect
-from inspect import Parameter
 import requests
 import logging
 from copy import copy
@@ -140,10 +138,6 @@ def client_func(genericAPIView, user, app, model, func_name, params):
     view_context = {'view': genericAPIView}
     params['view_context'] = view_context
 
-    signature = inspect.signature(func)
-    required = {k for k, p in signature.parameters.items() if p.default == Parameter.empty and p.kind in [Parameter.KEYWORD_ONLY, Parameter.POSITIONAL_OR_KEYWORD]}
-    raise exceptions.BusinessException(exceptions.PARAMETER_FORMAT_ERROR, '、'.join(required-params.keys())+' 必填')
-
     result = func(user, **params)
     # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
     if isinstance(result, requests.Response):
@@ -178,11 +172,6 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
 
     view_context = {'view': genericAPIView}
     params['view_context'] = view_context
-
-    signature = inspect.signature(func)
-    required = {k for k, p in signature.parameters.items() if p.default == Parameter.empty and p.kind in [Parameter.KEYWORD_ONLY, Parameter.POSITIONAL_OR_KEYWORD]}
-    raise exceptions.BusinessException(exceptions.PARAMETER_FORMAT_ERROR, '、'.join(required-params.keys())+' 必填')
-
     result = func(user, **params)
 
     # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
