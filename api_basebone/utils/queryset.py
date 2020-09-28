@@ -104,7 +104,10 @@ def serialize_queryset(data, action='list', expand_fields=None):
 
 
 def annotate_queryset(queryset, fields=None, context=None):
-    annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    annotated_fields = {}
+    if 'GMeta' in queryset.model.__dict__:
+        # 这样可以避免从继承过来的GMeta里取，对于one to one类型的继承来说会出错
+        annotated_fields = getattr(queryset.model.__dict__['GMeta'], gmeta.GMETA_ANNOTATED_FIELDS, {})
     if fields is not None:
         annotated_fields = {k: v for k, v in annotated_fields.items() if k in fields}
     if annotated_fields:
