@@ -4,7 +4,8 @@ from django.db.models import Manager
 from .operators import build_filter_conditions2
 from ..export.fields import get_attr_in_gmeta_class
 from ..core import gmeta
-from ..restful.serializers import multiple_create_serializer_class, get_field, nested_display_fields, sort_expand_fields
+from ..restful.serializers import multiple_create_serializer_class, get_field, nested_display_fields, \
+    sort_expand_fields, display_fields_to_expand_fields
 from ..services.expresstion import resolve_expression
 
 __all__ = ['filter', 'serialize', 'annotate']
@@ -125,7 +126,7 @@ def expand_dict_to_prefetch(model, expand_dict=None, fields=None, context=None, 
     result = []
     if expand_dict is None:
         if display_fields is not None:
-            expand_dict = sort_expand_fields([d.split('.', 1)[0] for d in display_fields if '.' in d])
+            expand_dict = sort_expand_fields(display_fields_to_expand_fields(display_fields))
         else:
             expand_dict = {}
 
@@ -191,3 +192,57 @@ filter = filter_queryset
 serialize = serialize_queryset
 annotate = annotate_queryset
 only = queryset_only
+
+
+# 尚未完全能用，prefetch有问题
+# class GMIterable(ModelIterable):
+#     def __iter__(self):
+#         serializer_class = self.queryset._serializer_class
+#         for obj in super().__iter__():
+#             return serializer_class(obj).data
+
+
+class BSMQuerySet(QuerySet):
+    def render(self, display_fields):
+        # clone = queryset_prefetch(self, display_fields=display_fields)
+        # clone._iterable_class = GMIterable
+        # clone._serializer_class = multiple_create_serializer_class(
+        #     clone.model,
+        #     expand_fields=display_fields_to_expand_fields(display_fields),
+        #     display_fields=display_fields,
+        #     action='retrieve',
+        # )
+        # return clone
+        serializer_class = multiple_create_serializer_class(
+            self.model,
+            display_fields=display_fields,
+            action='list',
+        )
+        qs = queryset_prefetch(self, display_fields=display_fields)
+        return serializer_class(qs.all(), many=True).data
+
+    def render_get(self, display_fields, **conditions):
+        serializer_class = multiple_create_serializer_class(
+            self.model,
+            display_fields=display_fields,
+            action='retrieve',
+        )
+        qs = queryset_prefetch(self, display_fields=display_fields)
+        return serializer_class(qs.get(**conditions)).data
+
+    # def _chain(self):
+    #     c = super()._chain()
+    #     if hasattr(self, '_serializer_class'):
+    #         c._serializer_class = self._serializer_class
+    #     return c
+
+
+class GManager(Manager):
+    def get_queryset(self):
+        return BSMQuerySet(self.model, using=self._db)
+
+    def render(self, *args, **kwargs):
+        return self.get_queryset().render(*args, **kwargs)
+
+    def render_get(self, *args, **kwargs):
+        return self.get_queryset().render_get(*args, **kwargs)

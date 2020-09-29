@@ -17,3 +17,28 @@ def register_annotated_field(
         'type': field_type,
         'annotation': annotation,
     }
+
+
+def register_computed_field(model, field_name, field_type, prop, display_name=None, deps=None):
+    setattr(model, field_name, property(prop))
+
+    if display_name is None:
+        display_name = field_name
+
+    if not hasattr(model, 'GMeta'):
+        class GMeta:
+            pass
+        model.GMeta = GMeta
+
+    if not hasattr(model.GMeta, 'computed_fields'):
+        model.GMeta.computed_fields = []
+    cfg = {
+        'name': field_name,
+        'display_name': display_name,
+        'type': field_type,
+    }
+
+    if deps is not None:
+        cfg['deps'] = deps
+
+    model.GMeta.computed_fields.append(cfg)

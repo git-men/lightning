@@ -425,9 +425,13 @@ def create_nested_serializer_class(
     )
 
 
+def display_fields_to_expand_fields(display_fields):
+    return [d.rsplit('.', 1)[0] for d in display_fields if '.' in d]
+
+
 def multiple_create_serializer_class(
     model,
-    expand_fields,
+    expand_fields=None,
     tree_structure=None,
     exclude_fields=None,
     action=None,
@@ -437,6 +441,8 @@ def multiple_create_serializer_class(
     """多重创建序列化类"""
     attrs = {}
 
+    if expand_fields is None and display_fields is not None:
+        expand_fields = display_fields_to_expand_fields(display_fields)
     expand_dict = sort_expand_fields(expand_fields)
     for key, value in expand_dict.items():
         field = get_field(model, key)
