@@ -4,7 +4,7 @@ from django.db.models import Manager
 from .operators import build_filter_conditions2
 from ..export.fields import get_attr_in_gmeta_class
 from ..core import gmeta
-from ..restful.serializers import multiple_create_serializer_class, get_field, nested_display_fields
+from ..restful.serializers import multiple_create_serializer_class, get_field, nested_display_fields, sort_expand_fields
 from ..services.expresstion import resolve_expression
 
 __all__ = ['filter', 'serialize', 'annotate']
@@ -121,8 +121,14 @@ def annotate_queryset(queryset, fields=None, context=None):
     return queryset
 
 
-def expand_dict_to_prefetch(model, expand_dict, fields=None, context=None, display_fields=None):
+def expand_dict_to_prefetch(model, expand_dict=None, fields=None, context=None, display_fields=None):
     result = []
+    if expand_dict is None:
+        if display_fields is not None:
+            expand_dict = sort_expand_fields([d.split('.', 1)[0] for d in display_fields if '.' in d])
+        else:
+            expand_dict = {}
+
     for key, value in expand_dict.items():
         field = get_field(model, key)
         next_model = field.related_model
@@ -170,7 +176,7 @@ def queryset_only(queryset, display_fields):
     return queryset.only(*only)
 
 
-def queryset_prefetch(queryset, expand_dict, context, display_fields=None):
+def queryset_prefetch(queryset, expand_dict=None, context=None, display_fields=None):
     if display_fields is not None:
         queryset = queryset_only(queryset, display_fields)
     return queryset.defer(*get_exclude_fields_by_model(queryset.model)).prefetch_related(
@@ -184,3 +190,4 @@ def queryset_prefetch(queryset, expand_dict, context, display_fields=None):
 filter = filter_queryset
 serialize = serialize_queryset
 annotate = annotate_queryset
+only = queryset_only
