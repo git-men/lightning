@@ -8,7 +8,7 @@ from ..restful.serializers import multiple_create_serializer_class, get_field, n
     sort_expand_fields, display_fields_to_expand_fields
 from ..services.expresstion import resolve_expression
 
-__all__ = ['filter', 'serialize', 'annotate']
+__all__ = ['filter', 'serialize', 'annotate', 'GManager']
 
 
 def filter_queryset(queryset, filters=None, context=None):
