@@ -31,7 +31,9 @@ BSM_TABLE_ACTIONS = 'table_actions'
 # 批量操作
 BSM_BATCH_ACTION = 'actions'
 
-BSM_MODAL_FROM = 'modal_form'
+BSM_MODAL_FORM = 'modal_form'
+
+BSM_MODAL_DETAIL = 'modal_detail'
 
 BSM_MODAL_CONFIG = 'modal_config'
 
@@ -78,7 +80,8 @@ VALID_MANAGE_ATTRS = [
     BSM_MAX_INLINE_ACTIONS,
     BSM_TABLE_ACTIONS,
     BSM_BATCH_ACTION,
-    BSM_MODAL_FROM,
+    BSM_MODAL_FORM,
+    BSM_MODAL_DETAIL,
     BSM_MODAL_CONFIG,
     BSM_ORDER_BY,
     BSM_FILTER,
