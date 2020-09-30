@@ -2,8 +2,9 @@ from pathlib import Path
 
 from django.http import FileResponse
 from django.urls import re_path
+from django.conf import settings
 
-static_path = Path(__file__).absolute().parent.joinpath('static')
+static_path = getattr(settings, 'LIGHTING_STATIC_PATH', Path(__file__).absolute().parent.joinpath('static'))
 
 
 def index_view(request):
