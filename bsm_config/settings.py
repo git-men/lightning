@@ -30,7 +30,6 @@ DINGDING_CORP_ID = 'dingding_corp_id'
 
 class DataConvert:
     """数据转换器"""
-
     def string_handler(self, value):
         return value
 
@@ -45,7 +44,6 @@ class DataConvert:
 
 
 data_convert = DataConvert()
-
 
 # class SettingClient:
 #     """配置访问器"""
@@ -77,20 +75,17 @@ data_convert = DataConvert()
 #             return self._get_config_from_settings(key)
 #         return instance.value
 
-
 # settings = SettingClient()
 
 
 class SiteSetting:
     """项目配置统一使用SiteSetting获取和设值"""
-
     def _get_config_from_settings(self, key):
         """从配置文件中获取对应的配置"""
         key = key.upper()
         try:
-            SITE_SETTING = django_settings.SITE_SETTING
-            return SITE_SETTING[key]
-        except Exception:
+            return getattr(django_settings, key)
+        except Exception as e:
             if key in os.environ:
                 return os.environ.get(key)
         return None
@@ -98,7 +93,8 @@ class SiteSetting:
 
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            setting_list = Setting.objects.using('default').filter(key__in=map(str.lower, item)).values_list('key', 'value')
+            setting_list = Setting.objects.using('default').filter(
+                key__in=map(str.lower, item)).values_list('key', 'value')
             setting_dict = dict(setting_list)
 
             value = []
@@ -109,7 +105,8 @@ class SiteSetting:
                     value.append(setting_dict[key])
             return value
         else:
-            setting = Setting.objects.using('default').filter(key=item.lower()).first()
+            setting = Setting.objects.using('default').filter(
+                key=item.lower()).first()
             if setting:
                 return setting.value
             return self._get_config_from_settings(item)
@@ -122,12 +119,12 @@ class SiteSetting:
         else:
             Setting.objects.using('default').create(key=key, value=value)
 
-    def get_values(self,item):
+    def get_values(self, item):
         values_dict = {}
         keys = tuple(item) if isinstance(item, list) else tuple([item])
-        
+
         values = self.__getitem__(keys)
-        for index,key in enumerate(keys):
+        for index, key in enumerate(keys):
             values_dict[key] = values[index]
         return values_dict
 
