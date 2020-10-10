@@ -5,6 +5,7 @@ import jsonfield.fields
 from django.conf import settings as SETTINGS
 import json
 
+
 def update_value_jsonfield(apps, schema_editor):
     print('更新update_value_jsonfield')
     Setting = apps.get_app_config('bsm_config').get_model('Setting')
@@ -13,7 +14,8 @@ def update_value_jsonfield(apps, schema_editor):
         for section in SETTINGS.WEBSITE_CONFIG:
             for field in section['fields']:
                 all_fields[field['name']] = field
-    settings = Setting.objects.all()
+    manager = Setting.objects.using(schema_editor.connection.alias)
+    settings = manager.all()
     updata_settings = []
     for setting in settings:
         if setting.value or (setting.value_json and setting.value_json.get('value',None)):
@@ -28,17 +30,20 @@ def update_value_jsonfield(apps, schema_editor):
                 value = bool_mapping[value]
             setting.value = value
             updata_settings.append(setting)
-    Setting.objects.bulk_update(updata_settings, ['value'])
+    manager.bulk_update(updata_settings, ['value'])
+
 
 def reverse_update_value_jsonfield(apps, schema_editor):
     print('回退')
     Setting = apps.get_app_config('bsm_config').get_model('Setting')
+    manager = Setting.objects.using(schema_editor.connection.alias)
     updata_settings = []
-    for setting  in Setting.objects.all():
+    for setting in manager.all():
         if setting.value != None:
             setting.value = json.loads(setting.value)
             updata_settings.append(setting)
-    Setting.objects.bulk_update(updata_settings, ['value'])
+    manager.bulk_update(updata_settings, ['value'])
+
 
 class Migration(migrations.Migration):
 
