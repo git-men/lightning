@@ -154,7 +154,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
 
             def map_menus(menus):
                 return [
-                    {**m, 'children': map_menus(m.pop('children', []))}
+                    {**m, 'children': map_menus(m.get('children', []))}
                     for m in menus if 'groups' not in m or self.request.user.is_superuser or set(m['groups']) & group_names
                 ]
             return success_response(map_menus(settings.ADMIN_MENUS))
