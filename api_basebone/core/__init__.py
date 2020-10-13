@@ -4,7 +4,7 @@ def register_annotated_field(
     if display_name is None:
         display_name = field_name
 
-    if not hasattr(model, 'GMeta'):
+    if 'GMeta' not in model.__dict__:
         class GMeta:
             pass
         model.GMeta = GMeta
@@ -25,7 +25,7 @@ def register_computed_field(model, field_name, field_type, prop, display_name=No
     if display_name is None:
         display_name = field_name
 
-    if not hasattr(model, 'GMeta'):
+    if 'GMeta' not in model.__dict__:
         class GMeta:
             pass
         model.GMeta = GMeta
