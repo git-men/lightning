@@ -23,6 +23,9 @@ USER_GROUP_MAP_CACHE_KEY = 'user_group_map'
 
 
 def get_role_config_with_group(app_label, model_slug):
+    if hasattr(settings, 'SHIELD_RULES'):
+        return settings.SHIELD_RULES.get(f'{app_label}__{model_slug}', [])
+
     cache_key = SHIELD_RULES_DICT_CACHE_KEY.format(app_label=app_label, model_slug=model_slug)
     record = cache.get(cache_key, None)
     if record:

@@ -149,7 +149,15 @@ class ConfigViewSet(viewsets.GenericViewSet):
     def get_manage_menu(self, request, *args, **kwargs):
         """获取管理端的菜单配置"""
         if hasattr(settings, 'ADMIN_MENUS'):
-            return success_response(settings.ADMIN_MENUS)
+            group_names = self.request.user.groups.values_list('name', flat=True)
+            group_names = set(group_names)
+
+            def map_menus(menus):
+                return [
+                    {**m, 'children': map_menus(m.pop('children', []))}
+                    for m in menus if 'groups' not in m or self.request.user.is_superuser or set(m['groups']) & group_names
+                ]
+            return success_response(map_menus(settings.ADMIN_MENUS))
 
         menutype = request.query_params.get('menutype', 'database')
         if menutype == 'database':
