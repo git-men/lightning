@@ -3,6 +3,8 @@ import collections
 import logging
 
 from django.conf import settings as django_settings
+from django.db.models.functions import Lower
+
 from .models import Setting
 
 log = logging.getLogger('bsm')
@@ -93,8 +95,8 @@ class SiteSetting:
 
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            setting_list = Setting.objects.using('default').filter(
-                key__in=map(str.lower, item)).values_list('key', 'value')
+            setting_list = Setting.objects.using('default').annotate(key_lower=Lower('key')).filter(
+                key_lower__in=map(str.lower, item)).values_list('key', 'value')
             setting_dict = dict(setting_list)
 
             value = []
@@ -105,8 +107,8 @@ class SiteSetting:
                     value.append(setting_dict[key])
             return value
         else:
-            setting = Setting.objects.using('default').filter(
-                key=item.lower()).first()
+            setting = Setting.objects.annotate(key_lower=Lower('key')).using('default').filter(
+                key_lower=item.lower()).first()
             if setting:
                 return setting.value
             return self._get_config_from_settings(item)
