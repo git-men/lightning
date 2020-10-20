@@ -74,7 +74,7 @@ class UploadViewSet(viewsets.GenericViewSet):
         elif service in ['aliyun', 'oss']:
             result = aliyun.get_token()
             result['provider'] = 'oss'
-        elif service in ['tencent', 'cos'], :
+        elif service in ['tencent', 'cos']:
             result = tencent.post_object_token()
             result['provider'] = 'cos'
         return success_response(result)
