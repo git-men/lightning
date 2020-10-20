@@ -67,14 +67,14 @@ class UploadViewSet(viewsets.GenericViewSet):
             provider = site_setting['upload_provider']
             if provider == 'oss':
                 result = aliyun.get_token()
-                result['provider'] = 'aliyun'
+                result['provider'] = 'oss'
             elif provider == 'cos':
                 result = tencent.post_object_token()
-                result['provider'] = 'tencent'
-        elif service == 'aliyun':
+                result['provider'] = 'cos'
+        elif service in ['aliyun', 'oss']:
             result = aliyun.get_token()
-            result['provider'] = 'aliyun'
-        elif service == 'tencent':
+            result['provider'] = 'oss'
+        elif service in ['tencent', 'cos'], :
             result = tencent.post_object_token()
-            result['provider'] = 'tencent'
+            result['provider'] = 'cos'
         return success_response(result)
