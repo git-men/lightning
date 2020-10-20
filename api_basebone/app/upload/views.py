@@ -6,6 +6,7 @@ from api_basebone.drf.response import success_response
 from api_basebone.restful.serializers import create_serializer_class
 from api_basebone.utils import tencent
 from api_basebone.utils.aliyun import aliyun
+from bsm_config.settings import site_setting
 
 
 class UploadViewSet(viewsets.GenericViewSet):
@@ -60,11 +61,20 @@ class UploadViewSet(viewsets.GenericViewSet):
             },
         }
         """
-        service = request.query_params.get('service', 'aliyun')
-        if service == 'aliyun':
+        service = request.query_params.get('service', None)
+        result = {'provider': None}
+        if service is None:
+            provider = site_setting['upload_provider']
+            if provider == 'oss':
+                result = aliyun.get_token()
+                result['provider'] = 'aliyun'
+            elif provider == 'cos':
+                result = tencent.post_object_token()
+                result['provider'] = 'tencent'
+        elif service == 'aliyun':
             result = aliyun.get_token()
+            result['provider'] = 'aliyun'
         elif service == 'tencent':
             result = tencent.post_object_token()
-        else:
-            result = {}
+            result['provider'] = 'tencent'
         return success_response(result)
