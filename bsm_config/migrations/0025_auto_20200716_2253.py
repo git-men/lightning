@@ -3,17 +3,20 @@
 import api_basebone.core.fields
 from django.db import migrations, models
 
+
 def update_value_json(apps, schema_editor):
     print('更新update_value_json')
     Setting = apps.get_app_config('bsm_config').get_model('Setting')
-    settings = Setting.objects.all()
+    manager = Setting.objects.using(schema_editor.connection.alias)
+    settings = manager.all()
     updata_settings = []
     for setting in settings:
         if setting.value:
             bool_mapping = {'True': True, 'False': False }
             setting.value_json = {"value": bool_mapping[setting.value] if setting.value in bool_mapping else setting.value }
             updata_settings.append(setting)
-    Setting.objects.bulk_update(updata_settings, ['value_json'])
+    manager.bulk_update(updata_settings, ['value_json'])
+
 
 class Migration(migrations.Migration):
 

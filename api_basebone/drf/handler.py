@@ -30,6 +30,7 @@ def exception_handler(exc, context):
         t, v, tb = sys.exc_info()
         traceback.print_tb(tb)
     if isinstance(exc, BusinessException):
+        logger.info(exc.error_message)
         return business_exception_handler(exc, context)
 
     if isinstance(exc, ValidationError):
@@ -64,6 +65,8 @@ def exception_handler(exc, context):
         import traceback
         t, v, tb = sys.exc_info()
         traceback.print_tb(tb)
+
+    logger.exception(exc)
 
     # 可自由配置是否直接抛出严重的错误
     CLOSE_DIRECT_SERIOUS_ERROR_SHOW = getattr(

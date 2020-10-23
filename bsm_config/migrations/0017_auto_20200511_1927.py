@@ -2,10 +2,12 @@
 
 from django.db import migrations, models
 
+
 def update_menu_type(apps, schema_editor):
     print('更新有children的菜单类型为菜单组')
     Menu = apps.get_app_config('bsm_config').get_model('Menu')
-    Menu.objects.filter(children__isnull=False).update(type='group')
+    Menu.objects.using(schema_editor.connection.alias).filter(children__isnull=False).update(type='group')
+
 
 class Migration(migrations.Migration):
 
