@@ -312,6 +312,7 @@ def reverse_one_to_one(field, value, instance):
     if isinstance(value, dict):
         value = forward_relation_hand(model, value)
         if pk_field.name not in value:
+            model.objects.filter(**{field.remote_field.name: instance}).delete()
             value[field.remote_field.name] = instance.pk
             s = create_serializer_class(model)
             s.Meta.fields.append(field.remote_field.name)
@@ -321,7 +322,7 @@ def reverse_one_to_one(field, value, instance):
         else:
             pk_value = pk_field.to_python(value[pk_field.name])
             filter_params = {
-                pk_value.name: pk_value,
+                pk_field.name: pk_value,
                 field.remote_field.name: instance,
             }
             obj = model.objects.filter(**filter_params).first()
