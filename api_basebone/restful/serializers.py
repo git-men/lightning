@@ -173,7 +173,7 @@ def create_meta_class(
         flat_fields = [
             f.name
             for f in model._meta.get_fields()
-            if f.concrete and not isinstance(f, OneToOneField)
+            if f.concrete
         ]
 
     if display_fields is not None and '*' not in display_fields:
@@ -441,8 +441,11 @@ def multiple_create_serializer_class(
     """多重创建序列化类"""
     attrs = {}
 
-    if expand_fields is None and display_fields is not None:
-        expand_fields = display_fields_to_expand_fields(display_fields)
+    if expand_fields is None:
+        if display_fields is not None:
+            expand_fields = display_fields_to_expand_fields(display_fields)
+        else:
+            expand_fields = []
     expand_dict = sort_expand_fields(expand_fields)
     for key, value in expand_dict.items():
         field = get_field(model, key)

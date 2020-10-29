@@ -45,6 +45,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'URLField': 'String',
     'UUIDField': 'String',
     'ForeignKey': 'Ref',
+    'TreeForeignKey': 'Ref',
     'OneToOneField': 'Ref',
     'ManyToManyField': 'RefMult',
     'BoneRichTextField': 'RichText',

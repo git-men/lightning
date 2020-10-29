@@ -237,12 +237,5 @@ class BSMQuerySet(QuerySet):
     #     return c
 
 
-class GManager(Manager):
-    def get_queryset(self):
-        return BSMQuerySet(self.model, using=self._db)
-
-    def render(self, *args, **kwargs):
-        return self.get_queryset().render(*args, **kwargs)
-
-    def render_get(self, *args, **kwargs):
-        return self.get_queryset().render_get(*args, **kwargs)
+class GManager(Manager.from_queryset(BSMQuerySet)):
+    pass

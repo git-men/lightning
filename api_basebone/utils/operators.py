@@ -14,7 +14,7 @@ OPERATOR_MAP = {
     ">=": "__gte",
     "<": "__lt",
     "<=": "__lte",
-    "=": "",
+    "=": "__exact",  # 改掉是为了安全，但有些操作会无法兼容
     "in": "__in",
     "startswith": "__startswith",
     "endswith": "__endswith",

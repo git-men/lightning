@@ -306,11 +306,49 @@ def forward_relation_hand(model, data):
         return data
 
 
-def reverse_one_to_one(model, value):
+def reverse_one_to_one(field, value, instance):
+    model = field.related_model
+    pk_field = model._meta.pk
     if isinstance(value, dict):
-        pass  # TODO
+        value = forward_relation_hand(model, value)
+        if pk_field.name not in value:
+            value[field.remote_field.name] = instance.pk
+            serializer = create_serializer_class(model)(data=value)
+            serializer.is_valid(raise_exception=True)
+            obj = serializer.save()
+        else:
+            pk_value = pk_field.to_python(value[pk_field.name])
+            filter_params = {
+                pk_value.name: pk_value,
+                field.remote_field.name: instance,
+            }
+            obj = model.objects.filter(**filter_params).first()
+            if not obj:
+                raise exceptions.BusinessException(
+                    error_code=exceptions.OBJECT_NOT_FOUND,
+                    error_data=f'{model}指定的主键[{pk_value}]找不到对应的数据',
+                )
+
+            value[field.remote_field.name] = instance.pk
+            serializer = create_serializer_class(model)(
+                instance=obj, data=value, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        # 如果存在反向字段数据，则需要处理
+        reverse_relation_fields = meta.get_reverse_fields(field.related_model)
+        if reverse_relation_fields:
+            for item in reverse_relation_fields:
+                if item.name in value:
+                    reverse_relation_hand(
+                        item.model, {item.name: value[item.name]}, instance=obj
+                    )
     else:
-        pass  # do nothing
+        if value is None:
+            model.objects.filter(**{field.remote_field.name: instance.pk}).delete()
+        else:
+            model.objects.filter(**{field.field_name: pk_field.to_python(value)}).update(**{field.remote_field.name: instance.pk})
 
 
 def reverse_relation_hand(model, data, instance, detail=True):
@@ -338,7 +376,7 @@ def reverse_relation_hand(model, data, instance, detail=True):
             elif field.one_to_many:
                 reverse_one_to_many(field, value, instance, detail=detail)
             elif field.one_to_one:
-                reverse_one_to_one(field, value)
+                reverse_one_to_one(field, value, instance)
 
 
 data = [
