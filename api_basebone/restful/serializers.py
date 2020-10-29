@@ -173,7 +173,7 @@ def create_meta_class(
         flat_fields = [
             f.name
             for f in model._meta.get_fields()
-            if f.concrete
+            if f.concrete and not isinstance(f, OneToOneField)
         ]
 
     if display_fields is not None and '*' not in display_fields:

@@ -313,7 +313,9 @@ def reverse_one_to_one(field, value, instance):
         value = forward_relation_hand(model, value)
         if pk_field.name not in value:
             value[field.remote_field.name] = instance.pk
-            serializer = create_serializer_class(model)(data=value)
+            s = create_serializer_class(model)
+            s.Meta.fields.append(field.remote_field.name)
+            serializer = s(data=value)
             serializer.is_valid(raise_exception=True)
             obj = serializer.save()
         else:
@@ -330,7 +332,9 @@ def reverse_one_to_one(field, value, instance):
                 )
 
             value[field.remote_field.name] = instance.pk
-            serializer = create_serializer_class(model)(
+            s = create_serializer_class(model)
+            s.Meta.fields.append(field.remote_field.name)
+            serializer = s(
                 instance=obj, data=value, partial=True
             )
             serializer.is_valid(raise_exception=True)
