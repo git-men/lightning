@@ -130,7 +130,8 @@ class StatisticsMixin:
 
         aggregates, relation_aggregates = {}, {}
 
-        relation_fields = [item.name for item in get_all_relation_fields(self.model)]
+        relation_fields = [
+            item.name for item in get_all_relation_fields(self.model)]
 
         for key, value in configs.items():
             if not isinstance(value, dict):
@@ -145,7 +146,8 @@ class StatisticsMixin:
             aggregate_param = method_map[value['method']](field)
 
             if method == 'count':
-                aggregate_param = method_map[value['method']](field, distinct=True)
+                aggregate_param = method_map[value['method']](
+                    field, distinct=True)
 
             condition = Coalesce(aggregate_param, Value(0))
 
@@ -160,7 +162,8 @@ class StatisticsMixin:
 
         result = queryset.aggregate(**aggregates)
         self.basebone_origin_queryset.query.annotations.clear()
-        relation_result = self.basebone_origin_queryset.aggregate(**relation_aggregates)
+        relation_result = self.basebone_origin_queryset.aggregate(
+            **relation_aggregates)
 
         result.update(relation_result)
         return success_response(result)
@@ -193,7 +196,7 @@ class GroupStatisticsMixin:
         # 支持一下使用计算字段作为
         data = {}
         for k, v in group.items():
-            if v['expression']:
+            if 'expression' in v:
                 expression = resolve_expression(v['expression'])
                 log.debug(
                     f'expression before: {v["expression"]} after resolve: {expression}'
@@ -220,7 +223,8 @@ class GroupStatisticsMixin:
             'Min': Min,
             None: F,
         }
-        log.debug(f'static parameters, fields: {fields}, groups: {group_kwargs}')
+        log.debug(
+            f'static parameters, fields: {fields}, groups: {group_kwargs}')
         queryset = (
             self.get_queryset().annotate(**group_kwargs).values(*group_kwargs.keys())
         )
@@ -368,4 +372,3 @@ class FormMixin(object):
     def get_bsm_model_admin(self):
         """获取 BSM Admin 模块"""
         return get_bsm_model_admin(self.model)
-
