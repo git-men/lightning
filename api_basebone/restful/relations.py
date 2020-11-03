@@ -94,7 +94,9 @@ def forward_one_to_many(field, value, update_data):
 
         serializer = create_serializer_class(model)(data=value)
         serializer.is_valid(raise_exception=True)
-        update_data[key] = serializer.save().pk
+        instance = serializer.save()
+        update_data[key] = instance.pk
+        reverse_relation(model, value, instance)
         return update_data
 
     # 如果传进来的数据包含主键，则代表是更新数据
@@ -114,6 +116,7 @@ def forward_one_to_many(field, value, update_data):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     update_data[key] = value[pk_field_name]
+    reverse_relation(model, value, instance)
     return update_data
 
 
@@ -211,7 +214,6 @@ def reverse_one_to_many(field, value, instance, detail=True):
 
                 filter_params = {
                     pk_field_name: pk_value,
-                    field.remote_field.name: instance,
                 }
                 obj = model.objects.filter(**filter_params).first()
                 if not obj:
@@ -235,14 +237,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
                 if detail:
                     pure_id_list.append(getattr(obj, pk_field_name))
 
-            # 如果存在反向字段数据，则需要处理
-            reverse_relation_fields = meta.get_reverse_fields(field.related_model)
-            if reverse_relation_fields:
-                for item in reverse_relation_fields:
-                    if item.name in item_value:
-                        reverse_relation_hand(
-                            item.model, {item.name: item_value[item.name]}, instance=obj
-                        )
+            reverse_relation(field.related_model, item_value, obj)
 
     # 如果是更新，则删除掉对应的数据
     if detail and pure_id_list:
@@ -341,19 +336,23 @@ def reverse_one_to_one(field, value, instance):
             serializer.is_valid(raise_exception=True)
             serializer.save()
 
-        # 如果存在反向字段数据，则需要处理
-        reverse_relation_fields = meta.get_reverse_fields(field.related_model)
-        if reverse_relation_fields:
-            for item in reverse_relation_fields:
-                if item.name in value:
-                    reverse_relation_hand(
-                        item.model, {item.name: value[item.name]}, instance=obj
-                    )
+        reverse_relation(field.related_model, value, obj)
     else:
         if value is None:
             model.objects.filter(**{field.remote_field.name: instance.pk}).delete()
         else:
             model.objects.filter(**{field.field_name: pk_field.to_python(value)}).update(**{field.remote_field.name: instance.pk})
+
+
+def reverse_relation(model, data, instance):
+    # 如果存在反向字段数据，则需要处理
+    reverse_relation_fields = meta.get_reverse_fields(model)
+    if reverse_relation_fields:
+        for item in reverse_relation_fields:
+            if item.name in data:
+                reverse_relation_hand(
+                    item.model, {item.name: data[item.name]}, instance=instance
+                )
 
 
 def reverse_relation_hand(model, data, instance, detail=True):
