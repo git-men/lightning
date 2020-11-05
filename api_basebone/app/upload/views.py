@@ -61,20 +61,14 @@ class UploadViewSet(viewsets.GenericViewSet):
             },
         }
         """
-        service = request.query_params.get('service', None)
+        service = request.query_params.get('service', site_setting['upload_provider'])
         result = {'provider': None}
-        if service is None:
-            provider = site_setting['upload_provider']
-            if provider == 'oss':
-                result = aliyun.get_token()
-                result['provider'] = 'oss'
-            elif provider == 'cos':
-                result = tencent.post_object_token()
-                result['provider'] = 'cos'
-        elif service in ['aliyun', 'oss']:
+        if service in ['aliyun', 'oss']:
             result = aliyun.get_token()
             result['provider'] = 'oss'
         elif service in ['tencent', 'cos']:
             result = tencent.post_object_token()
             result['provider'] = 'cos'
+        elif service == 'file_storage':
+            result = {'provider': 'file_storage', 'policy': ''}
         return success_response(result)
