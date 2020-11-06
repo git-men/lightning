@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from django.http import FileResponse
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 
@@ -34,3 +35,19 @@ def upload(request):
         for chunk in file.chunks():
             f.write(chunk)
     return success_response()
+
+
+def file(request, key):
+    storage_path = site_setting['storage_path']
+    print(key)
+    file_path = Path(storage_path).joinpath(key)
+    if not os.path.abspath(file_path).startswith(storage_path):
+        # 避免 path traversal 问题 https://owasp.org/www-community/attacks/Path_Traversal
+        # Python 3.9 才有 Path.is_relative_to，
+        # 而 Path.resolve 会 follow symbol link，
+        # Path.absolute 又不能解析“../”，
+        # 所以只能用 os.path.abspath 了
+        raise BusinessException('invalid file key: %s' % key)
+    if not file_path.is_file():
+        raise BusinessException('file not exists: %s' % key)
+    return FileResponse(file_path.open('rb'))
