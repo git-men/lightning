@@ -196,7 +196,7 @@ class GroupStatisticsMixin:
         # 支持一下使用计算字段作为
         data = {}
         for k, v in group.items():
-            if 'expression' in v:
+            if v.get('expression', None):
                 expression = resolve_expression(v['expression'])
                 log.debug(
                     f'expression before: {v["expression"]} after resolve: {expression}'

@@ -148,7 +148,7 @@ class CustomModelSerializer(serializers.ModelSerializer):
 
 
 def create_meta_class(
-    model, exclude_fields=None, extra_fields=None, action=None, display_fields=None, **kwargs
+    model, exclude_fields=None, extra_fields=None, action=None, display_fields=None, allow_one_to_one=False, **kwargs
 ):
     """构建序列化类的 Meta
 
@@ -173,7 +173,7 @@ def create_meta_class(
         flat_fields = [
             f.name
             for f in model._meta.get_fields()
-            if f.concrete and not isinstance(f, OneToOneField)
+            if f.concrete and (not isinstance(f, OneToOneField) or allow_one_to_one)
         ]
 
     if display_fields is not None and '*' not in display_fields:
@@ -197,6 +197,7 @@ def create_serializer_class(
     end_slug=None,
     attrs=None,
     display_fields=None,
+    allow_one_to_one=False,
 ):
     """构建序列化类
 
@@ -272,6 +273,7 @@ def create_serializer_class(
                 extra_fields=extra_fields,
                 display_fields=display_fields,
                 action=action,
+                allow_one_to_one=allow_one_to_one,
             ),
             'action': action,
             'basebone_model': model,

@@ -42,7 +42,7 @@ def forward_many_to_many(field, value, update_data):
             # FIXME: 嵌套处理
             forward_relation_hand(model, item_data)
 
-            serializer = create_serializer_class(model)(data=item_data)
+            serializer = create_serializer_class(model, allow_one_to_one=True)(data=item_data)
             serializer.is_valid(raise_exception=True)
             create_ids.append(serializer.save().pk)
         pure_data += create_ids
@@ -64,7 +64,7 @@ def forward_many_to_many(field, value, update_data):
 
             # FIXME: 嵌套处理
             forward_relation_hand(model, item_data)
-            serializer = create_serializer_class(model)(
+            serializer = create_serializer_class(model, allow_one_to_one=True)(
                 instance=instance, data=item_data, partial=True
             )
             serializer.is_valid(raise_exception=True)
@@ -92,7 +92,7 @@ def forward_one_to_many(field, value, update_data):
         # FIXME: 嵌套处理
         forward_relation_hand(model, value)
 
-        serializer = create_serializer_class(model)(data=value)
+        serializer = create_serializer_class(model, allow_one_to_one=True)(data=value)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         update_data[key] = instance.pk
@@ -110,7 +110,7 @@ def forward_one_to_many(field, value, update_data):
     # FIXME: 嵌套处理
     forward_relation_hand(model, value)
 
-    serializer = create_serializer_class(model)(
+    serializer = create_serializer_class(model, allow_one_to_one=True)(
         instance=instance, data=value, partial=True
     )
     serializer.is_valid(raise_exception=True)
@@ -223,7 +223,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
                     )
 
                 item_value[field.remote_field.name] = instance.pk
-                serializer = create_serializer_class(model)(
+                serializer = create_serializer_class(model, allow_one_to_one=True)(
                     instance=obj, data=item_value, partial=True
                 )
                 serializer.is_valid(raise_exception=True)
@@ -231,7 +231,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
             else:
                 # 如果传进来的数据不包含主键，则代表是创建数据
                 item_value[field.remote_field.name] = instance.pk
-                serializer = create_serializer_class(model)(data=item_value)
+                serializer = create_serializer_class(model, allow_one_to_one=True)(data=item_value)
                 serializer.is_valid(raise_exception=True)
                 obj = serializer.save()
                 if detail:
@@ -305,35 +305,30 @@ def reverse_one_to_one(field, value, instance):
     model = field.related_model
     pk_field = model._meta.pk
     if isinstance(value, dict):
+        remote_field_name = field.remote_field.name
+
+        class ParentLinkSerializer(create_serializer_class(model, allow_one_to_one=True)):
+            """支持parent_link=True"""
+            def build_field(self, field_name, *args, **kwargs):
+                if field_name == remote_field_name:
+                    from rest_framework.utils.model_meta import RelationInfo
+                    from rest_framework.utils.model_meta import _get_to_field
+                    relation_info = RelationInfo(
+                        model_field=field.remote_field,
+                        related_model=field.remote_field.remote_field.model,
+                        to_many=False,
+                        to_field=_get_to_field(field.remote_field),
+                        has_through_model=False,
+                        reverse=False
+                    )
+                    return self.build_relational_field(field_name, relation_info)
+                return super().build_field(field_name, *args, **kwargs)
+
         value = forward_relation_hand(model, value)
         if pk_field.name not in value:
             model.objects.filter(**{field.remote_field.name: instance}).delete()
             value[field.remote_field.name] = instance.pk
-            s = create_serializer_class(model)
-            remote_field_name = field.remote_field.name
-
-            class ParentLinkSerializer(s):
-                """支持parent_link=True"""
-                def build_field(self, field_name, *args, **kwargs):
-                    if field_name == remote_field_name:
-                        from rest_framework.utils.model_meta import RelationInfo
-                        from rest_framework.utils.model_meta import _get_to_field
-                        relation_info = RelationInfo(
-                            model_field=field.remote_field,
-                            related_model=field.remote_field.remote_field.model,
-                            to_many=False,
-                            to_field=_get_to_field(field.remote_field),
-                            has_through_model=False,
-                            reverse=False
-                        )
-                        return self.build_relational_field(field_name, relation_info)
-                    return super().build_field(field_name, *args, **kwargs)
-
-                class Meta(s.Meta):
-                    fields = s.Meta.fields + [remote_field_name]
             serializer = ParentLinkSerializer(data=value)
-            serializer.is_valid(raise_exception=True)
-            obj = serializer.save()
         else:
             pk_value = pk_field.to_python(value[pk_field.name])
             filter_params = {
@@ -347,15 +342,11 @@ def reverse_one_to_one(field, value, instance):
                     error_data=f'{model}指定的主键[{pk_value}]找不到对应的数据',
                 )
 
-            value[field.remote_field.name] = instance.pk
-            s = create_serializer_class(model)
-            s.Meta.fields.append(field.remote_field.name)
-            serializer = s(
-                instance=obj, data=value, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+            value[remote_field_name] = instance.pk
+            serializer = ParentLinkSerializer(instance=obj, data=value, partial=True)
 
+        serializer.is_valid(raise_exception=True)
+        obj = serializer.save()
         reverse_relation(field.related_model, value, obj)
     else:
         if value is None:
