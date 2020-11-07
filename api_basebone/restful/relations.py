@@ -310,8 +310,28 @@ def reverse_one_to_one(field, value, instance):
             model.objects.filter(**{field.remote_field.name: instance}).delete()
             value[field.remote_field.name] = instance.pk
             s = create_serializer_class(model)
-            s.Meta.fields.append(field.remote_field.name)
-            serializer = s(data=value)
+            remote_field_name = field.remote_field.name
+
+            class ParentLinkSerializer(s):
+                """支持parent_link=True"""
+                def build_field(self, field_name, *args, **kwargs):
+                    if field_name == remote_field_name:
+                        from rest_framework.utils.model_meta import RelationInfo
+                        from rest_framework.utils.model_meta import _get_to_field
+                        relation_info = RelationInfo(
+                            model_field=field.remote_field,
+                            related_model=field.remote_field.remote_field.model,
+                            to_many=False,
+                            to_field=_get_to_field(field.remote_field),
+                            has_through_model=False,
+                            reverse=False
+                        )
+                        return self.build_relational_field(field_name, relation_info)
+                    return super().build_field(field_name, *args, **kwargs)
+
+                class Meta(s.Meta):
+                    fields = s.Meta.fields + [remote_field_name]
+            serializer = ParentLinkSerializer(data=value)
             serializer.is_valid(raise_exception=True)
             obj = serializer.save()
         else:
