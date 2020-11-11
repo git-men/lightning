@@ -42,7 +42,7 @@ def forward_many_to_many(field, value, update_data):
             # FIXME: 嵌套处理
             forward_relation_hand(model, item_data)
 
-            serializer = create_serializer_class(model)(data=item_data)
+            serializer = create_serializer_class(model, allow_one_to_one=True)(data=item_data)
             serializer.is_valid(raise_exception=True)
             create_ids.append(serializer.save().pk)
         pure_data += create_ids
@@ -64,7 +64,7 @@ def forward_many_to_many(field, value, update_data):
 
             # FIXME: 嵌套处理
             forward_relation_hand(model, item_data)
-            serializer = create_serializer_class(model)(
+            serializer = create_serializer_class(model, allow_one_to_one=True)(
                 instance=instance, data=item_data, partial=True
             )
             serializer.is_valid(raise_exception=True)
@@ -92,9 +92,11 @@ def forward_one_to_many(field, value, update_data):
         # FIXME: 嵌套处理
         forward_relation_hand(model, value)
 
-        serializer = create_serializer_class(model)(data=value)
+        serializer = create_serializer_class(model, allow_one_to_one=True)(data=value)
         serializer.is_valid(raise_exception=True)
-        update_data[key] = serializer.save().pk
+        instance = serializer.save()
+        update_data[key] = instance.pk
+        reverse_relation(model, value, instance)
         return update_data
 
     # 如果传进来的数据包含主键，则代表是更新数据
@@ -108,12 +110,13 @@ def forward_one_to_many(field, value, update_data):
     # FIXME: 嵌套处理
     forward_relation_hand(model, value)
 
-    serializer = create_serializer_class(model)(
+    serializer = create_serializer_class(model, allow_one_to_one=True)(
         instance=instance, data=value, partial=True
     )
     serializer.is_valid(raise_exception=True)
     serializer.save()
     update_data[key] = value[pk_field_name]
+    reverse_relation(model, value, instance)
     return update_data
 
 
@@ -211,7 +214,6 @@ def reverse_one_to_many(field, value, instance, detail=True):
 
                 filter_params = {
                     pk_field_name: pk_value,
-                    field.remote_field.name: instance,
                 }
                 obj = model.objects.filter(**filter_params).first()
                 if not obj:
@@ -221,7 +223,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
                     )
 
                 item_value[field.remote_field.name] = instance.pk
-                serializer = create_serializer_class(model)(
+                serializer = create_serializer_class(model, allow_one_to_one=True)(
                     instance=obj, data=item_value, partial=True
                 )
                 serializer.is_valid(raise_exception=True)
@@ -229,20 +231,13 @@ def reverse_one_to_many(field, value, instance, detail=True):
             else:
                 # 如果传进来的数据不包含主键，则代表是创建数据
                 item_value[field.remote_field.name] = instance.pk
-                serializer = create_serializer_class(model)(data=item_value)
+                serializer = create_serializer_class(model, allow_one_to_one=True)(data=item_value)
                 serializer.is_valid(raise_exception=True)
                 obj = serializer.save()
                 if detail:
                     pure_id_list.append(getattr(obj, pk_field_name))
 
-            # 如果存在反向字段数据，则需要处理
-            reverse_relation_fields = meta.get_reverse_fields(field.related_model)
-            if reverse_relation_fields:
-                for item in reverse_relation_fields:
-                    if item.name in item_value:
-                        reverse_relation_hand(
-                            item.model, {item.name: item_value[item.name]}, instance=obj
-                        )
+            reverse_relation(field.related_model, item_value, obj)
 
     # 如果是更新，则删除掉对应的数据
     if detail and pure_id_list:
@@ -310,16 +305,18 @@ def reverse_one_to_one(field, value, instance):
     model = field.related_model
     pk_field = model._meta.pk
     if isinstance(value, dict):
+        remote_field_name = field.remote_field.name
+
+        Serializer = create_serializer_class(model, allow_one_to_one=True)
         value = forward_relation_hand(model, value)
         if pk_field.name not in value:
+            model.objects.filter(**{field.remote_field.name: instance}).delete()
             value[field.remote_field.name] = instance.pk
-            serializer = create_serializer_class(model)(data=value)
-            serializer.is_valid(raise_exception=True)
-            obj = serializer.save()
+            serializer = Serializer(data=value)
         else:
             pk_value = pk_field.to_python(value[pk_field.name])
             filter_params = {
-                pk_value.name: pk_value,
+                pk_field.name: pk_value,
                 field.remote_field.name: instance,
             }
             obj = model.objects.filter(**filter_params).first()
@@ -329,21 +326,12 @@ def reverse_one_to_one(field, value, instance):
                     error_data=f'{model}指定的主键[{pk_value}]找不到对应的数据',
                 )
 
-            value[field.remote_field.name] = instance.pk
-            serializer = create_serializer_class(model)(
-                instance=obj, data=value, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+            value[remote_field_name] = instance.pk
+            serializer = Serializer(instance=obj, data=value, partial=True)
 
-        # 如果存在反向字段数据，则需要处理
-        reverse_relation_fields = meta.get_reverse_fields(field.related_model)
-        if reverse_relation_fields:
-            for item in reverse_relation_fields:
-                if item.name in value:
-                    reverse_relation_hand(
-                        item.model, {item.name: value[item.name]}, instance=obj
-                    )
+        serializer.is_valid(raise_exception=True)
+        obj = serializer.save()
+        reverse_relation(field.related_model, value, obj)
     else:
         if value is None:
             model.objects.filter(**{field.remote_field.name: instance.pk}).delete()
@@ -351,7 +339,18 @@ def reverse_one_to_one(field, value, instance):
             model.objects.filter(**{field.field_name: pk_field.to_python(value)}).update(**{field.remote_field.name: instance.pk})
 
 
-def reverse_relation_hand(model, data, instance, detail=True):
+def reverse_relation(model, data, instance):
+    # 如果存在反向字段数据，则需要处理
+    reverse_relation_fields = meta.get_reverse_fields(model)
+    if reverse_relation_fields:
+        for item in reverse_relation_fields:
+            if item.name in data:
+                reverse_relation_hand(
+                    item.model, {item.name: data[item.name]}, instance=instance, whole_data=data
+                )
+
+
+def reverse_relation_hand(model, data, instance, detail=True, whole_data=None):
     """反向关系字段的处理
 
     Params:
@@ -375,6 +374,34 @@ def reverse_relation_hand(model, data, instance, detail=True):
                 reverse_many_to_many(instance, field, value)
             elif field.one_to_many:
                 reverse_one_to_many(field, value, instance, detail=detail)
+            elif field.parent_link and isinstance(value, dict):
+                model = field.related_model
+                remote_field_name = field.remote_field.name
+
+                class ParentLinkSerializer(create_serializer_class(model, allow_one_to_one=True)):
+                    """支持parent_link=True"""
+                    def build_field(self, field_name, *args, **kwargs):
+                        if field_name == remote_field_name:
+                            from rest_framework.utils.model_meta import RelationInfo
+                            from rest_framework.utils.model_meta import _get_to_field
+                            relation_info = RelationInfo(
+                                model_field=field.remote_field,
+                                related_model=field.remote_field.remote_field.model,
+                                to_many=False,
+                                to_field=_get_to_field(field.remote_field),
+                                has_through_model=False,
+                                reverse=False
+                            )
+                            return self.build_relational_field(field_name, relation_info)
+                        return super().build_field(field_name, *args, **kwargs)
+                value = forward_relation_hand(model, value)
+                value.update(whole_data)
+                value[remote_field_name] = instance.pk
+                serializer = ParentLinkSerializer(data=value)
+                print(value, serializer.Meta.fields)
+                serializer.is_valid(raise_exception=True)
+                obj = serializer.save()
+                reverse_relation(model, value, obj)
             elif field.one_to_one:
                 reverse_one_to_one(field, value, instance)
 
