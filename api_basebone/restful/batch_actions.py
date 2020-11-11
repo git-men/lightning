@@ -73,7 +73,7 @@ class BatchActionForm(serializers.Serializer):
 
     action = serializers.CharField(max_length=50)
     data = serializers.ListField(min_length=1)
-    payload = serializers.JSONField()
+    payload = serializers.JSONField(required=False)
 
     def validate_action(self, value):
         """
@@ -82,7 +82,8 @@ class BatchActionForm(serializers.Serializer):
         """
         view = self.context['view']
         actions = get_model_batch_actions(view.model, end=view.end_slug)
-        actions.setdefault(common_action_map)
+        for key, val in common_action_map.items():
+            actions.setdefault(key, val)
 
         if value not in actions:
             raise exceptions.BusinessException(
@@ -117,7 +118,7 @@ class BatchActionForm(serializers.Serializer):
     def handle(self):
         request = self.context['request']
         try:
-            return self.bsm_batch_action(request, self.bsm_batch_queryset, self.data['payload'])
+            return self.bsm_batch_action(request, self.bsm_batch_queryset, self.data.get('payload',{}))
         except Exception as e:
             raise exceptions.BusinessException(
                 error_code=exceptions.BATCH_ACTION_HAND_ERROR,
