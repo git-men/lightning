@@ -1,6 +1,7 @@
 from django.apps import apps
 from django.conf import settings
 from django.db.models import Q
+from django.contrib.auth.models import Group
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -82,9 +83,11 @@ class ConfigViewSet(viewsets.GenericViewSet):
     
     def _get_menu_from_database(self):
         """从数据库中获取菜单"""
-        permissions = self.request.user.get_all_permissions()
-        permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
-        menus = Menu.objects.filter(permission_filter).prefetch_related('parent').order_by('sequence','id').all()
+        user = self.request.user
+        # permissions = self.request.user.get_all_permissions()
+        # permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
+        menus =  Menu.objects.prefetch_related('parent').order_by('sequence','id') if user.is_superuser else \
+              Menu.objects.filter(Q(groups__in=self.request.user.groups.all())).prefetch_related('parent').order_by('sequence','id')
         fields =  { field.name for field in Menu._meta.fields } - {'id', 'parent',  'permission', 'name'}
         menus_map = { menu.id: dict({ field: getattr(menu, field) for field in fields }, **{ 'name': menu.display_name, 'parent_id': menu.parent_id, 'children': [] }) for menu in menus }
         for _, menu in menus_map.items():
