@@ -195,3 +195,24 @@ class Setting(models.Model):
         verbose_name = '网站配置'
         verbose_name_plural = '网站配置'
 
+
+class FieldAdmin(models.Model):
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, verbose_name='关联Admin')
+    field = models.CharField('字段名', max_length=200)
+
+    class Meta:
+        verbose_name = 'Admin字段配置'
+        verbose_name_plural = verbose_name
+        unique_together = ['admin', 'field']
+
+
+class FieldPermission(models.Model):
+    field_admin = models.ForeignKey(FieldAdmin, on_delete=models.CASCADE, verbose_name='关联字段')
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, verbose_name='角色')
+    read = models.BooleanField('读', default=True)
+    write = models.BooleanField('写', default=True)
+
+    class Meta:
+        verbose_name = '字段权限配置'
+        verbose_name_plural = verbose_name
+        unique_together = ['field_admin', 'group']

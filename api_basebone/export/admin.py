@@ -6,6 +6,7 @@ from api_basebone.core.admin import BSMAdminModule
 from api_basebone.utils import meta
 from api_basebone.utils.format import underline_to_camel
 from bsm_config.models import Admin
+from bsm_config.bsm.functions import get_field_permissions
 
 
 class BSMAdminConfig:
@@ -59,6 +60,7 @@ def get_app_admin_config():
     for admin in Admin.objects.all():
         config[admin.model] = admin.config
         config[admin.model]['_id'] = admin.id
+        config[admin.model]['field_permissions'] = get_field_permissions(None, admin.model)
 
     # 动态加载 amdin 模块
     meta.load_custom_admin_module()
