@@ -17,5 +17,5 @@ def index_view(request):
 
 
 urlpatterns = [
-    re_path('^(?!basebone/).*$', index_view)
+    re_path('^(?!basebone).*$', index_view)
 ]
