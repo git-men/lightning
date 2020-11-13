@@ -1,6 +1,8 @@
+from django.db import transaction
 from .models import Block
 
 
+@transaction.atomic
 def move(source, parent, index):
     source = Block.objects.get(id=source)
     parent = Block.objects.get(id=parent)
