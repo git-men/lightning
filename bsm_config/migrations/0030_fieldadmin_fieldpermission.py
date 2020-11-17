@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name='FieldAdmin',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('field', models.CharField(max_length=200, verbose_name='字段名')),
+                ('field', models.CharField(max_length=150, verbose_name='字段名')),
                 ('admin', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='bsm_config.Admin', verbose_name='关联Admin')),
             ],
             options={

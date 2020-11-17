@@ -198,7 +198,7 @@ class Setting(models.Model):
 
 class FieldAdmin(models.Model):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, verbose_name='关联Admin')
-    field = models.CharField('字段名', max_length=200)
+    field = models.CharField('字段名', max_length=150)
 
     class Meta:
         verbose_name = 'Admin字段配置'
