@@ -152,13 +152,13 @@ def permissions_new_str(self):
 def display_name(self):
     name = self.name
     if 'Can delete' in name:
-        return name.replace('Can delete', '删除')
+        return '删除'
     elif 'Can add' in name:
-        return name.replace('Can add', '添加')
+        return '添加'
     elif 'Can change' in name:
-        return name.replace('Can change', '修改')
+        return '修改'
     elif 'Can view' in name:
-        return name.replace('Can view', '查看')
+        return '查看'
     else:
         return name
 
