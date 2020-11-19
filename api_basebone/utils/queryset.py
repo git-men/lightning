@@ -230,12 +230,13 @@ class BSMQuerySet(QuerySet):
         qs = queryset_prefetch(self, display_fields=display_fields)
         return serializer_class(qs.get(**conditions)).data
 
+    def annotate_fields(self):
+        return annotate_queryset(self, fields=None, context=None)
+
     # def _chain(self):
     #     c = super()._chain()
     #     if hasattr(self, '_serializer_class'):
     #         c._serializer_class = self._serializer_class
     #     return c
 
-
-class GManager(Manager.from_queryset(BSMQuerySet)):
-    pass
+GManager = Manager.from_queryset(BSMQuerySet)
