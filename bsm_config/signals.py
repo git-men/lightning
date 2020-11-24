@@ -23,6 +23,8 @@ def remove_menu_permission(sender, instance, update_fields = [], **kwargs):
 
         if check_page(old_page, new_page, old_type, new_type):
             remove_permission(old_instance)
+            # 清空permission
+            instance.permission = ''
 
         if new_page not in MODEL_PAGES:
             instance.model = ''
