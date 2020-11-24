@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.http import FileResponse
-from django.urls import re_path
+from django.urls import re_path, path, include
 from django.conf import settings
 
 static_path = getattr(settings, 'LIGHTING_STATIC_PATH', Path(__file__).absolute().parent.joinpath('static'))
@@ -17,5 +17,7 @@ def index_view(request):
 
 
 urlpatterns = [
+    path('basebone/storage/', include('storage.urls')),
+    path('', include('api_basebone.urls')),
     re_path('^(?!basebone).*$', index_view)
 ]
