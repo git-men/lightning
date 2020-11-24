@@ -1,1 +1,0 @@
-(window["webpackJsonp"]=window["webpackJsonp"]||[]).push([[9],{SMXX:function(e,a,n){"use strict";n.r(a);var t=n("qE61"),r=n.n(t),c=n("IAeB"),l=n("7gdK"),u=function(e){var a=e.match.params.model;return r.a.createElement(r.a.Fragment,null,r.a.createElement(c["a"],e),r.a.createElement(l["a"],{model:a,key:a,defaultTab:"detail"}))};n.d(a,"default",function(){return u})}}]);
