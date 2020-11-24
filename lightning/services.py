@@ -80,7 +80,7 @@ def create_admin_config(app_labels, exist_model):
                 detailTableFields.append(field.name)
 
         if detailTableFields: 
-            config['detail']['sections'].append({'fields': detailTableFields,'style': {'widget': "table"}})
+            config['detail']['sections'].append({'fields': detailTableFields,'style': {'widget': "tiles"}})
         if detailFields:
             for f in detailFields:
                 config['detail']['sections'].append({'fields':[f]})  
