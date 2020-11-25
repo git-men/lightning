@@ -57,7 +57,8 @@ def create_admin_config(app_labels, exist_model):
     permissions = []
     for model in models:
         key = '{}__{}'.format(model._meta.app_label, model._meta.model_name).lower()
-        config = {'display':[], 'formFields':[], 'inlineActions':['edit', 'delete', 'detail'], 'filter':[], 'detail':{'fields': False, 'sections':[],'style': 'group'}}
+        config = {'display':[], 'formFields':[], 'inlineActions':['edit', 'delete', 'detail'], 'filter':[]}
+        detail = {'fields': False, 'sections':[],'style': 'group'}
         detailTableFields = []
         detailFields = []
 
@@ -80,10 +81,11 @@ def create_admin_config(app_labels, exist_model):
                 detailTableFields.append(field.name)
 
         if detailTableFields: 
-            config['detail']['sections'].append({'fields': detailTableFields,'style': {'widget': "tiles"}})
+            detail['sections'].append({'fields': detailTableFields,'style': {'widget': "tiles"}})
         if detailFields:
             for f in detailFields:
-                config['detail']['sections'].append({'fields':[f]})  
+                detail['sections'].append({'fields':[f]})  
+        config['details'] = [detail]
 
         admins.append(Admin(model=key, config=config)) 
 
@@ -103,7 +105,6 @@ def create_admin_config(app_labels, exist_model):
         permissions.append(f'{app_name}.change_{model_name}')
     Admin.objects.bulk_create(admins)
     Menu.objects.bulk_create([menu for menu in menus if f'{menu.model}-{menu.page}' not in menu_keys])
-    # import ipdb; ipdb.set_trace()
     new_meus = Menu.objects.exclude(id__in=menu_ids)
     # 返回所有模型权限
     return permissions, new_meus
