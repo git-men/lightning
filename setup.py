@@ -1,15 +1,7 @@
 from setuptools import find_packages, setup
 
-NAME = 'api_basebone'
+NAME = 'lightning'
 VERSION = '1.0.0'
-
-
-def get_packages():
-    """获取包"""
-    return [NAME] + [
-        "{}.{}".format(NAME, item) for item in find_packages(NAME)
-    ]
-
 
 def get_install_require_packages():
     """获取依赖的安装包"""
@@ -25,16 +17,22 @@ with open('README.md', 'r') as file:
 
 
 setup(
-    name='baseman',
+    name=NAME,
     version=VERSION,
-    #url='https://github.com/git-men/sky',
-    #author='Kycool',
-    #author_email='kycoolcool@gmail.com',
-    description='基于 Django, DRF 通用的接口解决方案',
+    url='https://github.com/git-men/lightning',
+    author='gitmen.com',
+    author_email='jeff@gitmen.com',
+    description='A Django based no-code Admin and rapid development framework',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    license='BSD',
-    packages=get_packages(),
+    license='MIT',
+    packages=[
+        'api_basebone',
+        'bsm_config',
+        'lightning',
+        'shield',
+        'storage'
+    ],
     include_package_data=True,
     install_requires=get_install_require_packages(),
     zip_safe=False,
