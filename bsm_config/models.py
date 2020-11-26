@@ -27,6 +27,7 @@ class Menu(models.Model):
     PAGE_ADMIN_CONFIG= 'adminConfig'
     PAGE_AUTO = 'auto'
     PAGE_CHART = 'chart'
+    PAGE_PUZZLE = 'puzzle'
     PAGE_IFRAME = 'iframe'
     PAGE_MAP = 'map'
     PAGE_CHOICES = [
@@ -34,7 +35,8 @@ class Menu(models.Model):
         [PAGE_DETAIL, '详情页'], 
         [PAGE_ADMIN_CONFIG, '页面配置面板'], 
         [PAGE_AUTO, '自定义页面'], 
-        [PAGE_CHART, '自定义图表'], 
+        # [PAGE_CHART, '自定义图表'], 
+        [PAGE_PUZZLE, '仪表盘'],
         [PAGE_IFRAME, 'Iframe页面'],
         # 先不放地图出去 [PAGE_MAP, '地图页面']
     ]
