@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from .models import Menu, Setting
 
 MODEL_PAGES = (Menu.PAGE_LIST, Menu.PAGE_DETAIL, Menu.PAGE_MAP)
-ORDER_PAGES = (Menu.PAGE_ADMIN_CONFIG,  Menu.PAGE_AUTO, Menu.PAGE_CHART, Menu.PAGE_IFRAME)
+ORDER_PAGES = (Menu.PAGE_ADMIN_CONFIG,  Menu.PAGE_AUTO, Menu.PAGE_CHART, Menu.PAGE_IFRAME, Menu.PAGE_PUZZLE)
 
 def remove_permission(menu):
     # 删除菜单权限
