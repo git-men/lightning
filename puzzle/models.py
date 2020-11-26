@@ -8,7 +8,7 @@ def uuid4_hex():
 
 
 class Block(MPTTModel):
-    COMPONENT_NAME = ''
+    COMPONENT_NAME = None
 
     id = models.SlugField('标识', unique=True, primary_key=True, default=uuid4_hex)
     component = models.CharField('组件', max_length=20, default='')  # 20个字符已经很过分了
@@ -18,7 +18,8 @@ class Block(MPTTModel):
         return f'<{self.component}: ({self.id})>'
 
     def save(self, *args, **kwargs):
-        self.component = self.COMPONENT_NAME
+        if self.COMPONENT_NAME: 
+            self.component = self.COMPONENT_NAME
         return super().save(*args, **kwargs)
 
     class Meta:
@@ -34,3 +35,6 @@ class Page(Block):
     class Meta:
         verbose_name = '页面'
         verbose_name_plural = verbose_name
+    
+    class GMeta:
+        title_field = 'name'

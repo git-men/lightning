@@ -14,6 +14,7 @@ from jsonfield import JSONField as OriginJSONField
 
 from api_basebone.core.fields import JSONField
 from api_basebone.export.specs import FieldType
+from puzzle.models import Page
 
 
 # 自定义菜单
@@ -53,12 +54,15 @@ class Menu(models.Model):
         'self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单', related_name='children'
     )
     page = models.CharField(
-        '页面', 
+        '页面类型', 
         max_length=200, 
         help_text='前端功能页面的标识', 
         default='', 
         null=True,
         choices=PAGE_CHOICES
+    )
+    puzzle = models.ForeignKey(
+        Page, on_delete=models.CASCADE, verbose_name='指向页面', related_name='menus', null=True
     )
     path = models.CharField('自定义路径', max_length=255, null=True, blank=True)
     permission = models.CharField(
