@@ -12,7 +12,7 @@ class Block(MPTTModel):
 
     id = models.SlugField('标识', unique=True, primary_key=True, default=uuid4_hex)
     component = models.CharField('组件', max_length=20, default='')  # 20个字符已经很过分了
-    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='children', verbose_name='父结点')
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children', verbose_name='父结点')
 
     def __str__(self):
         return f'<{self.component}: ({self.id})>'

@@ -18,3 +18,13 @@ class BlockAdmin(BSMAdmin):
 
     class Meta:
         model = models.Block
+
+
+@register
+class PageAdmin(BlockAdmin):
+    filter = BlockAdmin.filter + ['name']
+    display = BlockAdmin.display + ['name']
+    form_fields = BlockAdmin.form_fields + ['name']
+
+    class Meta:
+        model = models.Page
