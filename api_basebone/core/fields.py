@@ -55,8 +55,17 @@ class BoneImageCharField(models.CharField):
         return 'BoneImageCharField'
 
 
-class BoneImageUrlField(models.URLField):
+class BoneImageUrlField(models.CharField):
     """存储图片链接"""
+    def __init__(self, verbose_name=None, name=None, **kwargs):
+        kwargs.setdefault('max_length', 200)
+        super().__init__(verbose_name, name, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if kwargs.get("max_length") == 200:
+            del kwargs['max_length']
+        return name, path, args, kwargs
 
     def get_bsm_internal_type(self):
         return 'BoneImageUrlField'
