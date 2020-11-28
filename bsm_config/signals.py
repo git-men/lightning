@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from django.db.models.signals import post_save, pre_delete, pre_save, post_migrate
+from django.db.models import Min
 from django.dispatch import receiver
 from django.contrib.auth.models import Permission, Group
 from django.contrib.contenttypes.models import ContentType
@@ -14,7 +15,11 @@ log = logging.getLogger(__name__)
 
 @receiver(pre_save, sender=Menu, dispatch_uid='remove_menu_permission')
 def remove_menu_permission(sender, instance, update_fields = [], **kwargs):
-    if instance.id:
+    if instance._state.adding:
+        """把新建的菜单排序到最前面"""
+        min_sequence = Menu.objects.exclude(sequence=0).values_list('sequence', flat=True).annotate(Min('sequence')).order_by('sequence').first() or 1000
+        instance.sequence = min_sequence - 1
+    else:
         old_instance = Menu.objects.get(id=instance.id)
         old_page = old_instance.page
         new_page = instance.page
