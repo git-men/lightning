@@ -19,3 +19,4 @@ qcloud-python-sts==3.0.3
 # fork
 https://github.com/jeffkit/wechatpy/archive/v.18.13-work.zip
 psycopg2-binary==2.8.5
+django-mptt
