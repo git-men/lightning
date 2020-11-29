@@ -1,3 +1,3 @@
-from django.contrib import admin
+from api_basebone.core.admin import BSMAdmin
 
-# Register your models here.
+Admin = BSMAdmin
