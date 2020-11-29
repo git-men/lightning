@@ -2,5 +2,6 @@ include AUTHORS
 include MANIFEST.in
 include requirements.in
 include *.md
+recursive-include lightning/static *.png *.jpg *.css *.js *.html
 global-exclude __pycache__
 global-exclude *.py[co]
