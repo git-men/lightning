@@ -326,30 +326,6 @@ class GroupStatisticsMixin:
         )
         return success_response(data)
 
-
-class ActionLogMixin:
-    """动作记录"""
-
-    def initial(self, request, *args, **kwargs):
-        result = super().initial(request, *args, **kwargs)
-
-        # if self.app_label == 'api_basebone' and self.model_slug == 'adminlog':
-        #     return result
-        # if self.action in ('set', 'retrieve'):
-        #     return result
-
-        # if basebone_settings.MANAGE_USE_ACTION_LOG:
-        #     AdminLog.objects.create(
-        #         user=self.request.user,
-        #         action=self.action,
-        #         app_label=self.app_label,
-        #         model_slug=self.model_slug,
-        #         object_id=self.kwargs.get('pk', ''),
-        #         params=request.data,
-        #     )
-        return result
-
-
 class FormMixin(object):
     """表单处理集合"""
 

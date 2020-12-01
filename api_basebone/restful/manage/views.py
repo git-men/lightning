@@ -17,7 +17,6 @@ from api_basebone.drf.response import success_response
 from api_basebone.restful import batch_actions, renderers, renderers_v2
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.mixins import (
-    ActionLogMixin,
     CheckValidateMixin,
     GroupStatisticsMixin,
     StatisticsMixin,
@@ -622,7 +621,6 @@ class CommonManageViewSet(
     CheckValidateMixin,
     GroupStatisticsMixin,
     QuerySetMixin,
-    ActionLogMixin,
     GenericViewMixin,
     StatisticsMixin,
     BSMModelViewSet,
