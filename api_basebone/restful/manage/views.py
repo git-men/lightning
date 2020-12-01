@@ -647,6 +647,10 @@ class CommonManageViewSet(
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
         return rest_services.manage_update(self, request, False, request.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """删除数据"""
+        return rest_services.destroy(self, request, scope='admin')
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""
