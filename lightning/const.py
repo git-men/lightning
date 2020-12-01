@@ -23,6 +23,7 @@ DEFAULT_MENU = [
             "icon":"tool",
              "children":[
                 {"name":"菜单管理","children":[],"model":"bsm_config__menu","page":"list","icon":"menu",},
+                {"name":"页面配置","children":[],"model":"","page":"adminConfig","icon":"block__outlined",},
                 # {"name":"API管理","children":[],"model":"api_db__api","page":"list","icon":"api"},
                 # {"name":"触发器管理","children":[],"model":"trigger_core__trigger","page":"list","icon":"fork"},    
             ]
