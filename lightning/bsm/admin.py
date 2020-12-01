@@ -1,6 +1,7 @@
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.conf import settings
 
 from api_basebone.core.widgets import widgets
 from lightning.admin import Admin
@@ -11,11 +12,12 @@ User = get_user_model()
 @lightning_admin
 class UserAdmin(Admin):
 
-    display = ['name', 'username', 'is_active', 'is_superuser', 'groups']
+    display = ['username', 'is_active', 'is_superuser', 'groups']
     form_fields = [
         'username',
         {'name': 'password', 'widget': widgets.PasswordInput},
         'is_active',
+        'is_staff',
         'is_superuser',
         'groups',
     ]
@@ -31,6 +33,11 @@ class UserAdmin(Admin):
 if hasattr(Group,'_meta'):
     setattr(Group._meta,'verbose_name','角色')
     setattr(Group._meta,'verbose_name_plural','角色')
+
+class UserGMeta:
+    title_field = getattr(settings, 'USER_MODEL_TITLE_FIELD', 'username')
+
+setattr(User, 'GMeta', UserGMeta)
 
 @lightning_admin
 class GroupAdmin(Admin):
