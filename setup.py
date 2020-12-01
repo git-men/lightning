@@ -9,7 +9,7 @@ def get_install_require_packages():
         return [line
             for line in file.readlines() if not line.startswith('http')]
 
-with open('README.md', 'r') as file:
+with open('README.zh-CN.md', 'r') as file:
     long_description = file.read()
 
 
