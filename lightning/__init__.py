@@ -1,3 +1,4 @@
+default_app_config = 'lightning.apps.LightningConfig'
 APPS = [
     'guardian',
     'api_basebone',
