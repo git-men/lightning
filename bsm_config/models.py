@@ -33,7 +33,7 @@ class Menu(models.Model):
         [PAGE_DETAIL, '详情页'], 
         [PAGE_ADMIN_CONFIG, '页面配置面板'], 
         [PAGE_AUTO, '自定义页面'], 
-        [PAGE_CHART, '自定义图表'], 
+        # [PAGE_CHART, '自定义图表'], 
         [PAGE_IFRAME, 'Iframe页面'],
         # 先不放地图出去 [PAGE_MAP, '地图页面']
     ]
@@ -53,7 +53,7 @@ class Menu(models.Model):
         'self', models.SET_NULL, null=True, blank=True, verbose_name='上级菜单', related_name='children'
     )
     page = models.CharField(
-        '页面', 
+        '页面类型', 
         max_length=200, 
         help_text='前端功能页面的标识', 
         default='', 
