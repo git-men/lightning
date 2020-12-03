@@ -1,4 +1,7 @@
+import os
 from setuptools import find_packages, setup
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 NAME = 'lightning'
 VERSION = '1.0.0'
@@ -26,7 +29,6 @@ all_packages = []
     'lightning',
     'shield',
     'storage',
-    'puzzle'
 ])]
 
 setup(

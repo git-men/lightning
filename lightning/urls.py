@@ -19,7 +19,6 @@ def asset_view(request, asset_path):
 
 
 urlpatterns = [
-    path('basebone/block/', include('puzzle.urls')),
     path('basebone/storage/', include('storage.urls')),
     re_path(r'^lightning/(?P<asset_path>.*$)', asset_view),
     path('', include('api_basebone.urls')),
