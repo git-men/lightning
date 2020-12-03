@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[16],{NmtZ:function(n,t,e){"use strict";e.r(t);var a=e("q1tI"),c=e.n(a),r=e("PUmp"),u=e("r/IN"),o=e("fVK0");t.default=Object(u.a)(o.a.CHANGE_SETTING)(function(){return c.a.createElement(r.a,null)})}}]);
