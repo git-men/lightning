@@ -79,8 +79,8 @@ class Menu(models.Model):
         Group, 
         related_name='menus', 
         blank=True, 
-        verbose_name='关联角色',
-        help_text='可查看此菜单的角色,不设置默认所有角色可查看此菜单',
+        verbose_name='可见角色',
+        help_text='限制可查看此菜单的角色，留空则不限制',
     )
 
     @property
