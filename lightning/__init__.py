@@ -5,5 +5,6 @@ APPS = [
     'bsm_config',
     'shield',
     'storage',
+    'puzzle',
     'lightning',
 ]
