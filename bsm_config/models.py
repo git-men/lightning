@@ -80,7 +80,7 @@ class Menu(models.Model):
         related_name='menus', 
         blank=True, 
         verbose_name='关联角色',
-        help_text='设置可查看此菜单的角色',
+        help_text='可查看此菜单的角色,不设置默认所有角色可查看此菜单',
     )
 
     @property
