@@ -50,8 +50,11 @@ def get_setting_config():
                     formField['options'] = field['options']
                 formFields.append(formField)
                 value = site_setting[field['name']] 
-                if value==None:
-                    value = field.get('default',None)
+
+                # 在site_setting里已经处理好default这个逻辑了，所以注释了
+                #if value==None:
+                #    value = field.get('default',None)
+
                 if f['type'] in ('mref',):
                     f['ref'] = field['ref']
                     if not value:
