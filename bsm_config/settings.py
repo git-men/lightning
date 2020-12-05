@@ -80,16 +80,27 @@ data_convert = DataConvert()
 # settings = SettingClient()
 
 
+
+site_defaults = {}
+WEBSITE_CONFIG = getattr(django_settings, 'WEBSITE_CONFIG', [])
+for section in WEBSITE_CONFIG:
+    for f in section['fields']:
+        if 'default' in f:
+            site_defaults[f['name']] = f['default']
+
+
 class SiteSetting:
     """项目配置统一使用SiteSetting获取和设值"""
     def _get_config_from_settings(self, key):
         """从配置文件中获取对应的配置"""
-        key = key.upper()
+        key_upper = key.upper()
         try:
-            return getattr(django_settings, key)
+            return getattr(django_settings, key_upper)
         except Exception as e:
-            if key in os.environ:
-                return os.environ.get(key)
+            if key_upper in os.environ:
+                return os.environ.get(key_upper)
+        if key in site_defaults:
+            return site_defaults[key]
         return None
         log.warning(f'配置中找不到 {key} 对应的配置')
 

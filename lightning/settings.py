@@ -73,10 +73,10 @@ WEBSITE_CONFIG = [
         'title': "上传配置",
         'key': 'upload',
         "fields": [
-            {"name":'upload_provider', "type":"string", "displayName": '供应商',
+            {"name":'upload_provider', "type":"string", "displayName": '供应商', 'default': 'file_storage',
             'choices': [['file_storage', '文件系统'], ['oss', '阿里云'], ['cos', '腾讯云']],'widget': 'Radio'},
 
-            {"name": 'storage_path', "type": "string", "displayName": '存储路径', "show": '${upload_provider} === "file_storage"'},
+            {"name": 'storage_path', "type": "string", "displayName": '存储路径', "show": '${upload_provider} === "file_storage"', 'default': 'lightning-files'},
 
             {"name":'upload_dir', "type":"string", "displayName": '上传目录',"show":'${upload_provider} === "oss"'},
             {"name":'ali_yun_oss_key', "type":"string", "displayName": '访问密钥(Key)',"show":'${upload_provider} === "oss"'},
