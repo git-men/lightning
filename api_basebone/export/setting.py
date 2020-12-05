@@ -1,9 +1,6 @@
-from django.conf import settings
 from django.apps import apps
-from bsm_config.models import Setting
-from bsm_config.settings import site_setting
+from bsm_config.settings import site_setting, WEBSITE_CONFIG
 
-WEBSITE_CONFIG = getattr(settings, 'WEBSITE_CONFIG', [])
 
 def get_settins():
     view_keys = []
