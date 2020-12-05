@@ -1,11 +1,11 @@
 import os
-import collections
 import logging
 
 from django.conf import settings as django_settings
 from django.db.models.functions import Lower
 
 from .models import Setting
+from .site_setting_config import DEFAULT_WEBSITE_CONFIG
 
 log = logging.getLogger('bsm')
 """
@@ -82,7 +82,7 @@ data_convert = DataConvert()
 
 
 site_defaults = {}
-WEBSITE_CONFIG = getattr(django_settings, 'WEBSITE_CONFIG', [])
+WEBSITE_CONFIG = getattr(django_settings, 'WEBSITE_CONFIG', DEFAULT_WEBSITE_CONFIG)
 for section in WEBSITE_CONFIG:
     for f in section['fields']:
         if 'default' in f:
