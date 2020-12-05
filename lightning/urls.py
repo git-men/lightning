@@ -1,17 +1,22 @@
 import os
-from pathlib import Path
-from django.http import HttpResponse, HttpResponseNotFound, FileResponse
+import re
+from django.http import HttpResponse
 from django.template import engines
 from django.urls import re_path, path, include
+from django.contrib.staticfiles import finders
+from django.contrib.staticfiles.views import serve
 from django.conf import settings
 
-static_path = Path(__file__).absolute().parent.joinpath('static')
 static_url = settings.STATIC_URL
 lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 
-index_template = static_path.joinpath('lightning/index.html').open().read()
+index_template = open(finders.find(lightning_static_url + '/index.html')).read()
 index_content = engines['django'].from_string(index_template).render({'public_path': static_url + lightning_static_url})
 index_response = HttpResponse(index_content)
+
+
+def index_view(request):
+    return index_response
 
 
 def is_relative_to(sub_path, dir_path):
@@ -23,22 +28,9 @@ def is_relative_to(sub_path, dir_path):
     return os.path.abspath(sub_path).startswith(os.path.abspath(dir_path))
 
 
-def asset_view(request, asset_path):
-    p = static_path.joinpath(asset_path)
-    if not is_relative_to(p, static_path) or not p.is_file():
-        return HttpResponseNotFound()
-    return FileResponse(p.open('rb'))
-
-
-def index_view(request, sub_path):
-    su = static_url[1:]
-    if sub_path.startswith(su):
-        return asset_view(request, sub_path[len(su):])
-    return index_response
-
-
 urlpatterns = [
     path('basebone/storage/', include('storage.urls')),
     path('', include('api_basebone.urls')),
-    re_path('^(?!basebone)(?P<sub_path>.*$)', index_view)
+    re_path(r'^%s(?P<path>.*)$' % re.escape(static_url.lstrip('/')), serve, kwargs={'insecure': True}),
+    re_path('^(?!basebone).*$', index_view)
 ]
