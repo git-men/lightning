@@ -17,7 +17,6 @@ from api_basebone.drf.response import success_response
 from api_basebone.restful import batch_actions, renderers, renderers_v2
 from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.restful.mixins import (
-    ActionLogMixin,
     CheckValidateMixin,
     GroupStatisticsMixin,
     StatisticsMixin,
@@ -622,7 +621,6 @@ class CommonManageViewSet(
     CheckValidateMixin,
     GroupStatisticsMixin,
     QuerySetMixin,
-    ActionLogMixin,
     GenericViewMixin,
     StatisticsMixin,
     BSMModelViewSet,
@@ -647,6 +645,10 @@ class CommonManageViewSet(
     def update(self, request, *args, **kwargs):
         """全量更新数据"""
         return rest_services.manage_update(self, request, False, request.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """删除数据"""
+        return rest_services.destroy(self, request, scope='admin')
 
     def partial_update(self, request, *args, **kwargs):
         """部分字段更新"""

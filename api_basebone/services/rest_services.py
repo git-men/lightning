@@ -264,6 +264,7 @@ def manage_create(genericAPIView, request, set_data):
             create=True,
             request=genericAPIView.request,
             old_instance=None,
+            scope='admin'
         )
     return success_response(serializer.data)
 
@@ -344,6 +345,7 @@ def manage_update(genericAPIView, request, partial, set_data):
             create=False,
             old_instance=old_instance,
             request=genericAPIView.request,
+            scope='admin'
         )
     return success_response(serializer.data)
 
@@ -383,12 +385,13 @@ def update_sort(genericAPIView, request, data):
     return success_response(instance.objects.all().values())
 
 
-def destroy(genericAPIView, request):
+def destroy(genericAPIView, request, scope=''):
     """删除数据"""
     instance = genericAPIView.get_object()
+    old_instance = copy(instance)
     genericAPIView.perform_destroy(instance)
     post_bsm_delete.send(
-        sender=genericAPIView.model, instance=instance, request=genericAPIView.request
+        sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope
     )
     return success_response()
 
