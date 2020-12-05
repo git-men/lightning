@@ -103,13 +103,9 @@ urlpatterns = [
 ```
 此时，通过浏览器打开 http://localhost:8000/lightning 即可进入管理界面，使用管理员帐号登录即可。若未有帐号，使用`./manage.py createsuperuser` 命令创建一个。
 
-以下是部份演示截图：
+## 了解更多
 
-
-## 配置范例
-
-请参考客户关系管理 Demo的配置过程。
-
+请查阅[参考文档](https://gitmen.gitee.io/lightning-doc/)以及[示例](https://gitmen.gitee.io/lightning-doc/docs/crm)
 
 <!-- CONTRIBUTING -->
 ## 欢迎参与项目建设
