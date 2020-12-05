@@ -1,5 +1,5 @@
 {
-  "/vendors.css": "{{ public_path }}/vendors.44d0be36.chunk.css",
+  "/vendors.css": "{{ public_path }}/vendors.d03e3cf6.chunk.css",
   "/vendors.js": "{{ public_path }}/vendors.90dd89cd.async.js",
   "/1.930ddafe.async.js": "{{ public_path }}/1.930ddafe.async.js",
   "/2.26e63ddc.async.js": "{{ public_path }}/2.26e63ddc.async.js",
@@ -10,7 +10,7 @@
   "/6.9ad19f33.async.js": "{{ public_path }}/6.9ad19f33.async.js",
   "/p__BSMApp.js": "{{ public_path }}/p__BSMApp.c1a2bcf2.async.js",
   "/umi.css": "{{ public_path }}/umi.24c976db.css",
-  "/umi.js": "{{ public_path }}/umi.814dd15b.js",
+  "/umi.js": "{{ public_path }}/umi.4e45c16e.js",
   "/9.dd249bfb.chunk.css": "{{ public_path }}/9.dd249bfb.chunk.css",
   "/9.78ffdcbf.async.js": "{{ public_path }}/9.78ffdcbf.async.js",
   "/10.4c3237d7.chunk.css": "{{ public_path }}/10.4c3237d7.chunk.css",
@@ -46,6 +46,5 @@
   "/static/LineChart.png": "{{ public_path }}/static/LineChart.72153267.png",
   "/static/PieChart .png": "{{ public_path }}/static/PieChart .985cd2bf.png",
   "/static/RadarChart.png": "{{ public_path }}/static/RadarChart.c2823683.png",
-  "/static/logo.png": "{{ public_path }}/static/logo.5e791cb9.png",
-  "/static/style.css": "{{ public_path }}/static/panda.89c45324.jpg"
+  "/static/logo.png": "{{ public_path }}/static/logo.5e791cb9.png"
 }
