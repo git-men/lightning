@@ -9,6 +9,15 @@ from api_basebone.drf.response import success_response
 from bsm_config.settings import site_setting
 
 
+def is_relative_to(path, dir_path):
+    # 避免 path traversal 问题 https://owasp.org/www-community/attacks/Path_Traversal
+    # Python 3.9 才有 Path.is_relative_to，
+    # 而 Path.resolve 会 follow symbol link，
+    # Path.absolute 又不能解析“../”，
+    # 所以只能用 os.path.abspath 了
+    return os.path.abspath(path).startswith(os.path.abspath(dir_path))
+
+
 @api_view(['POST'])
 @parser_classes([MultiPartParser])
 def upload(request):
@@ -17,12 +26,7 @@ def upload(request):
     if not storage_path:
         raise BusinessException('storage support not enabled')
     file_path = Path(storage_path).joinpath(key)
-    if not os.path.abspath(file_path).startswith(storage_path):
-        # 避免 path traversal 问题 https://owasp.org/www-community/attacks/Path_Traversal
-        # Python 3.9 才有 Path.is_relative_to，
-        # 而 Path.resolve 会 follow symbol link，
-        # Path.absolute 又不能解析“../”，
-        # 所以只能用 os.path.abspath 了
+    if not is_relative_to(file_path, storage_path):
         raise BusinessException('invalid file key: %s' % key)
     dirname = file_path.parent
     if not dirname.exists():
@@ -39,14 +43,8 @@ def upload(request):
 
 def file(request, key):
     storage_path = site_setting['storage_path']
-    print(key)
     file_path = Path(storage_path).joinpath(key)
-    if not os.path.abspath(file_path).startswith(storage_path):
-        # 避免 path traversal 问题 https://owasp.org/www-community/attacks/Path_Traversal
-        # Python 3.9 才有 Path.is_relative_to，
-        # 而 Path.resolve 会 follow symbol link，
-        # Path.absolute 又不能解析“../”，
-        # 所以只能用 os.path.abspath 了
+    if not is_relative_to(file_path, storage_path):
         raise BusinessException('invalid file key: %s' % key)
     if not file_path.is_file():
         raise BusinessException('file not exists: %s' % key)

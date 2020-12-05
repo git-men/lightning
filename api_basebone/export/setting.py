@@ -1,9 +1,6 @@
-from django.conf import settings
 from django.apps import apps
-from bsm_config.models import Setting
-from bsm_config.settings import site_setting
+from bsm_config.settings import site_setting, WEBSITE_CONFIG
 
-WEBSITE_CONFIG = getattr(settings, 'WEBSITE_CONFIG', [])
 
 def get_settins():
     view_keys = []
@@ -50,8 +47,11 @@ def get_setting_config():
                     formField['options'] = field['options']
                 formFields.append(formField)
                 value = site_setting[field['name']] 
-                if value==None:
-                    value = field.get('default',None)
+
+                # 在site_setting里已经处理好default这个逻辑了，所以注释了
+                #if value==None:
+                #    value = field.get('default',None)
+
                 if f['type'] in ('mref',):
                     f['ref'] = field['ref']
                     if not value:
