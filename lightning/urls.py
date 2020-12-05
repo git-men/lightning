@@ -7,9 +7,10 @@ from django.conf import settings
 
 static_path = Path(__file__).absolute().parent.joinpath('static')
 static_url = settings.STATIC_URL
+lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 
 index_template = static_path.joinpath('lightning/index.html').open().read()
-index_content = engines['django'].from_string(index_template).render({'public_path': static_url})
+index_content = engines['django'].from_string(index_template).render({'public_path': static_url + lightning_static_url})
 index_response = HttpResponse(index_content)
 
 
