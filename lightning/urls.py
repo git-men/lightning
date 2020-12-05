@@ -9,7 +9,7 @@ static_path = Path(__file__).absolute().parent.joinpath('static')
 static_url = settings.STATIC_URL
 
 index_template = static_path.joinpath('lightning/index.html').open().read()
-index_content = engines['django'].from_string(index_template).render({'public_path': static_url[:-1]})
+index_content = engines['django'].from_string(index_template).render({'public_path': static_url})
 index_response = HttpResponse(index_content)
 
 
