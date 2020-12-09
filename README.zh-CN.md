@@ -45,7 +45,7 @@ lightning是由一系列的Django apps组件，前端是SPA，己打包到lightn
 ### 准备
 
 * **Python** 最低需要 3.6 版本
-* **Django** 需要 2.2.9 版本，Django 3.x 未完整测试。
+* **Django** 需要 2.2.x 版本，Django 3.x暂不支持。
 
 ### 安装
 
