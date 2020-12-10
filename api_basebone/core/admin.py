@@ -70,6 +70,12 @@ BSM_STATISTICS = 'statistics'
 # 允许排序的字段
 BSM_SORTABLE = 'sortable'
 
+# 详情页
+BSM_DETAILS = 'details'
+
+# 详情布局
+BSM_DETAIL_LAYOUT = 'detail_layout'
+
 # 合法的前端管理端的设置
 VALID_MANAGE_ATTRS = [
     BSM_AUTH_FILTER_FIELD,
@@ -97,6 +103,8 @@ VALID_MANAGE_ATTRS = [
     BSM_DISPLAY_IN_SORT,
     BSM_SORT_KEY,
     'detail',  # 详情页临时配置
+    BSM_DETAILS,
+    BSM_DETAIL_LAYOUT,
 ]
 
 # 属性和默认值映射
