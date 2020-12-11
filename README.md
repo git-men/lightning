@@ -1,6 +1,7 @@
 
 
 
+
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
@@ -94,7 +95,6 @@ urlpatterns = [
 ```sh
 ./manage.py light my_app
 ```
-
 ### 运行
 
 使用`./manage.py runserver` 运行Django项目

@@ -1,7 +1,10 @@
+import os
 from setuptools import find_packages, setup
 
 NAME = 'django-lightning'
-VERSION = '1.0.0'
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+VERSION = '1.0.2'
 
 def get_install_require_packages():
     """获取依赖的安装包"""

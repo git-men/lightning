@@ -1,0 +1,1 @@
+from api_basebone.signals import post_bsm_create, before_bsm_create, post_bsm_delete, before_bsm_delete
