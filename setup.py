@@ -1,9 +1,9 @@
 import os
 from setuptools import find_packages, setup
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+NAME = 'django-lightning'
 
-NAME = 'lightning'
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 VERSION = '1.0.2'
 
 def get_install_require_packages():
@@ -31,6 +31,17 @@ all_packages = []
     'storage',
 ])]
 
+import ssl
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
+
 setup(
     name=NAME,
     version=VERSION,
@@ -38,8 +49,8 @@ setup(
     author='gitmen.com',
     author_email='jeff@gitmen.com',
     description='A Django based no-code Admin and rapid development framework',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description='A Django based no-code Admin and rapid development framework',
+    # long_description_content_type='text/markdown',
     license='MIT',
     packages=all_packages,
     include_package_data=True,
