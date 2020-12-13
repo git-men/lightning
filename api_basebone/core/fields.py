@@ -152,7 +152,7 @@ class UserField(models.ForeignKey):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        del kwargs['to']
+        # del kwargs['to']
         if self.auto_current:
             kwargs['auto_current'] = True
         if self.auto_current_add:
