@@ -54,6 +54,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'JsonObjectField': 'Object',
     'JsonArrayField': 'Array',
     'BoneTimeStampField': 'TimeStamp',
+    'UserField': 'Ref',
 }
 
 VALIDATOR_MAP = {
@@ -180,6 +181,9 @@ class FieldConfig:
 
         if not field.editable:
             config['editable'] = field.editable
+        elif hasattr(field, 'get_bsm_internal_type') and field.get_bsm_internal_type() == 'UserField' and (field.auto_current or field.auto_current_add):
+            # 直接搞editable=False会导致drf生成form时不序列化此字段，insert_user_info会无效，所以临时先这么干
+            config['editable'] = False
 
         validator_config = self.validator_config(field)
         if validator_config:

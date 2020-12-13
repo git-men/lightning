@@ -1,6 +1,7 @@
 import json
 import typing
 from django.db import models
+from django.conf import settings
 from jsonfield import JSONField as OriginJSONField
 from api_basebone.core.object_model import ObjectModel
 from api_basebone.utils.timezone import local_timestamp
@@ -136,3 +137,30 @@ class ArrayField(JSONField):
             except:
                 return []
         return value
+
+
+class UserField(models.ForeignKey):
+    def __init__(self, auto_current=False, auto_current_add=False, *args, **kwargs):
+        self.auto_current = auto_current
+        self.auto_current_add = auto_current_add
+        kwargs.setdefault('db_constraint', False)
+        kwargs['to'] = settings.AUTH_USER_MODEL
+        if auto_current or auto_current_add:
+            # kwargs['editable'] = False  会导致drf生成form不序列化此项，暂时先不搞
+            kwargs['blank'] = True
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs['to']
+        if self.auto_current:
+            kwargs['auto_current'] = True
+        if self.auto_current_add:
+            kwargs['auto_current_add'] = True
+        if self.auto_current or self.auto_current_add:
+            # del kwargs['editable']
+            del kwargs['blank']
+        return name, path, args, kwargs
+
+    def get_bsm_internal_type(self):
+        return 'UserField'

@@ -14,14 +14,28 @@ from api_basebone.utils.gmeta import get_gmeta_config_by_key
 
 def insert_user_info(data, model, user_id, action):
     if not isinstance(data, dict):
-        return None, None
+        return []
+
     creator_field = get_gmeta_config_by_key(model, gmeta.GMETA_CREATOR_FIELD)
     updater_field = get_gmeta_config_by_key(model, gmeta.GMETA_UPDATER_FIELD) or getattr(model, admin.BSM_AUTH_FILTER_FIELD, None)
+    result = [creator_field, updater_field]
+
     if updater_field:
         data[updater_field] = user_id
     if action == 'create' and creator_field and creator_field != updater_field:
         data[creator_field] = user_id
-    return creator_field, updater_field
+    for field in model._meta.get_fields():
+        if hasattr(field, 'get_bsm_internal_type'):
+            if field.get_bsm_internal_type() == 'UserField':
+                update_insert = action == 'update' and field.auto_current
+                create_insert = action == 'create' and (field.auto_current or field.auto_current_add)
+                # 更新时只有auto_current的字段需要插入，创建时则无论是auto_current还是auto_current_add的字段都插入
+                if update_insert or create_insert:
+                    data[field.name] = user_id
+                    print(data)
+                    result.append(field.name)
+
+    return result
 
 
 def add_login_user_data(view, data):
