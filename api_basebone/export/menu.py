@@ -1,0 +1,17 @@
+from django.db.models import Q
+from bsm_config.models import Menu
+
+
+def get_menu_data(user):
+    """从数据库中获取菜单"""
+    # permissions = self.request.user.get_all_permissions()
+    # permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
+    menus =  Menu.objects.order_by('sequence','id') if user.is_superuser else \
+        Menu.objects.filter(Q(groups__in=user.groups.all()) | Q(groups__isnull=True)).order_by('sequence','id')
+    fields =  { field.name for field in Menu._meta.fields } - {'id', 'parent',  'permission', 'name', 'puzzle'}
+    menus_map = { menu.id: dict({ field: getattr(menu, field) for field in fields }, **{ 'name': menu.display_name, 'parent_id': menu.parent_id, 'children': [], 'puzzle': menu.puzzle_id }) for menu in menus }
+    for _, menu in menus_map.items():
+        parent_id = menu['parent_id']
+        if parent_id and parent_id in menus_map:
+            menus_map[parent_id]['children'].append(menu)
+    return [m for _, m in menus_map.items() if not m.get('parent_id')]

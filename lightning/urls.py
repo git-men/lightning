@@ -9,5 +9,6 @@ urlpatterns = [
     path('basebone/storage/', include('storage.urls')),
     path('', include('api_basebone.urls')),
     re_path(r'^%s(?P<path>.*)$' % re.escape(settings.STATIC_URL.lstrip('/')), serve, kwargs={'insecure': True}),
+    path('user/login', views.login_page),
     re_path('^(?!basebone).*$', views.index_view)
 ]

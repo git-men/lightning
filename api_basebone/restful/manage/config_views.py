@@ -15,6 +15,7 @@ from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.drf.response import success_response
 from api_basebone.export.admin import get_app_admin_config, get_json_field_admin_config
 from api_basebone.export.fields import get_app_field_schema, get_app_json_field_schema
+from api_basebone.export.menu import get_menu_data
 from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, get_export_apps
@@ -62,7 +63,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         self._load_bsm_admin_module()
         data = {
             'schemas': get_app_field_schema(),
-            'admins': get_app_admin_config()
+            'admins': get_app_admin_config(),
         }
         json_object_schemas, json_array_item_schemas = get_app_json_field_schema()
         json_admin_configs = get_json_field_admin_config(json_object_schemas,json_array_item_schemas)
@@ -82,21 +83,8 @@ class ConfigViewSet(viewsets.GenericViewSet):
         return success_response(settings)
     
     def _get_menu_from_database(self):
-        """从数据库中获取菜单"""
-        user = self.request.user
-        # permissions = self.request.user.get_all_permissions()
-        # permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
-        menus =  Menu.objects.order_by('sequence','id') if user.is_superuser else \
-            Menu.objects.filter(Q(groups__in=self.request.user.groups.all()) | Q(groups__isnull=True)).order_by('sequence','id')
-        fields =  { field.name for field in Menu._meta.fields } - {'id', 'parent',  'permission', 'name', 'puzzle'}
-        menus_map = { menu.id: dict({ field: getattr(menu, field) for field in fields }, **{ 'name': menu.display_name, 'parent_id': menu.parent_id, 'children': [], 'puzzle': menu.puzzle_id }) for menu in menus }
-        for _, menu in menus_map.items():
-            parent_id = menu['parent_id']
-            if parent_id and parent_id in menus_map:
-                menus_map[parent_id]['children'].append(menu)
-        menus_data = [ m for _, m in menus_map.items() if not m.get('parent_id')] 
+        menus_data = get_menu_data(self.request.user)
         return success_response(menus_data)
-            
 
     def _get_menu_from_custom(self):
         """从自定义的菜单配置中获取菜单"""

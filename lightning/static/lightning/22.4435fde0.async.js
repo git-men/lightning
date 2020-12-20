@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[22],{pGWQ:function(e,t,n){"use strict";n.r(t);var a=n("q1tI"),c=n.n(a),p=n("wY1l"),i=n.n(p),o=n("Y2fQ"),s=n("43qG");t.default=function(){return c.a.createElement(s.a,{type:"404",linkElement:i.a,desc:Object(o.formatMessage)({id:"app.exception.description.404"}),backText:Object(o.formatMessage)({id:"app.exception.back"})})}}}]);
