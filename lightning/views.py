@@ -34,12 +34,12 @@ def index_view(request):
     index_content = index_template.render({
         'public_path': static_url + lightning_static_url,
         'injection': json.dumps({
-            '$schemas': get_app_field_schema(),
-            '$admins': get_app_admin_config(),
-            '$menus': get_menu_data(user),
-            '$settings': get_settins(),
-            '$userinfo': get_userinfo(user),
-            '$permissions': user.get_all_permissions(),
+            '$$schemas': get_app_field_schema(),
+            '$$admins': get_app_admin_config(),
+            '$$menus': get_menu_data(user),
+            '$$settings': get_settins(),
+            '$$userinfo': get_userinfo(user),
+            '$$permissions': user.get_all_permissions(),
         }, cls=encoders.JSONEncoder),  # encoders.JSONEncoder 解决django lazy object不能json.dumps的问题
     })
     return HttpResponse(index_content)
