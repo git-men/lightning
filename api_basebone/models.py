@@ -19,8 +19,8 @@ class AdminLog(models.Model):
     action = models.CharField('动作', max_length=20, blank=True, default='')
     app_label = models.CharField('应用标识', max_length=20, blank=True, default='')
     model_slug = models.CharField('模型标识', max_length=30, blank=True, default='')
-    object_id = models.CharField('数据ID', max_length=20, blank=True, default='')
-    message = models.CharField('消息', max_length=50, blank=True, default='')
+    object_id = models.TextField('数据ID', blank=True, default='')
+    message = models.TextField('消息', blank=True, default='')
     params = JSONField(default={})
 
     class Meta:
