@@ -37,6 +37,9 @@ def append_create_log(sender, instance, create, request, old_instance, scope, **
         gmeta = getattr(sender, 'GMeta', None)
         title_field = getattr(gmeta, 'title_field', None) if gmeta else None
 
+        # request.data 有可能dumps不出来，会导致create阶段报错，从而触发Django请求事务回滚。因此提前尝试dumps
+        import json
+        json.dumps(request.data)
         AdminLog.objects.create(
             user=request.user,
             action=action,
