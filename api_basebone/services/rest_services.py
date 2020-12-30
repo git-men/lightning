@@ -3,10 +3,14 @@ import logging
 from copy import copy
 
 from django.db import transaction
+from django.apps import apps
 from django.http import HttpResponse
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 
 from rest_framework.exceptions import PermissionDenied
 
+from api_basebone.permissions import BasePermission
 from api_basebone.core import exceptions
 from api_basebone.settings import settings
 from api_basebone.signals import post_bsm_create, post_bsm_delete
@@ -169,6 +173,20 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
     if options.get('superuser_required', False):
         if not user.is_superuser:
             raise PermissionDenied()
+    if options.get('permissions', []):
+        permissions = options['permissions']
+        literal_pers = [per.strip() for per in permissions if isinstance(per, str) and per.strip() != '']
+        cls_pers = [per for per in permissions if isinstance(per, type) and issubclass(per, BasePermission)]
+
+        if literal_pers:
+            content_type = ContentType.objects.get(app_label=app, model=model)
+            per_names = [per[0] for per in Permission.objects.filter(codename__in=literal_pers, content_type=content_type).values_list('codename')]
+            if set(literal_pers) != set(per_names):
+                raise PermissionDenied()
+        
+        for cls_per in cls_pers:
+            if not cls_per().has_permission(user, apps.get_model(app, model), func_name, params, genericAPIView.request):
+                raise PermissionDenied()
 
     view_context = {'view': genericAPIView}
     params['view_context'] = view_context
