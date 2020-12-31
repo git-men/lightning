@@ -10,6 +10,7 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 from api_basebone.permissions import BasePermission
 from api_basebone.core import exceptions
@@ -204,6 +205,8 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
     if isinstance(result, QuerySet):
         serializer = genericAPIView.get_serializer(result, many=True)
         return success_response(serializer.data)
+    if isinstance(result, HttpResponse) or isinstance(result, Response):
+        return result
     rsp = success_response()
     try:
         rsp = success_response(result)
