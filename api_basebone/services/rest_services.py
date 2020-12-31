@@ -3,6 +3,7 @@ import logging
 from copy import copy
 
 from django.db import transaction
+from django.db.models.query import QuerySet
 from django.apps import apps
 from django.http import HttpResponse
 from django.contrib.auth.models import Permission
@@ -192,20 +193,23 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
     params['view_context'] = view_context
     result = func(user, **params)
 
-    # TODO：考虑函数的返回结果类型。1. 实体，2.实体列表，3.字典，4.无返回，针对不同的结果给客户端反馈
     if isinstance(result, requests.Response):
         response = HttpResponse(result, result.headers.get('Content-Type', None))
         if 'Content-disposition' in result.headers:
             response['Content-disposition'] = result.headers.get('Content-disposition')
         return response
-    if (
-        isinstance(result, list)
-        or isinstance(result, dict)
-        or isinstance(result, str)
-        or isinstance(result, bytes)
-    ):
-        return success_response(result)
-    return success_response()
+    if isinstance(result, genericAPIView.model):
+        serializer = genericAPIView.get_serializer(result)
+        return success_response(serializer.data)
+    if isinstance(result, QuerySet):
+        serializer = genericAPIView.get_serializer(result, many=True)
+        return success_response(serializer.data)
+    rsp = success_response()
+    try:
+        rsp = success_response(result)
+    except:
+        pass
+    return rsp
 
 
 def client_create(genericAPIView, request, set_data):
