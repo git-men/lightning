@@ -181,7 +181,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
     }
     attrs.update(kwargs)
 
-    class_name = f'{model}ModelSerializer'
+    class_name = f'{model.__name__}ModelSerializer'
 
     # 创建表单级的校验方法
     validators = get_gmeta_config_by_key(model, gmeta.GMETA_OBJECT_VALIDATORS)
