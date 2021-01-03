@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from api_basebone.permissions import BasePermission
 from api_basebone.core import exceptions
 from api_basebone.settings import settings
-from api_basebone.signals import post_bsm_create, post_bsm_delete
+from api_basebone.signals import post_bsm_create, post_bsm_delete, before_bsm_create, before_bsm_delete
 from api_basebone.restful.funcs import find_func
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.drf.response import success_response
@@ -229,6 +229,12 @@ def client_create(genericAPIView, request, set_data):
             data=set_data
         )
         serializer.is_valid(raise_exception=True)
+        before_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=genericAPIView.model(**serializer.validated_data),
+            create=True,
+            request=genericAPIView.request
+        )
         instance = genericAPIView.perform_create(serializer)
         reverse_relation_hand(genericAPIView.model, set_data, instance, detail=False)
         instance = genericAPIView.get_queryset().get(pk=instance.pk)
@@ -244,7 +250,6 @@ def client_create(genericAPIView, request, set_data):
             instance=instance,
             create=True,
             request=genericAPIView.request,
-            old_instance=None,
         )
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         serializer = genericAPIView.get_serializer(
@@ -267,6 +272,13 @@ def manage_create(genericAPIView, request, set_data):
             many=many
         )
         serializer.is_valid(raise_exception=True)
+        before_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=genericAPIView.model(**serializer.validated_data),
+            create=True,
+            request=genericAPIView.request,
+            scope='admin'
+        )
         instance = genericAPIView.perform_create(serializer)
 
         if many:
@@ -308,6 +320,12 @@ def client_update(genericAPIView, request, partial, set_data):
             instance, data=set_data, partial=partial
         )
         serializer.is_valid(raise_exception=True)
+        before_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=genericAPIView.model(**serializer.validated_data),
+            create=False,
+            request=genericAPIView.request
+        )
         instance = genericAPIView.perform_update(serializer)
 
         reverse_relation_hand(genericAPIView.model, set_data, instance)
@@ -349,7 +367,13 @@ def manage_update(genericAPIView, request, partial, set_data):
             context=genericAPIView.get_serializer_context(),
         )
         serializer.is_valid(raise_exception=True)
-
+        before_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=genericAPIView.model(**serializer.validated_data),
+            create=False,
+            request=genericAPIView.request,
+            scope='admin'
+        )
         instance = genericAPIView.perform_update(serializer)
         serializer = genericAPIView.get_serializer(instance)
 
@@ -414,6 +438,9 @@ def destroy(genericAPIView, request, scope=''):
     """删除数据"""
     instance = genericAPIView.get_object()
     old_instance = copy(instance)
+    before_bsm_delete.send(
+        sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope
+    )
     genericAPIView.perform_destroy(instance)
     post_bsm_delete.send(
         sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope

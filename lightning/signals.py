@@ -1,1 +1,4 @@
-from api_basebone.signals import post_bsm_create, before_bsm_create, post_bsm_delete, before_bsm_delete
+from api_basebone.signals import post_bsm_create as post_lightning_create
+from api_basebone.signals import before_bsm_create as pre_lightning_create
+from api_basebone.signals import post_bsm_delete as post_lightning_delete
+from api_basebone.signals import before_bsm_delete as pre_lightning_delete
