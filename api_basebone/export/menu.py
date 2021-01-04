@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models import Q
 from bsm_config.models import Menu
 
@@ -30,6 +31,6 @@ def get_menu_from_settings(user):
     def map_menus(menus):
         return [
             {**m, 'children': map_menus(m.get('children', []))}
-            for m in menus if 'groups' not in m or self.request.user.is_superuser or set(m['groups']) & group_names
+            for m in menus if 'groups' not in m or user.is_superuser or set(m['groups']) & group_names
         ]
     return map_menus(settings.ADMIN_MENUS)
