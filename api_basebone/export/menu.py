@@ -2,7 +2,7 @@ from django.db.models import Q
 from bsm_config.models import Menu
 
 
-def get_menu_data(user):
+def get_menu_from_database(user):
     """从数据库中获取菜单"""
     # permissions = self.request.user.get_all_permissions()
     # permission_filter = (Q(permission=None) | Q(permission='') | Q(permission__in=permissions))
@@ -15,3 +15,21 @@ def get_menu_data(user):
         if parent_id and parent_id in menus_map:
             menus_map[parent_id]['children'].append(menu)
     return [m for _, m in menus_map.items() if not m.get('parent_id')]
+
+
+def get_menu_data(user):
+    if hasattr(settings, 'ADMIN_MENUS'):
+        return get_menu_from_settings(user)
+    return get_menu_from_database(user)
+
+
+def get_menu_from_settings(user):
+    group_names = user.groups.values_list('name', flat=True)
+    group_names = set(group_names)
+
+    def map_menus(menus):
+        return [
+            {**m, 'children': map_menus(m.get('children', []))}
+            for m in menus if 'groups' not in m or self.request.user.is_superuser or set(m['groups']) & group_names
+        ]
+    return map_menus(settings.ADMIN_MENUS)
