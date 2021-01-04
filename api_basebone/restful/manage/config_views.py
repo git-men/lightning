@@ -15,7 +15,7 @@ from api_basebone.restful.const import MANAGE_END_SLUG
 from api_basebone.drf.response import success_response
 from api_basebone.export.admin import get_app_admin_config, get_json_field_admin_config
 from api_basebone.export.fields import get_app_field_schema, get_app_json_field_schema
-from api_basebone.export.menu import get_menu_data
+from api_basebone.export.menu import get_menu_from_database, get_menu_from_settings
 from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, get_export_apps
@@ -83,7 +83,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         return success_response(settings)
     
     def _get_menu_from_database(self):
-        menus_data = get_menu_data(self.request.user)
+        menus_data = get_menu_from_database(self.request.user)
         return success_response(menus_data)
 
     def _get_menu_from_custom(self):
@@ -140,15 +140,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
     def get_manage_menu(self, request, *args, **kwargs):
         """获取管理端的菜单配置"""
         if hasattr(settings, 'ADMIN_MENUS'):
-            group_names = self.request.user.groups.values_list('name', flat=True)
-            group_names = set(group_names)
-
-            def map_menus(menus):
-                return [
-                    {**m, 'children': map_menus(m.get('children', []))}
-                    for m in menus if 'groups' not in m or self.request.user.is_superuser or set(m['groups']) & group_names
-                ]
-            return success_response(map_menus(settings.ADMIN_MENUS))
+            return success_response(get_menu_from_settings(self.request.user))
 
         menutype = request.query_params.get('menutype', 'database')
         if menutype == 'database':
