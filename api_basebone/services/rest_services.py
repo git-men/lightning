@@ -250,6 +250,8 @@ def client_create(genericAPIView, request, set_data):
             instance=instance,
             create=True,
             request=genericAPIView.request,
+            old_instance=None,
+            scope='client',
         )
         # 如果有联合查询，单个对象创建后并没有联合查询, 所以要多查一次？
         serializer = genericAPIView.get_serializer(
@@ -343,6 +345,7 @@ def client_update(genericAPIView, request, partial, set_data):
             create=False,
             request=genericAPIView.request,
             old_instance=old_instance,
+            scope='client'
         )
 
         serializer = genericAPIView.get_serializer(

@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 NAME = 'django-lightning'
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 
 def get_install_require_packages():
     """获取依赖的安装包"""
@@ -12,8 +12,9 @@ def get_install_require_packages():
         return [line
             for line in file.readlines() if not line.startswith('http')]
 
-with open('README.zh-CN.md', 'r') as file:
-    long_description = file.read()
+# 可能会导致 Windows 安装有问题
+# with open('README.zh-CN.md', 'r') as file:
+#     long_description = file.read()
 
 
 def get_packages(app):
