@@ -1,1 +1,0 @@
-(window["webpackJsonp"]=window["webpackJsonp"]||[]).push([[21],{NmtZ:function(e,t,n){"use strict";var u=n("g09b");Object.defineProperty(t,"__esModule",{value:!0}),t.default=void 0;var a=u(n("q1tI")),o=u(n("PUmp")),r=n("r/IN"),c=n("fVK0"),d=function(){return a.default.createElement(o.default,null)},i=(0,r.checkPermission)(c.PERMISSIONS.CHANGE_SETTING)(d);t.default=i}}]);
