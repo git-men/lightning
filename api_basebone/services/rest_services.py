@@ -229,13 +229,13 @@ def client_create(genericAPIView, request, set_data):
             data=set_data
         )
         serializer.is_valid(raise_exception=True)
-        # 多对多实例化会报错，暂时注释
-        # before_bsm_create.send(
-        #     sender=genericAPIView.model,
-        #     instance=genericAPIView.model(**serializer.validated_data),
-        #     create=True,
-        #     request=genericAPIView.request
-        # )
+
+        before_bsm_create.send(
+            sender=genericAPIView.model,
+            instance=serializer.validated_data,
+            create=True,
+            request=genericAPIView.request
+        )
         instance = genericAPIView.perform_create(serializer)
         reverse_relation_hand(genericAPIView.model, set_data, instance, detail=False)
         instance = genericAPIView.get_queryset().get(pk=instance.pk)
@@ -277,7 +277,7 @@ def manage_create(genericAPIView, request, set_data):
         serializer.is_valid(raise_exception=True)
         before_bsm_create.send(
             sender=genericAPIView.model,
-            instance=genericAPIView.model(**serializer.validated_data),
+            instance=serializer.validated_data,
             create=True,
             request=genericAPIView.request,
             scope='admin'
@@ -325,7 +325,7 @@ def client_update(genericAPIView, request, partial, set_data):
         serializer.is_valid(raise_exception=True)
         before_bsm_create.send(
             sender=genericAPIView.model,
-            instance=genericAPIView.model(**serializer.validated_data),
+            instance=serializer.validated_data,
             create=False,
             request=genericAPIView.request
         )
@@ -373,7 +373,7 @@ def manage_update(genericAPIView, request, partial, set_data):
         serializer.is_valid(raise_exception=True)
         before_bsm_create.send(
             sender=genericAPIView.model,
-            instance=genericAPIView.model(**serializer.validated_data),
+            instance=serializer.validated_data,
             create=False,
             request=genericAPIView.request,
             scope='admin'
