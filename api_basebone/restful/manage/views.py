@@ -535,6 +535,18 @@ class GenericViewMixin:
             queryset = queryset_utils.queryset_prefetch(queryset, expand_dict, context, display_fields=display_fields)
         if self.action not in ['get_chart', 'group_statistics']:
             queryset = queryset_utils.annotate(queryset, context=context)
+
+        if hasattr(self.model, 'GMeta'):
+            try:
+                gm = self.model.GMeta()
+            except Exception as e:
+                log.error(str(e))
+            else:
+                if hasattr(gm, 'get_queryset'):
+                    gmeta_get_queryset = gm.get_queryset
+                    if gmeta_get_queryset is not None:
+                        queryset = gmeta_get_queryset(queryset, self.request, self)
+
         queryset = self._get_queryset(queryset)
 
         if admin_get_queryset:
