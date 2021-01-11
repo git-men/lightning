@@ -138,7 +138,7 @@ def simple_support_m2m_field_specify_through_model(func):
             for field in model._meta.many_to_many:
                 if field_info.forward_relations[field.name].has_through_model:
                     related_model = field.related_model
-                    kwargs[field.name] = serializers.PrimaryKeyRelatedField(many=True,
+                    kwargs[field.name] = serializers.PrimaryKeyRelatedField(many=True, required=not field.blank,
                                                                 queryset=related_model.objects.all())
         return func(model, exclude_fields=None, **kwargs)
 
