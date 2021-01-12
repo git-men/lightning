@@ -17,11 +17,15 @@ class LightningConfig(AppConfig):
 
         apps = settings.INSTALLED_APPS
         for app in apps:
-            app_module = __import__(app)
-            path = app_module.__path__[0]
-            functions_path = os.path.join(path, 'functions')
-            signal_path = os.path.join(path, 'signals')
-            if os.path.exists(functions_path + '.py'):
-                __import__('.'.join([app, 'functions']))
-            if os.path.exists(signal_path + '.py'):
-                __import__('.'.join([app, 'signals']))
+            try:
+                # TODO INSTALLED_APPS 里配的内容不一定是module，还不一定是字符串。提前导入也会改变导入顺序，使一些云函数的覆盖逻辑出错。
+                app_module = __import__(app)
+                functions_path = os.path.join(path, 'functions')
+                path = app_module.__path__[0]
+                signal_path = os.path.join(path, 'signals')
+                if os.path.exists(functions_path + '.py'):
+                    __import__('.'.join([app, 'functions']))
+                if os.path.exists(signal_path + '.py'):
+                    __import__('.'.join([app, 'signals']))
+            except:
+                pass

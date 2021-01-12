@@ -5,8 +5,8 @@ import operator
 from decimal import Decimal
 from functools import reduce
 from django.utils import timezone
-from django.db.models import F, Value, Count, Sum, Avg, Max, Min, StdDev, Variance
-from django.db.models.functions import Concat
+from django.db.models import *
+from django.db.models.functions import Concat, Cast
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +46,83 @@ FUNCS = {
     'contains': lambda container, *args: all(k in container for k in args),
     'if': lambda cond, a, b: a if cond else b,
     'slice': lambda obj, *args: obj[slice(*args)],
+}
+
+
+class BaseExpression:
+    function_set = FUNCS
+
+    @staticmethod
+    def split_expression(expression, symbol):
+        quote = False
+        surround = 0
+        buffer = ''
+        escape = False
+        for char in expression:
+            if escape and quote:
+                escape = False
+            else:
+                if char == symbol:
+                    if surround == 0 and not quote:
+                        yield buffer
+                        buffer = ''
+                        continue
+                elif char == '\\':
+                    if quote:
+                        escape = True
+                elif char == '"':
+                    quote = not quote
+                elif char in '([{':
+                    surround += 1
+                elif char in ')]}':
+                    surround -= 1
+            buffer += char
+        if buffer:
+            yield buffer
+
+    def execute_function(self, function_name, arguments):
+        args = [self.resolve(buffer) for buffer in arguments]
+        log.debug(f'returning calling Fun: {function_name} with args: {args}')
+        return self.function_set[function_name](*args)
+
+    def resolve(self, expression):
+        expression = expression.strip()
+
+        try:
+            return json.loads(expression)
+        except json.JSONDecodeError:
+            pass
+        log.debug(f'resolving expression: {expression}')
+        matched = re.match(r'^(\w+)\((.*)\)$', expression)
+        if matched:
+            func, arg_str = matched.groups()
+            return self.execute_function(func, self.split_expression(arg_str, ','))
+
+        raise NotImplementedError()
+
+
+class Expression(BaseExpression):
+    def __init__(self, variable_root):
+        self.variable_root = variable_root
+
+    def execute_function(self, function_name, arguments):
+        if function_name == '__variable_root__':
+            return self.variable_root
+        return super().execute_function(function_name, arguments)
+
+    def resolve(self, expression):
+        try:
+            return super().resolve(expression)
+        except NotImplementedError:
+            # 点操作符，getattr的语法糖
+            exp = '__variable_root__()'
+            for path_item in expression.split('.'):
+                exp = f'__getattr__({exp}, "{path_item}")'
+            log.debug(f'exp: {exp}')
+            return self.resolve(exp)
+
+
+DB_FUNC = {
     'F': F,
     'Concat': Concat,
     'Value': Value,
@@ -55,58 +132,21 @@ FUNCS = {
     'Max': Max,
     'Min': Min,
     'StdDev': StdDev,
-    'Variance': Variance
+    'Variance': Variance,
+    'Cast': Cast,
+    'DecimalField': DecimalField,
+    'FloatField': FloatField,
+    'IntegerField': IntegerField,
+    'CharField': CharField,
 }
 
 
-def split_expression(expression, symbol):
-    quote = False
-    surround = 0
-    buffer = ''
-    escape = False
-    for char in expression:
-        if escape and quote:
-            escape = False
-        else:
-            if char == symbol:
-                if surround == 0 and not quote:
-                    yield buffer
-                    buffer = ''
-                    continue
-            elif char == '\\':
-                if quote:
-                    escape = True
-            elif char == '"':
-                quote = not quote
-            elif char in '([{':
-                surround += 1
-            elif char in ')]}':
-                surround -= 1
-        buffer += char
-    if buffer:
-        yield buffer
+class DbExpression(Expression):
+    function_set = {
+        **Expression.function_set,
+        **DB_FUNC,
+    }
 
 
 def resolve_expression(expression, variables=None):
-    expression = expression.strip()
-
-    try:
-        return json.loads(expression)
-    except json.JSONDecodeError:
-        pass
-    log.debug(f'resolving expression: {expression}')
-    matched = re.match(r'^(\w+)\((.*)\)$', expression)
-    if matched:
-        func, arg_str = matched.groups()
-        if func == '__variables__':
-            return variables
-        args = [resolve_expression(buffer, variables=variables) for buffer in split_expression(arg_str, ',')]
-        log.debug(f'returning calling Fun: {FUNCS[func]} with args: {args}')
-        return FUNCS[func](*args)
-
-    # 点操作符，getattr的语法糖
-    exp = '__variables__()'
-    for path_item in expression.split('.'):
-        exp = f'__getattr__({exp}, "{path_item}")'
-    log.debug(f'exp: {exp}')
-    return resolve_expression(exp, variables=variables)
+    return DbExpression(variables).resolve(expression)
