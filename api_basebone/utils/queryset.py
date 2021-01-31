@@ -104,6 +104,29 @@ def serialize_queryset(data, action='list', expand_fields=None):
     return serializer.data
 
 
+class ChainProxy:
+    def __init__(self, queryset, annotations):
+        self.origin_chain = queryset._chain
+        self.annotations = annotations
+
+    def __call__(self, *args, **kwargs):
+        clone = self.origin_chain(*args, **kwargs)
+        clone.query.resolve_ref = ResolveRefProxy(clone.query, self.annotations)
+        return clone
+
+
+class ResolveRefProxy:
+    def __init__(self, query, annotations):
+        self.query = query
+        self.origin_resolve_ref = query.resolve_ref
+        self.annotations = annotations
+
+    def __call__(self, name, allow_joins=True, reuse=None, summarize=False, simple_col=False):
+        if name in self.annotations:
+            return self.annotations[name].resolve_expression(self.query, allow_joins=True, reuse=None, summarize=summarize)
+        return self.origin_resolve_ref(name, allow_joins=True, reuse=None, summarize=False, simple_col=False)
+
+
 def annotate_queryset(queryset, fields=None, context=None):
     annotated_fields = {}
     if 'GMeta' in queryset.model.__dict__:
@@ -118,7 +141,9 @@ def annotate_queryset(queryset, fields=None, context=None):
                 params[name] = field['annotation'] if not callable(field['annotation']) else field['annotation'](context or {})
             elif 'expression' in field:
                 params[name] = resolve_expression(field['expression'], context)
-        return queryset.annotate(**params) if params else queryset
+        for alias, annotation in params.items():
+            queryset._chain = ChainProxy(queryset, params)
+            queryset = queryset.annotate(**{alias: annotation})
     return queryset
 
 
