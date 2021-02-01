@@ -267,9 +267,10 @@ class GroupStatisticsMixin:
     @action(methods=['post'], detail=False, url_path='group_statistics')
     def group_statistics(self, request, *args, **kwargs):
         fields = request.data.get('fields')
+        filters = request.data.pop('filters', [])
         group_kwargs = self.get_group()
 
-        data = self.group_statistics_data(fields, group_kwargs)
+        data = self.group_statistics_data(fields, group_kwargs, filters=filters)
         return success_response(data)
 
     @action(methods=['post'], detail=False, url_path='get_chart')
