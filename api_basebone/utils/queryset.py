@@ -1,3 +1,4 @@
+import types
 from django.db.models.query import QuerySet, Prefetch
 from django.db.models import Manager
 
@@ -106,7 +107,7 @@ def serialize_queryset(data, action='list', expand_fields=None):
 
 class ChainProxy:
     def __init__(self, queryset, annotations):
-        self.origin_chain = queryset._chain
+        self.origin_chain = types.MethodType(type(queryset)._chain, queryset)
         self.annotations = annotations
 
     def __call__(self, *args, **kwargs):
@@ -118,7 +119,7 @@ class ChainProxy:
 class ResolveRefProxy:
     def __init__(self, query, annotations):
         self.query = query
-        self.origin_resolve_ref = query.resolve_ref
+        self.origin_resolve_ref = types.MethodType(type(query).resolve_ref, query)
         self.annotations = annotations
 
     def __call__(self, name, allow_joins=True, reuse=None, summarize=False, simple_col=False):
