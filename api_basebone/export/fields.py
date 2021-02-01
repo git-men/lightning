@@ -307,14 +307,15 @@ def get_model_field_config(model):
                 reverse_config['type'] = 'ref'
 
             meta = item.related_model._meta
-            reverse_config['displayName'] = meta.verbose_name
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
             reverse_config['refField'] = item.remote_field.name
             # TODO bref 下还是不应该要有refTo了，但是为了保留兼容性，可以先保留代码
             if item.one_to_one or item.one_to_many:
                 reverse_config['refTo'] = item.field_name or meta.pk and meta.pk.name
+                reverse_config['displayName'] = '{}({})'.format(meta.verbose_name, item.remote_field.verbose_name)
             elif item.many_to_many:
                 reverse_config['refTo'] = item.field.m2m_target_field_name()
+                reverse_config['displayName'] = meta.verbose_name
             reverse_config.update(field_config_instance.reset_field_config(item))
             config.append(reverse_config)
 
