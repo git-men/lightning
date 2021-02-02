@@ -53,7 +53,7 @@ class BaseExpression:
     function_set = FUNCS
 
     @staticmethod
-    def split_expression(expression, symbol):
+    def split_expression(expression, sep=','):
         quote = False
         surround = 0
         buffer = ''
@@ -62,7 +62,7 @@ class BaseExpression:
             if escape and quote:
                 escape = False
             else:
-                if char == symbol:
+                if char == sep:
                     if surround == 0 and not quote:
                         yield buffer
                         buffer = ''
@@ -81,7 +81,7 @@ class BaseExpression:
             yield buffer
 
     def execute_function(self, function_name, arguments):
-        args = [self.resolve(buffer) for buffer in arguments]
+        args = tuple(self.resolve(buffer) for buffer in arguments)
         log.debug(f'returning calling Fun: {function_name} with args: {args}')
         return self.function_set[function_name](*args)
 
@@ -96,7 +96,7 @@ class BaseExpression:
         matched = re.match(r'^(\w+)\((.*)\)$', expression)
         if matched:
             func, arg_str = matched.groups()
-            return self.execute_function(func, self.split_expression(arg_str, ','))
+            return self.execute_function(func, self.split_expression(arg_str))
 
         raise NotImplementedError()
 

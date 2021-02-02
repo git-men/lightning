@@ -136,15 +136,12 @@ def annotate_queryset(queryset, fields=None, context=None):
     if fields is not None:
         annotated_fields = {k: v for k, v in annotated_fields.items() if k in fields}
     if annotated_fields:
-        params = {}
-        for name, field in annotated_fields.items():
-            if 'annotation' in field:
-                params[name] = field['annotation'] if not callable(field['annotation']) else field['annotation'](context or {})
-            elif 'expression' in field:
-                params[name] = resolve_expression(field['expression'], context)
-        for alias, annotation in params.items():
-            queryset._chain = ChainProxy(queryset, params)
-            queryset = queryset.annotate(**{alias: annotation})
+        annotations = {name: field['annotation'] for name, field in annotated_fields.items()}
+        for name, annotation in annotations.items():
+            if callable(annotation):
+                annotations[name] = annotation(context or {})
+        queryset._chain = ChainProxy(queryset, annotations)
+        queryset = queryset.annotate(**annotations)
     return queryset
 
 
