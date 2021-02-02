@@ -36,6 +36,7 @@ def append_create_log(sender, instance, create, request, old_instance, scope, **
         action = 'add' if create else 'update'
         gmeta = getattr(sender, 'GMeta', None)
         title_field = getattr(gmeta, 'title_field', None) if gmeta else None
+        message=getattr(instance, title_field) if title_field else repr(instance)
 
         # request.data 有可能dumps不出来，会导致create阶段报错，从而触发Django请求事务回滚。因此提前尝试dumps
         import json
@@ -47,7 +48,7 @@ def append_create_log(sender, instance, create, request, old_instance, scope, **
             model_slug=sender._meta.model_name,
             object_id=instance.pk,
             params=request.data,
-            message=getattr(instance, title_field) if title_field else repr(instance)
+            message=message or '',
         )
     except:
         logger.error('append create log fail', exc_info=True)
