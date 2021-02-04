@@ -351,10 +351,7 @@ def get_model_field_config(model):
         attrs = {'required': False, 'readonly': True, 'name': name}
         attrs.update({underline_to_camel(k): v for k, v in field.items()})
         attrs.setdefault('displayName', name)
-        if 'annotation' in attrs:
-            del attrs['annotation']
-        if 'expression' in attrs:
-            del attrs['expression']
+        del attrs['annotation']
         config.append(attrs)
 
     ret = {
