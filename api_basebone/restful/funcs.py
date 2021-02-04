@@ -1,10 +1,15 @@
 import inspect
+import types
 from inspect import Parameter
 from api_basebone.core import exceptions
+from hashlib import md5
+
+from django.apps import apps
 
 
 funcs = {}
 
+lightning_rt_function_scripts = types.ModuleType("lightning_rt_function_scripts")
 
 def register_func(app, model, func_name, func, options):
     funcs[app, model, func_name] = func, options
@@ -27,10 +32,63 @@ def bsm_func(name, model, login_required=True, staff_required=False, superuser_r
     return _decorator
 
 
+def find_dynamic_func(app, model, func_name):
+    """从api_db里加载一下动态云函数。
+    """
+    empty = (None, None)
+    if not apps.is_installed('api_db'):
+        return empty
+
+    from api_db.models import Function
+    # TODO, 加缓存。
+    func = Function.objects.filter(model=f'{app}__{model}', name=func_name, enable=True).prefetch_related('functionparameter_set')
+    if not func:
+        return empty
+    func_obj = func[0]
+    if not func_obj.code:
+        return empty
+    
+    check_sum = md5(func_obj.code.encode('utf-8')).hexdigest()
+    script_name = f'{func_name}_{check_sum}'
+    func = getattr(lightning_rt_function_scripts, script_name, None)
+    if not func:
+        params = func_obj.functionparameter_set.all()
+        required_params = [p.name for p in params if p.required]
+        optional_params = [p.name for p in params if not p.required]
+        sign = ', '.join(
+            [', '.join(required_params),
+            ', '.join([f'{p}=None' for p in optional_params])])
+        head = f'def {func_name}(user, {sign}, **kwargs):'
+        body = ('\n' + func_obj.code.strip()).replace('\n', '\n' + ' ' * 4).replace('\t', ' ' * 4)
+        print(head + body)
+        exec(head + body)
+        func = locals().get(func_name, None)
+        if not func:
+            print('can not create function from code')
+            return
+        
+        # 先清理旧版本的模块方法
+        old_func = [f for f in dir(lightning_rt_function_scripts) if f.startswith(func_name)]
+        for of in old_func:
+            delattr(lightning_rt_function_scripts, of)
+        
+        # 把新版本的方法植入
+        setattr(lightning_rt_function_scripts, script_name, func)
+    
+    return func, {
+        'login_required': func_obj.login_required,
+        'staff_required': func_obj.staff_required,
+        'superuser_required': func_obj.superuser_required
+    }
+
+
 def find_func(app, model, func_name):
     if (app, model, func_name) not in funcs:
-        return None, None
-    func, options = funcs[app, model, func_name]
+        func, options = find_dynamic_func(app, model, func_name)
+        if not func:
+            return func, options
+    else:
+        func, options = funcs[app, model, func_name]
 
     def proxy(*args, **kwargs):
         signature = inspect.signature(func)
