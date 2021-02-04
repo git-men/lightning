@@ -2,11 +2,12 @@ import re
 import json
 import logging
 import operator
+from collections import namedtuple
 from decimal import Decimal
 from functools import reduce
 from django.utils import timezone
 from django.db.models import *
-from django.db.models.functions import Concat, Cast
+from django.db.models.functions import Concat, Cast, Coalesce
 
 log = logging.getLogger(__name__)
 
@@ -105,10 +106,13 @@ class Expression(BaseExpression):
     def __init__(self, variable_root):
         self.variable_root = variable_root
 
-    def execute_function(self, function_name, arguments):
-        if function_name == '__variable_root__':
-            return self.variable_root
-        return super().execute_function(function_name, arguments)
+    @property
+    def function_set(self):
+        super_set = super().function_set
+        return {
+            **super_set,
+            '__variable_root__': lambda: self.variable_root,
+        }
 
     def resolve(self, expression):
         try:
@@ -134,6 +138,7 @@ DB_FUNC = {
     'StdDev': StdDev,
     'Variance': Variance,
     'Cast': Cast,
+    'Coalesce': Coalesce,
     'DecimalField': DecimalField,
     'FloatField': FloatField,
     'IntegerField': IntegerField,
@@ -142,11 +147,75 @@ DB_FUNC = {
 
 
 class DbExpression(Expression):
-    function_set = {
-        **Expression.function_set,
-        **DB_FUNC,
-    }
+    @property
+    def function_set(self):
+        super_set = super().function_set
+        return {
+            **super_set,
+            **DB_FUNC,
+        }
 
 
 def resolve_expression(expression, variables=None):
     return DbExpression(variables).resolve(expression)
+
+
+class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model'])):
+    def __call__(self, field_path):
+        aggregation = self.aggregation
+        if '__' not in field_path:
+            return aggregation(field_path)
+        model = self.model
+        reverse_path = []
+        path_parts = field_path.split('__')
+        for part in path_parts[:-1]:
+            try:
+                next_field = model._meta.get_field(part).remote_field
+            except:
+                return aggregation(field_path)
+            model = next_field.model
+            reverse_path.insert(0, next_field.name)
+
+        outer_ref_name = self.model._meta.get_field(path_parts[0]).target_field.name
+        query_path = '__'.join(reverse_path + [outer_ref_name])
+        from api_basebone.utils import queryset as queryset_util
+        return Subquery(queryset_util.annotate(model.objects.all()).filter(**{query_path: OuterRef(outer_ref_name)}).values(query_path).annotate(__result__=aggregation(path_parts[-1])).values('__result__'))
+
+
+class FieldExpression(DbExpression):
+    def __init__(self, model, variable_root=None):
+        self.model = model
+        super().__init__(variable_root)
+
+    def f(self, field_path):
+        model = self.model
+        reverse_path = []
+        path_parts = field_path.split('__')
+        for part in path_parts[:-1]:
+            try:
+                next_field = model._meta.get_field(part).remote_field
+            except:
+                return F(field_path)
+            model = next_field.model
+            reverse_path.insert(0, next_field.name)
+
+        try:
+            model._meta.get_field(path_parts[-1])
+        except FieldDoesNotExist:
+            query_path = '__'.join(reverse_path)
+            from api_basebone.utils import queryset as queryset_util
+            return Subquery(queryset_util.annotate(model.objects.all()).filter(**{query_path: OuterRef(self.model._meta.get_field(path_parts[0]).target_field.name)}).values(path_parts[-1])[:1])
+
+        return F(field_path)
+
+    @property
+    def function_set(self):
+        super_set = super().function_set
+        return {
+            **super_set,
+            'Sum': SubqueryAggregate(Sum, model=self.model),
+            'Avg': SubqueryAggregate(Avg, model=self.model),
+            'Max': SubqueryAggregate(Max, model=self.model),
+            'Min': SubqueryAggregate(Min, model=self.model),
+            'F': self.f,
+        }
