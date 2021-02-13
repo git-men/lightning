@@ -12,8 +12,9 @@ funcs = {}
 lightning_rt_function_scripts = types.ModuleType("lightning_rt_function_scripts")
 
 def register_func(app, model, func_name, func, options):
-    funcs[app, model, func_name] = func, options
-
+    if (app, model) not in funcs:
+        funcs[app, model] = {}
+    funcs[app, model][func_name] = func, options
 
 def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[]):
     # 做注册工作，把下层的方法注册到funcs里面去。
@@ -58,6 +59,13 @@ def find_dynamic_func(app, model, func_name):
         sign = ', '.join(
             [', '.join(required_params),
             ', '.join([f'{p}=None' for p in optional_params])])
+        scene_param = {
+            Function.SCENE_UNLIMIT: '',
+            Function.SCENE_INLINE_ACTION: 'id',
+            Function.SCENE_BATCH_ACTION: 'ids',
+        }[func_obj.scene]
+        if scene_param:
+            sign = ', '.join([scene_param, sign])
         head = f'def {func_name}(user, {sign}, **kwargs):'
         body = ('\n' + func_obj.code.strip()).replace('\n', '\n' + ' ' * 4).replace('\t', ' ' * 4)
         print(head + body)
@@ -83,12 +91,12 @@ def find_dynamic_func(app, model, func_name):
 
 
 def find_func(app, model, func_name):
-    if (app, model, func_name) not in funcs:
+    if (app, model) not in funcs or func_name not in funcs[app, model]:
         func, options = find_dynamic_func(app, model, func_name)
         if not func:
             return func, options
     else:
-        func, options = funcs[app, model, func_name]
+        func, options = funcs[app, model][func_name]
 
     def proxy(*args, **kwargs):
         signature = inspect.signature(func)
@@ -99,3 +107,7 @@ def find_func(app, model, func_name):
         return func(*args, **kwargs)
 
     return proxy, options
+
+
+def functions_for_model(app, model):
+    return funcs.get((app, model), {})
