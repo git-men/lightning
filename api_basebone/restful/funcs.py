@@ -56,8 +56,11 @@ def find_dynamic_func(app, model, func_name):
         params = func_obj.functionparameter_set.all()
         required_params = [p.name for p in params if p.required]
         optional_params = [p.name for p in params if not p.required]
-        sign = ', '.join(
-            [', '.join(required_params),
+        sign = ''
+        if required_params:
+            sign = ', '.join(required_params)
+        if optional_params:
+            sign = ', '.join([sign,
             ', '.join([f'{p}=None' for p in optional_params])])
         scene_param = {
             Function.SCENE_UNLIMIT: '',
