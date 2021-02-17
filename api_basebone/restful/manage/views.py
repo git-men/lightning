@@ -517,7 +517,7 @@ class GenericViewMixin:
     def get_queryset(self):
         """新版get_queryset方法，把组装queryset的方法全移出view之外，不与view绑定。
         """
-        if django_settings.QUERYSET_VERSION == 'v2':
+        if getattr(django_settings, 'QUERYSET_VERSION', 'v1') == 'v2':
             log.debug('USING QUERYSET VERSION 2')
             return queryset_service.queryset(self.request, self.action, self.model,
                 filters=self.request.data.get(const.FILTER_CONDITIONS, []),
