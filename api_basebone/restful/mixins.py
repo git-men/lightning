@@ -161,8 +161,9 @@ class StatisticsMixin:
             return success_response({})
 
         result = queryset.aggregate(**aggregates)
-        self.basebone_origin_queryset.query.annotations.clear()
-        relation_result = self.basebone_origin_queryset.aggregate(
+        origin_queryset = self.basebone_origin_queryset or queryset
+        origin_queryset.query.annotations.clear()
+        relation_result = origin_queryset.aggregate(
             **relation_aggregates)
 
         result.update(relation_result)

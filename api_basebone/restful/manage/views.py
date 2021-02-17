@@ -5,6 +5,7 @@ import logging
 from django.apps import apps
 
 from django.contrib.auth import get_user_model
+from django.conf import settings as django_settings
 from rest_framework.decorators import action
 
 from api_basebone.settings import settings
@@ -36,8 +37,10 @@ from api_basebone.restful.viewsets import BSMModelViewSet
 
 from api_basebone.services import rest_services
 from api_basebone.utils import queryset as queryset_utils
+from api_basebone.services import queryset as queryset_service
 
 from .user_pip import add_login_user_data
+
 
 log = logging.getLogger(__name__)
 
@@ -510,8 +513,23 @@ class GenericViewMixin:
 
     def get_display_fields(self):
         return self.request.data.get(const.DISPLAY_FIELDS)
-
+    
     def get_queryset(self):
+        """新版get_queryset方法，把组装queryset的方法全移出view之外，不与view绑定。
+        """
+        if django_settings.QUERYSET_VERSION == 'v2':
+            log.debug('USING QUERYSET VERSION 2')
+            return queryset_service.queryset(self.request, self.action, self.model,
+                filters=self.request.data.get(const.FILTER_CONDITIONS, []),
+                fields=self.get_display_fields(),
+                expand_fields=self.expand_fields,
+                order=self.request.data.get(const.ORDER_BY_FIELDS),
+                tree_data=self.tree_data,
+                skip_distinct=self.action == 'statistics'
+            )
+        return self.get_queryset_legacy()
+
+    def get_queryset_legacy(self):
         """动态的计算结果集
 
         - 如果是展开字段，这里做好是否关联查询
