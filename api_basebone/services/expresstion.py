@@ -128,6 +128,7 @@ class Expression(BaseExpression):
 
 DB_FUNC = {
     'F': F,
+    'Q': Q,
     'Concat': Concat,
     'Value': Value,
     'Count': Count,
