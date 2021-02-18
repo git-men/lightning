@@ -2,6 +2,7 @@ import inspect
 import types
 from inspect import Parameter
 from api_basebone.core import exceptions
+from api_basebone.sandbox.functions import __all__
 from hashlib import md5
 
 from django.apps import apps
@@ -70,6 +71,7 @@ def find_dynamic_func(app, model, func_name):
         if scene_param:
             sign = ', '.join([scene_param, sign])
         head = f'def {func_name}(user, {sign}, **context):'
+        head += '\n    from api_basebone.sandbox.functions import %s' % ', '.join(__all__)
         body = ('\n' + func_obj.code.strip()).replace('\n', '\n' + ' ' * 4).replace('\t', ' ' * 4)
         print(head + body)
         exec(head + body)
