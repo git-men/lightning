@@ -19,7 +19,6 @@ from api_basebone.signals import post_bsm_create, post_bsm_delete, before_bsm_cr
 from api_basebone.restful.funcs import find_func
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.drf.response import success_response
-from api_basebone.sandbox.functions import context
 
 from api_basebone.restful.client import user_pip as client_user_pip
 
@@ -199,9 +198,7 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
         'request': genericAPIView.request,
         'current_model': f'{app}__{model}',
         'current_model_cls': apps.get_model(app, model),
-        'get_model': apps.get_model
     })
-    params.update(context)
     result = func(user, **params)
 
     if isinstance(result, requests.Response):
@@ -333,9 +330,11 @@ def client_update(genericAPIView, request, partial, set_data):
             instance, data=set_data, partial=partial
         )
         serializer.is_valid(raise_exception=True)
+        instance_dict = {'id': instance.pk}
+        instance_dict.update(serializer.validated_data)
         before_bsm_create.send(
             sender=genericAPIView.model,
-            instance=serializer.validated_data,
+            instance=instance_dict,
             create=False,
             request=genericAPIView.request
         )
@@ -381,9 +380,11 @@ def manage_update(genericAPIView, request, partial, set_data):
             context=genericAPIView.get_serializer_context(),
         )
         serializer.is_valid(raise_exception=True)
+        instance_dict = {'id': instance.pk}
+        instance_dict.update(serializer.validated_data)
         before_bsm_create.send(
             sender=genericAPIView.model,
-            instance=serializer.validated_data,
+            instance=instance_dict,
             create=False,
             request=genericAPIView.request,
             scope='admin'
