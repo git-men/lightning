@@ -69,7 +69,7 @@ def find_dynamic_func(app, model, func_name):
         }[func_obj.scene]
         if scene_param:
             sign = ', '.join([scene_param, sign])
-        head = f'def {func_name}(user, {sign}, **kwargs):'
+        head = f'def {func_name}(user, {sign}, **context):'
         body = ('\n' + func_obj.code.strip()).replace('\n', '\n' + ' ' * 4).replace('\t', ' ' * 4)
         print(head + body)
         exec(head + body)
