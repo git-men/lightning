@@ -264,7 +264,7 @@ def get_queryset_by_with_tree(tree_data, queryset):
         return queryset.filter(**params)
     return queryset
 
-def queryset(request, action, model, filters=[], fields=[], expand_fields=[], order=[], tree_data=None, skip_distinct=False):
+def queryset(request, model, action='list', filters=[], fields=[], expand_fields=[], order=[], tree_data=None, skip_distinct=False):
     """通用数据查询方法。
     - user，当前查询用户
     - model，查询的模型

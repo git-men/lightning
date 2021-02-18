@@ -353,8 +353,7 @@ class GenericViewMixin:
         result = super().perform_authentication(request)
 
         self.check_app_model(request)
-        # TODO: 暂时取消检测，因为联调进度
-        # self.validate_call_api_permission(request)
+        self.validate_call_api_permission(request)
         self.get_expand_fields()
         self._get_data_with_tree(request)
 
@@ -519,7 +518,7 @@ class GenericViewMixin:
         """
         if getattr(django_settings, 'QUERYSET_VERSION', 'v1') == 'v2':
             log.debug('USING QUERYSET VERSION 2')
-            return queryset_service.queryset(self.request, self.action, self.model,
+            return queryset_service.queryset(self.request, self.model, self.action, 
                 filters=self.request.data.get(const.FILTER_CONDITIONS, []),
                 fields=self.get_display_fields(),
                 expand_fields=self.expand_fields,
