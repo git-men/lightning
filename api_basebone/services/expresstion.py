@@ -127,6 +127,7 @@ class Expression(BaseExpression):
 
 
 DB_FUNC = {
+    'Condition': namedtuple('Condition', ['field', 'operator', 'value']),
     'F': F,
     'Concat': Concat,
     'Value': Value,
@@ -139,6 +140,8 @@ DB_FUNC = {
     'Variance': Variance,
     'Cast': Cast,
     'Coalesce': Coalesce,
+    'When': lambda then, *conditions: When(then=then, **{cond.field+'__'+cond.operator: cond.value for cond in conditions}),
+    'Case': lambda *cases: Case(*cases) if isinstance(cases[-1], When) else Case(*cases[:-1], default=cases[-1]),
     'DecimalField': DecimalField,
     'FloatField': FloatField,
     'IntegerField': IntegerField,
