@@ -143,7 +143,7 @@ DB_FUNC = {
     'Coalesce': Coalesce,
     'When': lambda then, *conditions: When(then=then, **{cond.field+'__'+cond.operator: cond.value for cond in conditions}),
     'Case': lambda *cases: Case(*cases) if isinstance(cases[-1], When) else Case(*cases[:-1], default=cases[-1]),
-    'DecimalField': DecimalField,
+    'DecimalField': lambda max_digits, decimal_places: DecimalField(max_digits=max_digits, decimal_places=decimal_places),
     'FloatField': FloatField,
     'IntegerField': IntegerField,
     'CharField': CharField,
