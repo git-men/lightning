@@ -7,13 +7,13 @@ __all__ = ['get_queryset', 'raise_error', 'get_model']
 
 get_model = apps.get_model
 
-def get_queryset(request, model):
+def get_queryset(request, model, expand_fields=None):
     """获取指定的模型查询结果集，在此之上可以继续进行filter操作。
     """
     if isinstance(model, str) and '__' in model:
         seg = model.split('__')
         model = apps.get_model(seg[0], seg[1])
-    return queryset_service.queryset(request, model)
+    return queryset_service.queryset(request, model, expand_fields=expand_fields)
 
 def raise_error(message, code='9999', data=None, app=None):
     raise BusinessException(error_code=code, error_message=message, error_data=data, error_app=app)
