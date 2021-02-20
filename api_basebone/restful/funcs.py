@@ -68,9 +68,14 @@ def find_dynamic_func(app, model, func_name):
             Function.SCENE_INLINE_ACTION: 'id',
             Function.SCENE_BATCH_ACTION: 'ids',
         }[func_obj.scene]
-        if scene_param:
+        print('sign and scene: ', scene_param, sign)
+        if scene_param and sign:
             sign = ', '.join([scene_param, sign])
-        head = f'def {func_name}(user, {sign}, **context):'
+        if sign:
+            params_str = ', '.join(['user', sign, '**context'])
+        else:
+            params_str = ', '.join(['user', '**context'])
+        head = f'def {func_name}({params_str}):'
         head += '\n    from api_basebone.sandbox.functions import %s' % ', '.join(__all__)
         body = ('\n' + func_obj.code.strip()).replace('\n', '\n' + ' ' * 4).replace('\t', ' ' * 4)
         print(head + body)
