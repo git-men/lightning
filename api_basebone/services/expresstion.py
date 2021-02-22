@@ -94,7 +94,7 @@ class BaseExpression:
         except json.JSONDecodeError:
             pass
         log.debug(f'resolving expression: {expression}')
-        matched = re.match(r'^(\w+)\((.*)\)$', expression)
+        matched = re.match(r'^(\w+)\((.*)\)$', expression, flags=re.DOTALL)
         if matched:
             func, arg_str = matched.groups()
             return self.execute_function(func, self.split_expression(arg_str))
