@@ -249,7 +249,7 @@ def get_queryset_by_filter_conditions(user, model, action, filters, role_config,
         tree_check(filter_conditions)
         distinct_queryset = should_distinct_queryset(model, action, list(fields))
         cons = build_filter_conditions2(
-            filter_conditions, context={'user': user}
+            filter_conditions, context={'user': user} if user else {}
         )
 
         if cons:
@@ -276,7 +276,7 @@ def queryset(request, model, action='list', filters=[], fields=[], expand_fields
     # 1. 从最原始的queryset开始
     queryset = model.objects.all()
 
-    context = {'user': request.user}
+    context = {'user': request.user} if request else {}
 
     admin_class = get_bsm_model_admin(model)
 
@@ -291,7 +291,7 @@ def queryset(request, model, action='list', filters=[], fields=[], expand_fields
         queryset = queryset_utils.annotate(queryset, context=context)
 
     # 4. 如果GMeta重定义了get_queryset
-    if hasattr(model, 'GMeta'):
+    if hasattr(model, 'GMeta') and request:
         try:
             gm = model.GMeta()
         except Exception as e:
@@ -306,22 +306,23 @@ def queryset(request, model, action='list', filters=[], fields=[], expand_fields
     log.debug(f'role_config: {role_config}')
 
     # 5. 根据当前用户过滤
-    queryset = get_queryset_by_filter_user(request.user, model, role_config, queryset)
+    if request:
+        queryset = get_queryset_by_filter_user(request.user, model, role_config, queryset)
     # 6. 根据条件过滤
-    queryset, distinct_queryset = get_queryset_by_filter_conditions(request.user, model, action, filters, role_config, queryset)
+    queryset, distinct_queryset = get_queryset_by_filter_conditions(request.user if request else None, model, action, filters, role_config, queryset)
     # 7. 添加排序信息
     queryset = get_queryset_by_order_by(order, queryset)
     # 8. 树型数据特殊滤
     queryset = get_queryset_by_with_tree(tree_data, queryset)  
 
     # 9. 检测是否在Admin覆盖了get_queryset
-    if admin_class:
+    if admin_class and request:
         admin_get_queryset = getattr(admin_class(), 'get_queryset', None)
         if admin_get_queryset:
             queryset = admin_get_queryset(queryset, request, None)
     
     # 10. 如果开启了 guardian 数据权限检测，那么这里会进行必要的筛选
-    if settings.MANAGE_GUARDIAN_DATA_PERMISSION_CHECK:
+    if settings.MANAGE_GUARDIAN_DATA_PERMISSION_CHECK and request:
         queryset = _guard(model, action, request.user, queryset)
 
     # 11. 权限中配置是否去重
