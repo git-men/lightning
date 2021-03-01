@@ -46,7 +46,7 @@ DJANGO_FIELD_TYPE_MAP = {
     'UUIDField': 'String',
     'ForeignKey': 'Ref',
     'TreeForeignKey': 'Ref',
-    'OneToOneField': 'Ref',
+    'OneToOneField': 'RefOne',
     'ManyToManyField': 'RefMult',
     'BoneRichTextField': 'RichText',
     'BoneImageUrlField': 'Image',
@@ -238,6 +238,10 @@ class FieldConfig:
         base.update(self.reset_field_config(field, data_type))
         return base
 
+    def refone_params(self, field, data_type):
+        """一对一"""
+        return self.ref_params(field, data_type)
+
     def object_params(self, field, data_type):
         """对象类型的配置获取
         """
@@ -304,7 +308,7 @@ def get_model_field_config(model):
                 reverse_config['type'] = 'mref'
 
             elif item.one_to_one:
-                reverse_config['type'] = 'ref'
+                reverse_config['type'] = 'boref'
 
             meta = item.related_model._meta
             reverse_config['ref'] = '{}__{}'.format(meta.app_label, meta.model_name)
