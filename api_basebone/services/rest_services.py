@@ -397,7 +397,7 @@ def manage_update(genericAPIView, request, partial, set_data):
 
         reverse_relation_hand(genericAPIView.model, set_data, instance)
 
-    with transaction.atomic():
+    # with transaction.atomic():  # 与主流程同一个事务
         log.debug(
             'sending Post Update signal with: model: %s, instance: %s',
             genericAPIView.model,
@@ -451,15 +451,16 @@ def update_sort(genericAPIView, request, data):
 
 def destroy(genericAPIView, request, scope=''):
     """删除数据"""
-    instance = genericAPIView.get_object()
-    old_instance = copy(instance)
-    before_bsm_delete.send(
-        sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope
-    )
-    genericAPIView.perform_destroy(instance)
-    post_bsm_delete.send(
-        sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope
-    )
+    with transaction.atomic():
+        instance = genericAPIView.get_object()
+        old_instance = copy(instance)
+        before_bsm_delete.send(
+            sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope
+        )
+        genericAPIView.perform_destroy(instance)
+        post_bsm_delete.send(
+            sender=genericAPIView.model, instance=old_instance, request=genericAPIView.request, scope=scope
+        )
     return success_response()
 
 
