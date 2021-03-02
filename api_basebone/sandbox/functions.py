@@ -2,10 +2,12 @@
 from api_basebone.services import queryset as queryset_service
 from api_basebone.core.exceptions import BusinessException
 from django.apps import apps
+from datetime import date
 
-__all__ = ['get_queryset', 'raise_error', 'get_model']
+__all__ = ['get_queryset', 'raise_error', 'get_model', 'today']
 
 get_model = apps.get_model
+today = date.today
 
 def get_queryset(request, model, expand_fields=None):
     """获取指定的模型查询结果集，在此之上可以继续进行filter操作。
