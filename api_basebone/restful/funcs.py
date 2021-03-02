@@ -68,10 +68,13 @@ def find_dynamic_func(app, model, func_name):
             Function.SCENE_INLINE_ACTION: 'id',
             Function.SCENE_BATCH_ACTION: 'ids',
         }[func_obj.scene]
-        print('sign and scene: ', scene_param, sign)
-        if scene_param and sign:
-            sign = ', '.join([scene_param, sign])
-        if sign:
+        if sign or scene_param:
+            if sign:
+                if scene_param:
+                    sign = ', '.join([scene_param, sign])
+            else:
+                if scene_param:
+                    sign = scene_param
             params_str = ', '.join(['user', sign, '**context'])
         else:
             params_str = ', '.join(['user', '**context'])
