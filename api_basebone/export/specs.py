@@ -138,6 +138,16 @@ FIELDS = {
             },
         ],
     },
+    'RefOne': {
+        'name': 'oref',
+        'attributes': [
+            {
+                'name': 'ref',
+                'type': 'string',
+                'required': False,
+            },
+        ],
+    },
     'Object': {
         'name': 'object',
     },

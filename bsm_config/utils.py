@@ -54,8 +54,8 @@ def get_permission(menu):
     if not menu.permission:
         # 创建菜单权限
         if menu.page in MODEL_PAGES:
-            content_model = apps.get_app_config(app).get_model(model) 
-            content_type = ContentType.objects.get_for_model(content_model) 
+            content_model = apps.get_app_config(app).get_model(model)
+            content_type = ContentType.objects.get_for_model(content_model)
             permission, _ = Permission.objects.get_or_create(codename=f'view_{model}', content_type=content_type)
      
         if menu.page in ORDER_PAGES or menu.type == Menu.TYPE_GROUP:
@@ -68,10 +68,11 @@ def get_permission(menu):
         _ , codename = menu.permission.split('.')
         if menu.page in MODEL_PAGES:
             try:
-                content_model = apps.get_app_config(app).get_model(model) 
+                content_model = apps.get_app_config(app).get_model(model)
             except Exception:
                 return False, False
-        content_type = ContentType.objects.get_for_model(content_model)        
+        # 代理模型不用for_concrete_model会返回代理指向的模型
+        content_type = ContentType.objects.get_for_model(content_model, for_concrete_model=False)
         permission = Permission.objects.get(codename=codename, content_type=content_type)
     
     return permission,  f'{permission.content_type.app_label}.{permission.codename}'
