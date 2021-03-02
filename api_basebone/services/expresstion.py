@@ -192,6 +192,8 @@ class FieldExpression(DbExpression):
         super().__init__(variable_root)
 
     def f(self, field_path):
+        if '__' not in field_path:
+            return F(field_path)
         model = self.model
         reverse_path = []
         path_parts = field_path.split('__')
