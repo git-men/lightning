@@ -4,6 +4,9 @@ from collections import OrderedDict
 
 from django.http import HttpResponse
 from pydash import objects
+import openpyxl
+from openpyxl.styles.alignment import Alignment
+from tempfile import NamedTemporaryFile
 
 from api_basebone.core import gmeta
 from api_basebone.core.decorators import BSM_ADMIN_COMPUTED_FIELDS_MAP
@@ -102,7 +105,7 @@ def row_data_merge(model, fields, data, export_fields):
             item_data = get_data_from_dict(data, key)
             row_item_data = item_data[0] if item_data else ''
             result.append(row_item_data)
-    return result
+    return [result]
 
 
 def get_no_merge_fields(model, serializer_class, export_config):
@@ -162,7 +165,7 @@ def get_no_merge_fields(model, serializer_class, export_config):
     return fields
 
 
-def row_data_no_merge(model, fields, instance_data, export_fields, writer):
+def row_data_no_merge(model, fields, instance_data, export_fields):
     """不合并行数据的处理"""
 
     result = []
@@ -173,9 +176,8 @@ def row_data_no_merge(model, fields, instance_data, export_fields, writer):
         data[key] = get_data_from_dict(instance_data, key)
         if len(data[key]) > max_nest_list:
             max_nest_list = len(data[key])
-
     if max_nest_list == 0:
-        writer.writerow([objects.get(data, key) for key in fields.keys()])
+        result.append([objects.get(data, key) for key in fields.keys()])
     else:
         for index in range(0, max_nest_list):
             row_data = []
@@ -185,7 +187,7 @@ def row_data_no_merge(model, fields, instance_data, export_fields, writer):
                 except Exception:
                     value = ''
                 row_data.append(value)
-            writer.writerow(row_data)
+            result.append(row_data)
     return result
 
 
@@ -268,7 +270,54 @@ def csv_render(model, queryset, serializer_class, export_config=None):
         for instance in queryset_iter:
             instance_data = serializer_class(instance).data
             # 写入一行数据
-            row_data_no_merge(
-                model, fields, instance_data, export_config['fields'], writer,
-            )
+            rows = row_data_no_merge(model, fields, instance_data, export_config['fields'])            
+            writer.writerows(rows)
     return response
+
+
+def excel_render(model, queryset, serializer_class, export_config=None):
+    app_label, model_name = model._meta.app_label, model._meta.model_name
+    file_name = f'{app_label}-{model_name}-{local_timestamp()}'
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{file_name}.xlsx"'
+
+    datas = []
+    
+    get_fields = get_merge_fields if export_config['merge_bref'] else get_no_merge_fields
+    row_data = row_data_merge if export_config['merge_bref'] else row_data_no_merge
+
+    fields = get_fields(model, serializer_class, export_config)
+    # 处理结果集
+    queryset_iter = queryset if isinstance(queryset, list) else queryset.all()
+    for instance in queryset_iter:
+        instance_data = serializer_class(instance).data
+        rows = row_data(model, fields, instance_data, export_config['fields'])
+        datas.append(rows)
+    
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+
+    titles = list(fields.values())
+    print('titles: ', titles)
+    for i in range(len(titles)):
+        sheet.cell(1, i + 1, titles[i])
+    
+    insert_line = 2
+    for rows in datas:
+        for row in rows:
+            for i in range(len(row)):
+                cell = sheet.cell(insert_line, i + 1, row[i])
+                cell.alignment = Alignment(wrap_text=True)
+            insert_line += 1
+    with NamedTemporaryFile() as tmp:
+        workbook.save(tmp.name)
+        tmp.seek(0)
+        content = tmp.read()
+        response.write(content)
+    return response
+
+def render(model, queryset, serializer_class, export_config=None, file_type='excel'):        
+    if file_type == 'csv':
+        return csv_render(model, queryset, serializer_class, export_config)
+    return excel_render(model, queryset, serializer_class, export_config)

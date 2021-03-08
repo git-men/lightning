@@ -13,6 +13,7 @@ from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.drf.response import success_response
+from api_basebone.restful.export.excel import export_excel
 
 # from api_basebone.export.fields import get_attr_in_gmeta_class
 from api_basebone.restful import batch_actions, renderers, renderers_v2
@@ -448,7 +449,17 @@ class GenericViewMixin:
                         pass
         elif self.action == 'export_file':
             # FIXME: 如果不是新版导出，则直接从导出配置中识别出扩展字段
-            if self._export_type_config.get('version') != 'v2':
+            export_version = self._export_type_config.get('version', None)
+            if export_version == 'v2':
+                # 这里需要根据导出的字段自动识别出需要扩展的字段
+                self.expand_fields = get_prefetch_fields_from_export_fields(
+                    self.model, self._export_type_config['fields']
+                )
+            elif export_version == 'v3':
+                self.expand_fields = get_prefetch_fields_from_export_fields(
+                    self.model, [mp['field'] for mp in self._export_type_config['list_mapping']]
+                )
+            else:
                 self.expand_fields = copy.deepcopy(
                     renderers.get_export_config_by_key(
                         self.model,
@@ -456,11 +467,7 @@ class GenericViewMixin:
                         self._export_type_config,
                     )
                 )
-            else:
-                # 这里需要根据导出的字段自动识别出需要扩展的字段
-                self.expand_fields = get_prefetch_fields_from_export_fields(
-                    self.model, self._export_type_config['fields']
-                )
+                
 
     def _get_data_with_tree(self, request):
         """检测是否可以设置树形结构"""
@@ -722,7 +729,42 @@ class CommonManageViewSet(
         """
         # 检测是否支持导出
         admin_class = self.get_bsm_model_admin()
-        if self._export_type_config.get('version') != 'v2':
+
+        if not self._export_type_config:
+            raise exceptions.BusinessException(
+                error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+            )
+
+        export_version = self._export_type_config.get('version')
+        if export_version == 'v2': 
+            file_type = self._export_type_config['file_type']
+            file_type = file_type if file_type in ('csv', 'excel') else 'csv'
+
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer_class = get_export_serializer_class(
+                self.model, self.get_serializer_class(), version=export_version
+            )
+
+            return renderers_v2.render(
+                self.model,
+                queryset,
+                serializer_class,
+                export_config=self._export_type_config,
+                file_type=file_type
+            )
+        
+        if export_version == 'v3':  # 第三版，优先导出Excel，支持指定模板
+            detail_model = request.data.get('detail_model', None)
+            detail_id = request.data.get('detail_id', None)
+            
+            detail_obj = None
+            if detail_id and detail_model:
+                dmodel = apps.get_model(*detail_model.split('__'))
+                detail_obj = queryset_service.queryset(
+                    request, dmodel).filter(pk=detail_id).last()
+            return export_excel(self._export_type_config, self.get_queryset(), detail_obj)
+        
+        else:  # 原始旧版导出
             if admin_class:
                 exportable = getattr(admin_class, admin.BSM_EXPORTABLE, False)
                 if not exportable:
@@ -733,55 +775,30 @@ class CommonManageViewSet(
                 raise exceptions.BusinessException(
                     error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
                 )
-
-        if not self._export_type_config:
-            raise exceptions.BusinessException(
-                error_code=exceptions.MODEL_EXPORT_IS_NOT_SUPPORT
+            serializer_queryset_handler = self._export_type_config.get(
+                'serializer_queryset_handler'
             )
+            if serializer_queryset_handler:
+                func_handler = getattr(admin_class, serializer_queryset_handler, None)
+                if func_handler:
+                    queryset = func_handler(queryset)
 
-        csv_file, excel_file = 'csv', 'excel'
-        valid_list = (csv_file, excel_file)
+            actual_app_label = self._export_type_config.get('actual_app_label')
+            actual_model_slug = self._export_type_config.get('actual_model_slug')
 
-        file_type = self._export_type_config['file_type']
-        file_type = file_type if file_type in valid_list else csv_file
-        queryset = self.filter_queryset(self.get_queryset())
+            if actual_app_label and actual_model_slug:
+                self.model = apps.get_model(actual_app_label, actual_model_slug)
 
-        export_version = self._export_type_config.get('version')
-        if export_version == 'v2':
+            custom_serializer_class = self._export_type_config.get('serializer_class')
             serializer_class = get_export_serializer_class(
-                self.model, self.get_serializer_class(), version=export_version
-            )
-
-            return renderers_v2.csv_render(
                 self.model,
-                queryset,
-                serializer_class,
-                export_config=self._export_type_config,
+                self.get_serializer_class(),
+                custom_serializer_class=custom_serializer_class,
+            )
+            return renderers.csv_render(
+                self.model, queryset, serializer_class, export_config=self._export_type_config
             )
 
-        serializer_queryset_handler = self._export_type_config.get(
-            'serializer_queryset_handler'
-        )
-        if serializer_queryset_handler:
-            func_handler = getattr(admin_class, serializer_queryset_handler, None)
-            if func_handler:
-                queryset = func_handler(queryset)
-
-        actual_app_label = self._export_type_config.get('actual_app_label')
-        actual_model_slug = self._export_type_config.get('actual_model_slug')
-
-        if actual_app_label and actual_model_slug:
-            self.model = apps.get_model(actual_app_label, actual_model_slug)
-
-        custom_serializer_class = self._export_type_config.get('serializer_class')
-        serializer_class = get_export_serializer_class(
-            self.model,
-            self.get_serializer_class(),
-            custom_serializer_class=custom_serializer_class,
-        )
-        return renderers.csv_render(
-            self.model, queryset, serializer_class, export_config=self._export_type_config
-        )
 
     @action(methods=['POST', 'GET'], detail=False, url_path='func')
     def func(self, request, app, model, **kwargs):
