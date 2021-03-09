@@ -337,7 +337,7 @@ def reverse_one_to_one(field, value, instance):
         if value is None:
             model.objects.filter(**{field.remote_field.name: to_field_value}).delete()
         else:
-            model.objects.filter(**{field.field_name: pk_field.to_python(value)}).update(**{field.remote_field.name: to_field_value})
+            model.objects.filter(**{pk_field.name: pk_field.to_python(value)}).update(**{field.remote_field.name: to_field_value})
 
 
 def reverse_relation(model, data, instance):
