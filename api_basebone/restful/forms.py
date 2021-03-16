@@ -34,6 +34,21 @@ class BulkCreateListSerializer(serializers.ListSerializer):
         # self.child.Meta.model.objects.bulk_create(result, ignore_conflicts=False)
         
         return result
+    
+    def update(self, instance, validated_data):
+        """批量更新数据,目前只支持批量级新一个层级的字段，关联字段未支持更新
+        """
+        print('批量更新数据')
+        pk_name = instance.model._meta.pk.name
+        origins = dict([(ins.pk, ins) for ins in instance])
+        ret = []
+        for data in validated_data:
+            if data[pk_name] not in origins:
+                # 不在查询结果中，可能是无权限修改
+                continue
+            ins = origins[data[pk_name]]
+            ret.append(self.child.update(ins, data))
+        return ret
 
 def validate_condition_required(
     data, field=[], condition_field=None, operator=None, value=None
@@ -132,7 +147,7 @@ def simple_support_m2m_field_specify_through_model(func):
     :return:
     """
     @functools.wraps(func)
-    def wrapper(model, exclude_fields=None, **kwargs):
+    def wrapper(model, action='create', batch=False, exclude_fields=None, **kwargs):
         if model._meta.many_to_many:
             field_info = get_field_info(model)
             for field in model._meta.many_to_many:
@@ -140,13 +155,13 @@ def simple_support_m2m_field_specify_through_model(func):
                     related_model = field.related_model
                     kwargs[field.name] = serializers.PrimaryKeyRelatedField(many=True, required=not field.blank,
                                                                 queryset=related_model.objects.all())
-        return func(model, exclude_fields=None, **kwargs)
+        return func(model, action, batch, exclude_fields=None, **kwargs)
 
     return wrapper
 
 
 @simple_support_m2m_field_specify_through_model
-def create_form_class(model, exclude_fields=None, **kwargs):
+def create_form_class(model, action='create', batch=False, exclude_fields=None, **kwargs):
     """构建序列化类"""
 
     def __init__(self, *args, **kwargs):
@@ -179,6 +194,8 @@ def create_form_class(model, exclude_fields=None, **kwargs):
         '__init__': __init__,
         'update': update
     }
+    if action == 'update' and batch:
+        attrs[model._meta.pk.name] = serializers.ModelSerializer.serializer_field_mapping[type(model._meta.pk)]()
     attrs.update(kwargs)
 
     class_name = f'{model.__name__}ModelSerializer'
@@ -191,7 +208,7 @@ def create_form_class(model, exclude_fields=None, **kwargs):
     return type(class_name, (serializers.ModelSerializer,), attrs)
 
 
-def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, request=None, **kwargs):
+def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, request=None, batch=False, **kwargs):
     """获取表单类
 
     如果用户有自定义的表单类，则优先返回用户自定义的表单，如果没有，则使用默认创建的表单
@@ -205,9 +222,8 @@ def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, requ
     Returns:
         class 表单类
     """
-
     # rfum_append=a,b
-    rfum_append = request.query_params.get('rfum_append', None)
+    rfum_append = request.query_params.get('rfum_append', None) if request.query_params else None
     if rfum_append:
         rfu_modes.append = rfum_append.split(',')
     else:
@@ -221,11 +237,11 @@ def get_form_class(model, action, exclude_fields=None, end=MANAGE_END_SLUG, requ
 
     name_suffix = name_suffix_map.get(end)
     if not name_suffix:
-        return create_form_class(model, exclude_fields=exclude_fields, **kwargs)
+        return create_form_class(model, action, batch=batch, exclude_fields=exclude_fields, **kwargs)
 
     class_name = '{}{}{}'.format(model.__name__, action_map[action], name_suffix)
     form_class = getattr(form_module, class_name, None)
 
     if form_class is None:
-        return create_form_class(model, exclude_fields=exclude_fields, **kwargs)
+        return create_form_class(model, action, batch=batch, exclude_fields=exclude_fields, **kwargs)
     return form_class
