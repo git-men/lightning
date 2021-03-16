@@ -13,7 +13,7 @@ from api_basebone.core import admin, const, exceptions, gmeta
 from api_basebone.drf.pagination import PageNumberPagination
 from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.drf.response import success_response
-from api_basebone.restful.export.excel import export_excel
+from api_basebone.restful.export.excel import export_excel, import_excel
 
 # from api_basebone.export.fields import get_attr_in_gmeta_class
 from api_basebone.restful import batch_actions, renderers, renderers_v2
@@ -717,6 +717,42 @@ class CommonManageViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.handle()
         return success_response()
+
+    @action(methods=['POST'], detail=False, url_path='import/file')
+    def import_file(self, request, *args, **kwargs):
+        """导入文件
+        参数：
+        1. detail_id
+        2. detail_model
+        3. import_config
+        4. file（文件）
+        4. model
+        """
+        print(request.data)
+        config = json.loads(request.data['import_config'])
+        content = request.data['file'].read()
+        detail_id = request.data.get('detail_id', None)
+        detail_model = request.data.get('detail_model', None)
+        detail_field = request.data.get('detail_field', None)    
+        
+        detail_obj = None
+        if detail_id:
+            dm = apps.get_model(*detail_model.split('__'))
+            detail_obj = queryset_service.queryset(request, dm).get(pk=detail_id)
+            if not detail_obj:
+                raise exceptions.BusinessException(error_message='找不到对象')
+
+        if detail_obj:
+            detail_filter = {detail_field: detail_obj}
+            queryset = queryset_service.queryset(request, self.model).filter(**detail_filter)
+        else:
+            queryset = queryset_service.queryset(request, self.model)
+        
+        if config['file_type'] == 'excel':
+            return import_excel(config, content, queryset, request, detail_obj)
+        else:
+            return import_excel(config, content, queryset, request, detail_obj)
+    
 
     @action(methods=['get', 'post'], detail=False, url_path='export/file')
     def export_file(self, request, *args, **kwargs):

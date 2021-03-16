@@ -1,14 +1,20 @@
 import openpyxl
+from openpyxl import load_workbook
 import collections
 import requests
+from time import time
 from tempfile import NamedTemporaryFile
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
 
+from rest_framework.exceptions import ValidationError
+
 from api_basebone.utils.timezone import local_timestamp
 from api_basebone.restful.export.formatter import format
+from api_basebone.restful.forms import get_form_class
+from api_basebone.drf.response import success_response
 
 def get_attribute(instance, field_path, formatter=None):
     # 获取对象属性值,并对其进行格式化
@@ -116,7 +122,7 @@ def export_excel(config, queryset, detail=None):
                 for field in list_mapping:
                     sheet[f'{field["column"]}{row}'] = get_attribute(instance, field['field'], field.get('formatter', None))
                 row += 1
-                
+
             sheet.delete_rows(row, end - row + 1)
         else:
             row = len(detail_mapping) + 1
@@ -139,12 +145,13 @@ def export_excel(config, queryset, detail=None):
     if detail_mapping:
         # 渲染关联详情
         if use_template:  # 模型指定位置
+            qs_len = len(queryset)
             for dfield in detail_mapping:
                 position = dfield['position']
                 if isinstance(position, str):
                     sheet[dfield['position']] = get_attribute(detail, dfield['field'], dfield.get('formatter', None))
                 elif isinstance(position, dict):
-                    row = position['related_row'] + config.get('list_start_line') + len(queryset) - 1
+                    row = position['related_row'] + config.get('list_start_line') + qs_len - 1
                     sheet.cell(row, position['column'], get_attribute(detail, dfield['field'], dfield.get('formatter', None)))
         else:  # 自动生成，从第一行起，合并单元格。
             cur = 1
@@ -160,3 +167,79 @@ def export_excel(config, queryset, detail=None):
         content = tmp.read()
         response.write(content)
     return response
+
+
+def import_excel(config, content, queryset, request, detail=None):
+    """导入Exce
+    参数：
+    1. config: 导入配置
+    2. content: 文件内容
+    3. detail: 上层数据
+
+    config的结构：
+    {	
+        "type": "create",  // create | update
+        "template": "",  // 可用模板，可不用模板。
+        "update_by": ["user.first_name", "user.last_name"],  // 更新的话需要指定条件
+        "list_mapping": [  // 字段映射，暂不允许关联更新
+            {"column": "", "field": ""},
+        ],
+        "list_start_line": 10  // 数据开始行
+    }
+    """
+    with NamedTemporaryFile(suffix='.xlsx') as tmp:
+        tmp.write(content)
+        workbook = load_workbook(tmp.name)
+    print('excel file name: ', tmp.name)
+
+    sheet = workbook.worksheets[0]
+
+    list_mapping = config['list_mapping']
+    start_line = config.get('list_start_line', 1)
+    line = start_line
+
+    data = []
+    eof = False
+    while not eof:
+        row_data = {}
+        for field in list_mapping:
+            print(f'reading value of position: {field["column"]}{line}')
+            row_data[field["field"]] = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
+        line += 1
+        if not [val for val in row_data.values() if val]:
+            eof = True
+        else:
+            data.append(row_data)
+    
+    print('excel data: ', data)
+
+    if config['type'] == 'create':
+        serializer = get_form_class(queryset.model, 'create', request=request)(data=data, many=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response()
+
+    elif config['type'] == 'update':
+        # 更新，是有条件的更新
+        # update_by = config.get('update_by', [])
+        pk_name = queryset.model._meta.pk.name
+        pk_values = [row[pk_name] for row in data]
+        condition = {f'{pk_name}__in': pk_values}
+        print('condition: ', condition)
+        instances = queryset.filter(**condition)
+        
+        # FIXME 如果data里面有instances里面没有的数据时，要报无权修改
+        serializer = get_form_class(queryset.model, 'update', request=request, batch=True)(instances, data=data, partial=True, many=True)
+        
+        if not serializer.is_valid(raise_exception=False):
+            error_details = []
+            errors = serializer.errors
+            for idx in range(len(errors)):
+                if errors[idx]:
+                    error_details.append({
+                        "line": start_line + idx,
+                        "error": errors[idx]
+                    })
+            raise ValidationError(error_details)
+        serializer.save()
+        return success_response()
