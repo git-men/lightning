@@ -20,6 +20,7 @@ from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, get_export_apps
 from bsm_config.models import Menu, Admin
+from bsm_config.signals import update_action_permission, create_action_permission
 from api_basebone.utils import queryset as queryset_utils
 from api_basebone.drf.permissions import IsAdminUser
 
@@ -51,9 +52,14 @@ class ConfigViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['put'], url_path='admin/(?P<model_name>[^/.]+)', permission_classes = (IsAdminUser,))
     def admin(self, request, model_name):
-        model, created = Admin.objects.get_or_create(model=model_name)
-        model.config = dict(request.data)
-        model.save()
+        admin, created = Admin.objects.get_or_create(model=model_name)
+        old_config = admin.config
+        admin.config = dict(request.data)
+        admin.save()
+        if created:
+            create_action_permission(*admin.model.split('__'), admin.config)
+        else:
+            update_action_permission(*admin.model.split('__'), admin.config, old_config)
         return success_response()
 
     @action(detail=False, url_path='all', permission_classes = (IsAdminUser,))

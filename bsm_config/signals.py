@@ -87,6 +87,7 @@ def get_actions(config):
     for action in config.get('inlineActions', []) + config.get('actions', []) + config.get('tableActions', []):
         if 'id' not in action:
             action['id'] = str(uuid.uuid4().hex)
+        result.append(action)
     return result
 
 
