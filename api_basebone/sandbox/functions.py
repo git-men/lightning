@@ -4,10 +4,16 @@ from api_basebone.core.exceptions import BusinessException
 from django.apps import apps
 from datetime import date
 
-__all__ = ['get_queryset', 'raise_error', 'get_model', 'today']
+__all__ = ['get_queryset', 'raise_error', 'get_model', 'today', 'generate_sequence']
 
 get_model = apps.get_model
 today = date.today
+
+def generate_sequence(prefix, last, width):
+    """生成序列号
+    """
+    current = str(last + 1).zfill(width)
+    return '-'.join([prefix, today().strftime('%Y%m%d'), current])
 
 def get_queryset(request, model, expand_fields=None):
     """获取指定的模型查询结果集，在此之上可以继续进行filter操作。
