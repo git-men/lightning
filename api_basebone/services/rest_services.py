@@ -199,7 +199,12 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
         'current_model': f'{app}__{model}',
         'current_model_cls': apps.get_model(app, model),
     })
-    result = func(user, **params)
+    
+    if options.get('atomic', True):
+        with transaction.atomic():
+            result = func(user, **params)
+    else:
+        result = func(user, **params)
 
     if isinstance(result, requests.Response):
         response = HttpResponse(result, result.headers.get('Content-Type', None))

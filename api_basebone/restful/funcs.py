@@ -17,7 +17,7 @@ def register_func(app, model, func_name, func, options):
         funcs[app, model] = {}
     funcs[app, model][func_name] = func, options
 
-def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[]):
+def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[], atomic=True):
     # 做注册工作，把下层的方法注册到funcs里面去。
     def _decorator(function):
         app = model._meta.app_label
@@ -28,7 +28,8 @@ def bsm_func(name, model, login_required=True, staff_required=False, superuser_r
                 'login_required': login_required,
                 'staff_required': staff_required,
                 'superuser_required': superuser_required,
-                'permissions': permissions
+                'permissions': permissions,
+                'atomic': atomic
             })
         return function
     return _decorator
@@ -99,7 +100,8 @@ def find_dynamic_func(app, model, func_name):
     return func, {
         'login_required': func_obj.login_required,
         'staff_required': func_obj.staff_required,
-        'superuser_required': func_obj.superuser_required
+        'superuser_required': func_obj.superuser_required,
+        'atomic': True  # 默认全开启事务
     }
 
 
