@@ -55,6 +55,7 @@ class BaseExpression:
 
     @staticmethod
     def split_expression(expression, sep=','):
+        expression = expression.strip()
         quote = False
         surround = 0
         buffer = ''
@@ -103,7 +104,7 @@ class BaseExpression:
 
 
 class Expression(BaseExpression):
-    def __init__(self, variable_root):
+    def __init__(self, variable_root=None):
         self.variable_root = variable_root
 
     @property
@@ -118,16 +119,16 @@ class Expression(BaseExpression):
         try:
             return super().resolve(expression)
         except NotImplementedError:
-            # 点操作符，getattr的语法糖
-            exp = '__variable_root__()'
-            for path_item in expression.split('.'):
-                exp = f'__getattr__({exp}, "{path_item}")'
-            log.debug(f'exp: {exp}')
-            return self.resolve(exp)
+            if '.' in expression:
+                # 点操作符，getattr的语法糖
+                return self.resolve(reduce(lambda exp, seg: f'__getattr__({exp}, "{seg}")', expression.split('.')))
+            return self.resolve('__getattr__(__variable_root__(), "{}")'.format(expression))
 
 
 DB_FUNC = {
-    'Condition': namedtuple('Condition', ['field', 'operator', 'value']),
+    'Condition': lambda field, lookup, value: Q(**{f'{field}__{lookup}': value}),
+    'ConditionOr': reduce_wrap(operator.or_),
+    'ConditionAnd': reduce_wrap(operator.and_),
     'F': F,
     'Q': Q,
     'Concat': Concat,
@@ -141,7 +142,7 @@ DB_FUNC = {
     'Variance': Variance,
     'Cast': Cast,
     'Coalesce': Coalesce,
-    'When': lambda then, *conditions: When(then=then, **{cond.field+'__'+cond.operator: cond.value for cond in conditions}),
+    'When': When,
     'Case': lambda *cases: Case(*cases) if isinstance(cases[-1], When) else Case(*cases[:-1], default=cases[-1]),
     'DecimalField': lambda max_digits, decimal_places: DecimalField(max_digits=max_digits, decimal_places=decimal_places),
     'FloatField': FloatField,

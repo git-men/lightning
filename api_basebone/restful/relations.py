@@ -304,20 +304,21 @@ def forward_relation_hand(model, data):
 def reverse_one_to_one(field, value, instance):
     model = field.related_model
     pk_field = model._meta.pk
+    to_field_value = getattr(instance, field.field_name)
     if isinstance(value, dict):
         remote_field_name = field.remote_field.name
 
         Serializer = create_serializer_class(model, allow_one_to_one=True)
         value = forward_relation_hand(model, value)
         if pk_field.name not in value:
-            model.objects.filter(**{field.remote_field.name: instance}).delete()
-            value[field.remote_field.name] = instance.pk
+            model.objects.filter(**{field.remote_field.name: to_field_value}).delete()
+            value[field.remote_field.name] = to_field_value
             serializer = Serializer(data=value)
         else:
             pk_value = pk_field.to_python(value[pk_field.name])
             filter_params = {
                 pk_field.name: pk_value,
-                field.remote_field.name: instance,
+                field.remote_field.name: to_field_value,
             }
             obj = model.objects.filter(**filter_params).first()
             if not obj:
@@ -326,7 +327,7 @@ def reverse_one_to_one(field, value, instance):
                     error_data=f'{model}指定的主键[{pk_value}]找不到对应的数据',
                 )
 
-            value[remote_field_name] = instance.pk
+            value[remote_field_name] = to_field_value
             serializer = Serializer(instance=obj, data=value, partial=True)
 
         serializer.is_valid(raise_exception=True)
@@ -334,9 +335,9 @@ def reverse_one_to_one(field, value, instance):
         reverse_relation(field.related_model, value, obj)
     else:
         if value is None:
-            model.objects.filter(**{field.remote_field.name: instance.pk}).delete()
+            model.objects.filter(**{field.remote_field.name: to_field_value}).delete()
         else:
-            model.objects.filter(**{field.field_name: pk_field.to_python(value)}).update(**{field.remote_field.name: instance.pk})
+            model.objects.filter(**{pk_field.name: pk_field.to_python(value)}).update(**{field.remote_field.name: to_field_value})
 
 
 def reverse_relation(model, data, instance):

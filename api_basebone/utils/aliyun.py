@@ -68,7 +68,7 @@ class AliYunOSS:
 
         policy_encode = base64.b64encode(json.dumps(policy_dict).strip().encode())
         h = hmac.new(site_setting[self.OSS_SECRET].encode(), policy_encode, sha1)
-        sign_result = base64.encodestring(h.digest()).strip()
+        sign_result = base64.encodebytes(h.digest()).strip()
 
         token_dict = {
             'accessid': site_setting[self.OSS_KEY],
