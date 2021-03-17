@@ -125,6 +125,10 @@ class Expression(BaseExpression):
             return self.resolve('__getattr__(__variable_root__(), "{}")'.format(expression))
 
 
+def aggregation_align(aggregation):
+    return lambda expression, q=None: aggregation(expression, filter=q)
+
+
 DB_FUNC = {
     'Condition': lambda field, lookup, value: Q(**{f'{field}__{lookup}': value}),
     'ConditionOr': reduce_wrap(operator.or_),
@@ -134,10 +138,10 @@ DB_FUNC = {
     'Concat': Concat,
     'Value': Value,
     'Count': Count,
-    'Sum': Sum,
-    'Avg': Avg,
-    'Max': Max,
-    'Min': Min,
+    'Sum': aggregation_align(Sum),
+    'Avg': aggregation_align(Avg),
+    'Max': aggregation_align(Max),
+    'Min': aggregation_align(Min),
     'StdDev': StdDev,
     'Variance': Variance,
     'Cast': Cast,
@@ -166,10 +170,10 @@ def resolve_expression(expression, variables=None):
 
 
 class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model'])):
-    def __call__(self, field_path):
+    def __call__(self, field_path, q=None):
         aggregation = self.aggregation
         if '__' not in field_path:
-            return aggregation(field_path)
+            return aggregation(field_path, q)
         model = self.model
         reverse_path = []
         path_parts = field_path.split('__')
@@ -177,14 +181,14 @@ class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model']
             try:
                 next_field = model._meta.get_field(part).remote_field
             except:
-                return aggregation(field_path)
+                return aggregation(field_path, q)
             model = next_field.model
             reverse_path.insert(0, next_field.name)
 
         outer_ref_name = self.model._meta.get_field(path_parts[0]).target_field.name
         query_path = '__'.join(reverse_path + [outer_ref_name])
         from api_basebone.utils import queryset as queryset_util
-        return Subquery(queryset_util.annotate(model.objects.all()).filter(**{query_path: OuterRef(outer_ref_name)}).values(query_path).annotate(__result__=aggregation(path_parts[-1])).values('__result__'))
+        return Subquery(queryset_util.annotate(model.objects.all()).filter(q or Q(), **{query_path: OuterRef(outer_ref_name)}).values(query_path).annotate(__result__=aggregation(path_parts[-1])).values('__result__'))
 
 
 class FieldExpression(DbExpression):
