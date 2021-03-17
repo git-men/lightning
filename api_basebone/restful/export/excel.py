@@ -243,10 +243,6 @@ def import_excel(config, content, queryset, request, detail=None):
 
     if config['type'] == 'create':
         serializer = get_form_class(queryset.model, 'create', request=request)(data=data, many=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response()
-
     elif config['type'] == 'update':
         # 更新，是有条件的更新
         # update_by = config.get('update_by', [])
@@ -258,16 +254,16 @@ def import_excel(config, content, queryset, request, detail=None):
         
         # FIXME 如果data里面有instances里面没有的数据时，要报无权修改
         serializer = get_form_class(queryset.model, 'update', request=request, batch=True)(instances, data=data, partial=True, many=True)
-        
-        if not serializer.is_valid(raise_exception=False):
-            error_details = []
-            errors = serializer.errors
-            for idx in range(len(errors)):
-                if errors[idx]:
-                    error_details.append({
-                        "line": start_line + idx,
-                        "error": errors[idx]
-                    })
-            raise ValidationError(error_details)
-        serializer.save()
-        return success_response()
+    
+    if not serializer.is_valid(raise_exception=False):
+        error_details = []
+        errors = serializer.errors
+        for idx in range(len(errors)):
+            if errors[idx]:
+                error_details.append({
+                    "line": start_line + idx,
+                    "error": errors[idx]
+                })
+        raise ValidationError(error_details)
+    serializer.save()
+    return success_response()
