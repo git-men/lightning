@@ -1,5 +1,6 @@
 import openpyxl
 from openpyxl import load_workbook
+from openpyxl.worksheet.datavalidation import DataValidation
 import collections
 import requests
 from time import time
@@ -24,11 +25,13 @@ def get_attribute(instance, field_path, formatter=None):
         # 如果是一对多，多对多的refManager，把它all一下。
         opts = obj.__class__._meta
         try:
-            field_cls = opts.get_field(field).__class__
+            field_obj = opts.get_field(field)
         except:  # FIXME 找不到该字段是，可能是计算字段。
-            field_cls = None
-        if field_cls in [ManyToManyField, ManyToManyRel, ManyToOneRel]:
+            field_obj = None
+        if field_obj.__class__ in [ManyToManyField, ManyToManyRel, ManyToOneRel]:
             return rs.all()
+        if field_obj.choices:
+            return dict(field_obj.choices)[rs]
         return rs
 
     # 逐层获取属性
@@ -55,6 +58,9 @@ def get_attribute(instance, field_path, formatter=None):
     if isinstance(result, QuerySet) or isinstance(result, list):
         return [format(rs, formatter['type'], formatter['params']) for rs in result]
     return format(result, formatter['type'], formatter['params'])
+
+def convertToTitle(n):
+    return ('' if n <= 26 else convertToTitle((n-1)//26)) + chr((n-1)%26+ord('A'))
 
 def export_excel(config, queryset, detail=None):
     """
@@ -113,6 +119,9 @@ def export_excel(config, queryset, detail=None):
     detail_mapping = config.get('detail_mapping', [])
     
     list_mapping = config.get('list_mapping', [])
+
+    model_fields = dict([(f.name, f) for f in queryset.model._meta.fields])
+    print('model_fields', model_fields)
     # 渲染列表
     if list_mapping:
         if use_template:  # 指定模板
@@ -132,13 +141,28 @@ def export_excel(config, queryset, detail=None):
             for field in list_mapping:
                 title = field.get('title', '') # FIXME 考虑没有指定Title的情况。
                 sheet.cell(row, col, title)
+                field_name = field.get('field')  # FIXME 考虑嵌套的情况, 如果嵌套，结果只是没校验，但输出没问題。
+                if field_name in model_fields:
+                    if model_fields[field_name].choices:
+                        # 生成Validation
+                        formula = ','.join([v[1] for v in model_fields[field_name].choices])
+                        dv = DataValidation(type="list", formula1=f'"{formula}"', allow_blank=True)
+                        dv.error = '单元格的值不在有效范围'
+                        dv.errorTitle = '错误值'
+                        # dv.prompt = '选择以下选项中的值'
+                        # dv.promptTitle = '请选择'
+                        sheet.add_data_validation(dv)
+                        title = convertToTitle(col)
+                        dv.add(f'{title}{row + 1}:{title}1048576')
+                        print('校验范围： ',f'{title}{row + 1}:{title}1048576', formula)
                 col += 1
             row += 1
 
             for instance in queryset:
                 col = 1
                 for field in list_mapping:
-                    sheet.cell(row, col, get_attribute(instance, field['field'], field.get('formatter', None)))
+                    value = get_attribute(instance, field['field'], field.get('formatter', None))
+                    sheet.cell(row, col, value)
                     col += 1
                 row += 1
     
@@ -198,20 +222,24 @@ def import_excel(config, content, queryset, request, detail=None):
     start_line = config.get('list_start_line', 1)
     line = start_line
 
+    model_fields = dict([(f.name, f) for f in queryset.model._meta.fields])
+
     data = []
     eof = False
     while not eof:
         row_data = {}
         for field in list_mapping:
-            print(f'reading value of position: {field["column"]}{line}')
-            row_data[field["field"]] = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
+            value = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
+            if field["field"] in model_fields and model_fields[field["field"]].choices:
+                choices = dict([(c[1], c[0]) for c in model_fields[field["field"]].choices])
+                if value in choices:
+                    value = choices[value]
+            row_data[field["field"]] = value
         line += 1
         if not [val for val in row_data.values() if val]:
             eof = True
         else:
             data.append(row_data)
-    
-    print('excel data: ', data)
 
     if config['type'] == 'create':
         serializer = get_form_class(queryset.model, 'create', request=request)(data=data, many=True)
