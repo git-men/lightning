@@ -152,14 +152,14 @@ def update_action_permission(app, model, new_config, old_config):
                     codename=f'{action["action"]}_{model}_{action["id"]}',
                     content_type=content_type
                 )
-                if permission.name != action['title']:
-                    permission.name = action['title']
+                if permission.name != action.get('title', action.get('name', '')):
+                    permission.name = action.get('title', action.get('name', ''))
                     permission.save()
                 permission.group_set.set(action['groups'])
             except Permission.DoesNotExist:
                 log.error('update and set permission error', exc_info=True)
                 permission = Permission(
-                    name=action['title'],
+                    name=action.get('title', action.get('name', '')),
                     codename=f'{action["action"]}_{model}_{action["id"]}',
                     content_type=content_type
                 )
