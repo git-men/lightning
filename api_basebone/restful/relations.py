@@ -214,6 +214,7 @@ def reverse_one_to_many(field, value, instance, detail=True):
 
                 filter_params = {
                     pk_field_name: pk_value,
+                    # FIXME 註釋掉這句之後會有安全隱患 field.remote_field.name: instance,
                 }
                 obj = model.objects.filter(**filter_params).first()
                 if not obj:
@@ -337,7 +338,9 @@ def reverse_one_to_one(field, value, instance):
         if value is None:
             model.objects.filter(**{field.remote_field.name: to_field_value}).delete()
         else:
-            model.objects.filter(**{pk_field.name: pk_field.to_python(value)}).update(**{field.remote_field.name: to_field_value})
+            pass
+            # 不應該改掉原先的關聯關係，所以註釋掉，改爲pass了。什麼都不做。
+            # model.objects.filter(**{pk_field.name: pk_field.to_python(value)}).update(**{field.remote_field.name: to_field_value})
 
 
 def reverse_relation(model, data, instance):
