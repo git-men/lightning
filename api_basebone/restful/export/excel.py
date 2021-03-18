@@ -10,7 +10,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
-from django.db import models
+from django.db import models, transaction
 
 from rest_framework.exceptions import ValidationError
 
@@ -269,5 +269,6 @@ def import_excel(config, content, queryset, request, detail=None):
                     "error": errors[idx]
                 })
         raise ValidationError(error_details)
-    serializer.save()
+    with transaction.atomic():
+        serializer.save()
     return success_response()
