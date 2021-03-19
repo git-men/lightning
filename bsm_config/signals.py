@@ -12,6 +12,7 @@ from bsm_config.models import Menu, Admin, Setting
 from .utils import remove_permission, check_page, get_permission, MODEL_PAGES
 from .settings import WEBSITE_CONFIG
 from api_basebone.signals import post_bsm_create, post_bsm_delete
+from api_basebone.core import admin
 log = logging.getLogger(__name__)
 
 @receiver(pre_save, sender=Menu, dispatch_uid='remove_menu_permission')
@@ -201,6 +202,7 @@ def admin_change(sender, instance, create, request, old_instance, **kwargs):
     else:
         log.debug('Admin update')
         update_action_permission(*instance.model.split('__'), instance.config, old_instance.config)
+    admin.set_config(*instance.model.split('__'), instance.config)
 
 @receiver(post_bsm_delete, sender=Admin, dispatch_uid='bsm_admin_delete')
 def admin_deleted(sender, instance, **kwargs):
@@ -208,3 +210,4 @@ def admin_deleted(sender, instance, **kwargs):
     """
     # 1. InlineAction对应权限的删除
     delete_action_permission(*instance.model.split('__'), instance.config)
+    admin.set_config(*instance.model.split('__'), None)

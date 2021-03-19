@@ -1,6 +1,9 @@
-from django.contrib.admin import ModelAdmin as DjangoModelAdmin
-from django.utils import six
+from importlib import import_module
 
+from django.contrib.admin import ModelAdmin as DjangoModelAdmin
+from django.conf import settings
+from django.utils import six
+from api_basebone.utils import get_lower_case_name
 # 属性的常量声明
 
 # 根据哪个字段进行筛选登录的用户，因为一个模型可能有多个字段指向用户模型
@@ -142,3 +145,57 @@ def register(admin_class):
     # if key not in BSMAdminModule.modules:
     BSMAdminModule.modules[key] = admin_class
     return admin_class
+
+
+configs = {}
+config_had_init = {}
+
+def set_config(model, config):
+    if isinstance(model, str):
+        key = model
+    else:
+        key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
+    if not config:
+        del config[key]
+    else:
+        configs[key] = config
+
+def get_config(model, name, view_type='list', view=None):
+    """获取指定模型的配置值，优先获取配置数据的值，其实是类的值。
+    """
+    views = f'{view_type}Views'
+    key = '{}__{}'.format(model._meta.app_label, model._meta.model_name)
+    if not config_had_init.get(key, None):
+        backend = getattr(settings, 'LIGHTNING_ADMIN_CONFIG_LOADER', None)
+        if backend:
+            func = backend.split('.')
+            mod = '.'.join(func[:-1])
+            method = func[-1]
+            mod = import_module(mod)
+            method = getattr(mod, method)
+            cs = method()
+            for k, v in cs.items():
+                set_config(k, v)
+        config_had_init[key] = True
+    
+    if key in configs:
+        config = configs[key]
+        result = config.get(name, {})
+        config_vi = config.get(views, {}).get(view, None) if view else None
+    else:
+        cls = BSMAdminModule.modules.get(key)
+        if not cls:
+            return None
+        result = getattr(cls, get_lower_case_name(name), None)
+        config_vi = getattr(cls, views, {}).get(view, None) if view else None
+    
+    print('view config: ', config_vi)
+    
+    if view:  # 指定了视图
+        if not config_vi:
+            return None
+        
+        # 视图中没有定义属性，但是开启了继承，则使用默认的
+        if name not in config_vi and config_vi.get('inherit', False):
+            return result
+        return config_vi.get(name, None)

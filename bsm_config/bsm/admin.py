@@ -26,6 +26,7 @@ class MenuAdmin(BSMAdmin):
         {'name': 'type', 'widget': 'Radio'},
         {'name': 'page', 'show': '${type} === "item"'},
         {'name': 'puzzle', 'show': '${page} === "puzzle"'},
+        {'name': 'view', 'show': '${page} === "list"'},
         {'name': 'model', 'widget': 'ModelSelect', 'show': '(${page} === "list" || ${page} === "detail") && ${type} === "item" || ${page} === "map"'},
         {'name': 'path', 'show': '${page} === "auto" || ${page} === "iframe"'},
         'groups'

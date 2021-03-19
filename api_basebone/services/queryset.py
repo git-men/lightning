@@ -8,6 +8,7 @@ from api_basebone.utils.meta import get_bsm_model_admin, get_all_relation_fields
 from api_basebone.utils import meta, module as basebone_module
 from api_basebone.utils import queryset as queryset_utils
 from api_basebone.core import admin, const, exceptions, gmeta
+from api_basebone.core.admin import get_config
 from api_basebone.restful.serializers import (
     create_serializer_class,
     get_export_serializer_class,
@@ -192,7 +193,7 @@ def should_distinct_queryset(model, action, fields):
             return True
 
 
-def get_queryset_by_filter_conditions(user, model, action, filters, role_config, queryset):
+def get_queryset_by_filter_conditions(user, model, action, filters, role_config, queryset, view=None):
     """
     用于检测客户端传入的过滤条件
 
@@ -224,12 +225,9 @@ def get_queryset_by_filter_conditions(user, model, action, filters, role_config,
     if action in ['update', 'partial_update', 'custom_patch']:
         filter_conditions = []
 
-    admin_class = get_bsm_model_admin(model)
-    if admin_class:
-        default_filter = getattr(admin_class, admin.BSM_DEFAULT_FILTER, None)
-        default_filter = default_filter
-        if default_filter:
-            filter_conditions += default_filter
+    default_filter = get_config(model, 'defaultFilter', 'list', view)
+    if default_filter:
+        filter_conditions += default_filter
 
     if role_filters:
         filter_conditions += role_filters
@@ -264,7 +262,7 @@ def get_queryset_by_with_tree(tree_data, queryset):
         return queryset.filter(**params)
     return queryset
 
-def queryset(request, model, action='list', filters=[], fields=[], expand_fields=[], order=[], tree_data=None, skip_distinct=False):
+def queryset(request, model, action='list', filters=[], fields=[], expand_fields=[], order=[], tree_data=None, skip_distinct=False, view=None):
     """通用数据查询方法。
     - user，当前查询用户
     - model，查询的模型
@@ -309,7 +307,7 @@ def queryset(request, model, action='list', filters=[], fields=[], expand_fields
     if request:
         queryset = get_queryset_by_filter_user(request.user, model, role_config, queryset)
     # 6. 根据条件过滤
-    queryset, distinct_queryset = get_queryset_by_filter_conditions(request.user if request else None, model, action, filters, role_config, queryset)
+    queryset, distinct_queryset = get_queryset_by_filter_conditions(request.user if request else None, model, action, filters, role_config, queryset, view)
     # 7. 添加排序信息
     queryset = get_queryset_by_order_by(order, queryset)
     # 8. 树型数据特殊滤

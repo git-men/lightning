@@ -531,7 +531,8 @@ class GenericViewMixin:
                 expand_fields=self.expand_fields,
                 order=self.request.data.get(const.ORDER_BY_FIELDS),
                 tree_data=self.tree_data,
-                skip_distinct=self.action == 'statistics'
+                skip_distinct=self.action == 'statistics',
+                view=self.request.data.get('view', None)
             )
         return self.get_queryset_legacy()
 
