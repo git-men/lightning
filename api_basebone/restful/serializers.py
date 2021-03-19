@@ -424,6 +424,7 @@ def create_nested_serializer_class(
         end_slug=end_slug,
         attrs=attrs,
         display_fields=display_fields,
+        allow_one_to_one=True,
     )
 
 

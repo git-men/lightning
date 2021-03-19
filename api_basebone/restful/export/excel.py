@@ -1,3 +1,4 @@
+import datetime
 import openpyxl
 from openpyxl import load_workbook
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -9,6 +10,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
+from django.db import models, transaction
 
 from rest_framework.exceptions import ValidationError
 
@@ -230,6 +232,8 @@ def import_excel(config, content, queryset, request, detail=None):
         row_data = {}
         for field in list_mapping:
             value = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
+            if isinstance(value, datetime.datetime) and isinstance(model_fields[field["field"]], models.DateField):
+                value = value.date()
             if field["field"] in model_fields and model_fields[field["field"]].choices:
                 choices = dict([(c[1], c[0]) for c in model_fields[field["field"]].choices])
                 if value in choices:
@@ -265,5 +269,6 @@ def import_excel(config, content, queryset, request, detail=None):
                     "error": errors[idx]
                 })
         raise ValidationError(error_details)
-    serializer.save()
+    with transaction.atomic():
+        serializer.save()
     return success_response()
