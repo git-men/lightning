@@ -128,11 +128,18 @@ class ResolveRefProxy:
         return self.origin_resolve_ref(name, allow_joins=True, reuse=None, summarize=False, simple_col=False)
 
 
+def get_real_model(fake_model):
+    """为了适配meta里模型可能为fake的情况"""
+    from django.apps import apps
+    return apps.get_model(fake_model._meta.app_label, fake_model._meta.model_name)
+
+
 def annotate_queryset(queryset, fields=None, context=None):
     annotated_fields = {}
-    if 'GMeta' in queryset.model.__dict__:
+    real_model = get_real_model(queryset.model)
+    if 'GMeta' in real_model.__dict__:
         # 这样可以避免从继承过来的GMeta里取，对于one to one类型的继承来说会出错
-        annotated_fields = getattr(queryset.model.__dict__['GMeta'], gmeta.GMETA_ANNOTATED_FIELDS, {})
+        annotated_fields = getattr(real_model.__dict__['GMeta'], gmeta.GMETA_ANNOTATED_FIELDS, {})
     if fields is not None:
         annotated_fields = {k: v for k, v in annotated_fields.items() if k in fields}
     if annotated_fields:
@@ -181,8 +188,9 @@ def get_exclude_fields_by_model(model):
 
 
 def queryset_only(queryset, display_fields):
-    annotated_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_ANNOTATED_FIELDS, {})
-    computed_fields = get_attr_in_gmeta_class(queryset.model, gmeta.GMETA_COMPUTED_FIELDS, [])
+    real_model = get_real_model(queryset.model)
+    annotated_fields = get_attr_in_gmeta_class(real_model, gmeta.GMETA_ANNOTATED_FIELDS, {})
+    computed_fields = get_attr_in_gmeta_class(real_model, gmeta.GMETA_COMPUTED_FIELDS, [])
     computed_field_names = {c['name'] for c in computed_fields}
     only = [d for d in display_fields if '.' not in d and d not in annotated_fields and d not in computed_field_names]
     for d in display_fields:
