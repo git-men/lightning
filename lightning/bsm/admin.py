@@ -1,18 +1,16 @@
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
-from django.conf import settings
 
 from api_basebone.core.widgets import widgets
-from api_basebone.export.specs import FieldType
 from lightning.admin import Admin
 from lightning.decorators import lightning_admin
+from . import UserGMeta
 
 User = get_user_model()
 
+
 @lightning_admin
 class UserAdmin(Admin):
-
     display = ['username', 'is_active', 'is_superuser', 'groups']
     form_fields = [
         'username',
@@ -29,25 +27,20 @@ class UserAdmin(Admin):
     table_actions = [
         'add',
     ]
+
     class Meta:
         model = User
 
 
-if hasattr(Group,'_meta'):
-    setattr(Group._meta,'verbose_name','角色')
-    setattr(Group._meta,'verbose_name_plural','角色')
+if hasattr(Group, '_meta'):
+    setattr(Group._meta, 'verbose_name', '角色')
+    setattr(Group._meta, 'verbose_name_plural', '角色')
 
-class UserGMeta:
-    title_field = getattr(settings, 'USER_MODEL_TITLE_FIELD', 'fullname')
-    computed_fields = [
-        {'name': 'fullname', 'type': FieldType.STRING, 'display_name': '名字'}
-    ]
-    exclude_fields = ['password']
-    field_form_config = {'password': {'required': False}}
 
 @property
 def fullname(self):
     return f'{self.last_name}{self.first_name}' if self.first_name.strip() != '' else self.username
+
 
 setattr(User, 'fullname', fullname)
 setattr(User, 'GMeta', UserGMeta)
