@@ -189,7 +189,6 @@ def get_config(model, name, view_type='list', view=None):
         result = getattr(cls, get_lower_case_name(name), None)
         config_vi = getattr(cls, views, {}).get(view, None) if view else None
     
-    print('view config: ', config_vi)
     
     if view:  # 指定了视图
         if not config_vi:

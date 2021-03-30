@@ -83,7 +83,8 @@ class Menu(models.Model):
         '视图',
         max_length=200,
         null=True,
-        help_text='自定义视图名，非模型的默认列表'
+        help_text='自定义视图名，非模型的默认列表',
+        blank=True
     )
     sequence = models.IntegerField('排序', default=1000, help_text='数值越小，排列越前')
     type = models.CharField('菜单类型', max_length=20, default='item', choices=TYPE_CHOICES)
