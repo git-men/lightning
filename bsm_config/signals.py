@@ -202,7 +202,7 @@ def admin_change(sender, instance, create, request, old_instance, **kwargs):
     else:
         log.debug('Admin update')
         update_action_permission(*instance.model.split('__'), instance.config, old_instance.config)
-    admin.set_config(*instance.model.split('__'), instance.config)
+    admin.set_config(instance.model, instance.config)
 
 @receiver(post_bsm_delete, sender=Admin, dispatch_uid='bsm_admin_delete')
 def admin_deleted(sender, instance, **kwargs):
@@ -210,4 +210,4 @@ def admin_deleted(sender, instance, **kwargs):
     """
     # 1. InlineAction对应权限的删除
     delete_action_permission(*instance.model.split('__'), instance.config)
-    admin.set_config(*instance.model.split('__'), None)
+    admin.set_config(instance.model, None)
