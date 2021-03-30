@@ -2,6 +2,7 @@ import re
 import json
 import logging
 import operator
+from datetime import timedelta
 from collections import namedtuple
 from decimal import Decimal
 from functools import reduce
@@ -25,6 +26,8 @@ FUNCS = {
     '__getattr__': getattr,
     'now': timezone.now,
     'today': lambda: timezone.now().date(),
+    'first_day_of_month': lambda: timezone.now().date().replace(day=1),
+    'days_after': lambda days: timezone.now().date() + timedelta(days=days),
     'max': max,
     'min': min,
     'add': reduce_wrap(operator.add),
@@ -99,7 +102,7 @@ class BaseExpression:
         if matched:
             func, arg_str = matched.groups()
             return self.execute_function(func, self.split_expression(arg_str))
-
+        log.error(f'error when resolving expression: {expression}')
         raise NotImplementedError()
 
 
