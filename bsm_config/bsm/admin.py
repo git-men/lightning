@@ -45,7 +45,7 @@ class AdminConfigAdmin(BSMAdmin):
     display = ['model', {'name': "config", 'fields': {'value': "config"}, 'widget': "longtext", 'textType': "jsonText"}]
     form_fields = [
         'model',
-        {'name': "config", 'widget': "JsonEditor"}
+        {'name': "config", 'widget': "CodeEditor", "params": {"mode": "json"}}
     ]
     inline_actions = ['edit']
 
