@@ -16,6 +16,7 @@ from api_basebone.restful.serializers import create_serializer_class
 
 lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 static_url = settings.STATIC_URL
+public_path = getattr(settings, 'LIGHTNING_CDN_HOST', '').rstrip('/') + static_url + lightning_static_url
 
 index_template = open(finders.find(lightning_static_url + '/index.html')).read()
 index_template = engines['django'].from_string(index_template)
@@ -32,7 +33,7 @@ def get_userinfo(user):
 def index_view(request):
     user = request.user
     index_content = index_template.render({
-        'public_path': static_url + lightning_static_url,
+        'public_path': public_path,
         'injection': json.dumps({
             '$$schemas': get_app_field_schema(),
             '$$admins': get_app_admin_config(),
@@ -47,7 +48,7 @@ def index_view(request):
 
 def login_page(request):
     index_content = index_template.render({
-        'public_path': static_url + lightning_static_url,
+        'public_path': public_path,
         'injection': json.dumps({
         }, cls=encoders.JSONEncoder),  # encoders.JSONEncoder 解决django lazy object不能json.dumps的问题
     })
