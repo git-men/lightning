@@ -316,8 +316,8 @@ class GroupStatisticsMixin:
             fields[metric.name] = field
         group_kwargs = self.get_group_data(group)
         filters = [
-            {'field': ft.field, 'operator': ft.operator, 'value': ft.value}
-            for ft in chart.chart_filters.all()
+            {'field': ft.field, 'operator': ft.operator, 'value': ft.value, 'children': ft.children}
+            for ft in chart.chart_filters.all().prefetch_related('children')
         ]
         data = self.group_statistics_data(
             fields,
