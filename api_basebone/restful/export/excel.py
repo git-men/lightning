@@ -32,7 +32,7 @@ def get_attribute(instance, field_path, formatter=None):
             field_obj = None
         if field_obj.__class__ in [ManyToManyField, ManyToManyRel, ManyToOneRel]:
             return rs.all()
-        if field_obj.choices:
+        if getattr(field_obj, 'choices', None):
             return dict(field_obj.choices)[rs]
         return rs
 
