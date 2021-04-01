@@ -18,10 +18,16 @@ def get_menu_from_database(user):
     return [m for _, m in menus_map.items() if not m.get('parent_id')]
 
 
+def filter_valid_menu(menus):
+    return [{**m, 'children': filter_valid_menu(m['children'])} for m in menus if m['page'] or m['children']]
+
+
 def get_menu_data(user):
     if hasattr(settings, 'ADMIN_MENUS'):
-        return get_menu_from_settings(user)
-    return get_menu_from_database(user)
+        menus = get_menu_from_settings(user)
+    else:
+        menus = get_menu_from_database(user)
+    return filter_valid_menu(menus)
 
 
 def get_menu_from_settings(user):
