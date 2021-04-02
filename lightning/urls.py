@@ -22,7 +22,7 @@ class LightningRoute:
             path('', include('api_basebone.urls')),
             re_path(r'^%s(?P<path>.*)$' % re.escape(settings.STATIC_URL.lstrip('/')), serve, kwargs={'insecure': True}),
             path('user/login', self.views.login_page),
-            re_path(r'^(?!basebone)(?!service-worker\.js).*$', self.views.index_view)
+            re_path('^(?!basebone).*$', self.views.index_view)
         ]
 
 
