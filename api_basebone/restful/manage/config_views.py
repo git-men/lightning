@@ -1,28 +1,20 @@
+from bsm_config.models import Admin
+from bsm_config.signals import update_action_permission, create_action_permission
 from django.apps import apps
 from django.conf import settings
-from django.db.models import Q
-from django.contrib.auth.models import Group
-
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 
-from api_basebone.restful.serializers import (
-    create_serializer_class
-)
-
-from api_basebone.restful.const import MANAGE_END_SLUG
+from api_basebone.drf.permissions import IsAdminUser
 from api_basebone.drf.response import success_response
-from api_basebone.export.admin import get_app_admin_config, get_json_field_admin_config
+from api_basebone.export.admin import get_app_admin_config, get_json_field_admin_config, ExportService
 from api_basebone.export.fields import get_app_field_schema, get_app_json_field_schema
 from api_basebone.export.menu import get_menu_from_database, get_menu_from_settings
 from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils import module
 from api_basebone.utils.meta import load_custom_admin_module, get_export_apps
-from bsm_config.models import Menu, Admin
-from bsm_config.signals import update_action_permission, create_action_permission
-from api_basebone.utils import queryset as queryset_utils
-from api_basebone.drf.permissions import IsAdminUser
+
+export_service = ExportService()
 
 
 class ConfigViewSet(viewsets.GenericViewSet):
@@ -43,7 +35,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
     def get_admin(self, request, *args, **kwargs):
         self._load_bsm_admin_module()
         """获取 admin 配置"""
-        data = get_app_admin_config()
+        data = export_service.get_app_admin_config(request)
         return success_response(data)
 
     def get_serializer(self):
@@ -69,7 +61,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         self._load_bsm_admin_module()
         data = {
             'schemas': get_app_field_schema(),
-            'admins': get_app_admin_config(),
+            'admins': export_service.get_app_admin_config(request),
         }
         json_object_schemas, json_array_item_schemas = get_app_json_field_schema()
         json_admin_configs = get_json_field_admin_config(json_object_schemas,json_array_item_schemas)

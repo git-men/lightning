@@ -1,5 +1,4 @@
 import re
-from functools import partial
 from django.urls import re_path, path, include
 from django.contrib.staticfiles.views import serve
 from django.conf import settings

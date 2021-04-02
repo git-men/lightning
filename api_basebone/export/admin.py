@@ -68,6 +68,11 @@ def get_app_admin_config():
     return config
 
 
+class ExportService:
+    def get_app_admin_config(self, request=None):
+        return get_app_admin_config()
+
+
 def get_json_field_admin_config(json_object_schemas:dict, json_array_item_schemas:dict):
     """
     生成默认的json field admin
