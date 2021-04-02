@@ -1,9 +1,12 @@
 import re
+from functools import partial
 from django.urls import re_path, path, include
 from django.contrib.staticfiles.views import serve
 from django.conf import settings
 from .views import LightningView
 from .services import Lightning
+
+lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 
 
 class LightningRoute:
@@ -22,7 +25,12 @@ class LightningRoute:
             path('', include('api_basebone.urls')),
             re_path(r'^%s(?P<path>.*)$' % re.escape(settings.STATIC_URL.lstrip('/')), serve, kwargs={'insecure': True}),
             path('user/login', self.views.login_page),
-            re_path('^(?!basebone).*$', self.views.index_view)
+            path('index.html', self.views.login_page),
+            path('basebone/manifest.json', self.views.manifest),
+            path('basebone/service-worker.js', self.views.service_worker),
+            path('basebone/index.html', self.views.login_page),
+            re_path(r'^basebone/precache-manifest\.\w+\.js$', self.views.precache_manifest),
+            re_path(r'^(?!basebone).*$', self.views.index_view)
         ]
 
 
