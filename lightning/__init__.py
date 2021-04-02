@@ -1,4 +1,3 @@
-from api_basebone.permissions import BasePermission
 default_app_config = 'lightning.apps.LightningConfig'
 
 APPS = [

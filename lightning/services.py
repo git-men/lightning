@@ -1,15 +1,11 @@
-from itertools import groupby
-from functools import reduce
+from api_basebone.export.admin import get_app_admin_config
 from django.contrib.auth import get_user_model
-from django.db.models.functions import Lower, Replace
-from django.db.utils import load_backend
-from django.db.models import F, Q, Value, TextField, URLField, AutoField, BigAutoField
-from django.contrib.auth.models import Permission
+from django.db.models import TextField, URLField, AutoField, BigAutoField
 from django.db import transaction
 from django.apps import apps
 from django.conf import settings
 
-from bsm_config.models import Menu, Admin, Setting
+from bsm_config.models import Menu, Admin
 from bsm_config.utils import create_menus_permission
 from .const import DEFAULT_MENU
 
@@ -126,3 +122,23 @@ def generate_configs(app_labels=[]):
         # 创建新增菜单的资源
         create_menus_permission(new_meus)
     return new_permission, new_meus
+
+
+class ExportService:
+    def get_app_admin_config(self, request=None):
+        return get_app_admin_config()
+
+
+class Lightning:
+    export = ExportService()
+
+    def __init__(self):
+        from .urls import LightningRoute
+        self.route = LightningRoute(self)
+
+    @property
+    def urls(self):
+        return self.route.urls
+
+
+__all__ = ['Lightning']
