@@ -30,7 +30,7 @@ def unquote_placeholder(text):
 
 index_template = open(finders.find(lightning_static_url + '/index.html')).read()
 index_template = unquote_placeholder(index_template)
-index_template = index_template.replace(public_path_placeholder + '/manifest.json', '/basebone/manifest.json')
+index_template = index_template.replace(public_path_placeholder + '/manifest.json', '/manifest.json')
 index_template = engines['django'].from_string(index_template)
 
 index_content = index_template.render({

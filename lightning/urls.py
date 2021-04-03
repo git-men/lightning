@@ -25,11 +25,11 @@ class LightningRoute:
             re_path(r'^%s(?P<path>.*)$' % re.escape(settings.STATIC_URL.lstrip('/')), serve, kwargs={'insecure': True}),
             path('user/login', self.views.login_page),
             path('index.html', self.views.login_page),
-            path('basebone/manifest.json', self.views.manifest),
+            path('manifest.json', self.views.manifest),
             path('service-worker.js', self.views.service_worker),
             path('basebone/index.html', self.views.login_page),
             re_path(r'^basebone/precache-manifest\.\w+\.js$', self.views.precache_manifest),
-            re_path(r'^(?!basebone)(?!service-worker\.js).*$', self.views.index_view)
+            re_path(r'^(?!basebone)(?!service-worker\.js)(?!manifest.json).*$', self.views.index_view)
         ]
 
 
