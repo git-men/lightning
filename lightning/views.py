@@ -8,11 +8,10 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.template import engines
 from django.contrib.staticfiles import finders
-from django.contrib.staticfiles.views import serve
 from django.conf import settings
-from django.views.generic import RedirectView
 from rest_framework.utils import encoders
 
+from bsm_config.settings import site_setting
 from api_basebone.export.fields import get_app_field_schema
 from api_basebone.export.menu import get_menu_data
 from api_basebone.export.setting import get_settins
@@ -44,13 +43,9 @@ login_response = HttpResponse(index_content)
 manifest = open(finders.find(lightning_static_url + '/manifest.json')).read()
 manifest = unquote_placeholder(manifest)
 manifest_template = engines['django'].from_string(manifest)
-manifest = manifest_template.render({
-    'public_path': public_path,
-})
-manifest_response = HttpResponse(manifest, content_type='application/json')
 
 
-service_worker = open(finders.find(lightning_static_url + '/basebone/service-worker.js')).read()
+service_worker = open(finders.find(lightning_static_url + '/service-worker.js')).read()
 [precache_manifest] = re.findall(r'precache-manifest\.\w+\.js', service_worker)
 service_worker = unquote_placeholder(service_worker)
 service_worker = service_worker.replace(public_path_placeholder+'/precache-manifest', '/basebone/precache-manifest')
@@ -117,8 +112,33 @@ class LightningView:
         return login_response
 
     @staticmethod
-    def manifest(request):
-        return manifest_response
+    def image_url(raw, size, provider):
+        if provider == 'oss':
+            return raw + '?x-oss-process=image/resize,m_pad,h_{0},w_{0},limit_0'.format(size)
+        return raw
+
+    @classmethod
+    def manifest(cls, request):
+        content = manifest_template.render({
+            'public_path': public_path,
+        })
+        content = json.loads(content)
+        title = site_setting['TITLE']
+        if title:
+            content['name'] = title
+            content['short_name'] = title
+        short_name = site_setting['SHORT_NAME']
+        if short_name:
+            content['short_name'] = short_name
+        logo = site_setting['LOGO']
+        if logo and '#' in logo:
+            url, provider = logo.rsplit('#', 1)
+            content['icons'] = [{
+                'sizes': '{0}x{0}'.format(s),
+                'src': cls.image_url(url, s, provider),
+            } for s in [128, 192, 512]]
+        content = json.dumps(content)
+        return HttpResponse(content, content_type='application/json')
 
     @staticmethod
     def service_worker(request):
