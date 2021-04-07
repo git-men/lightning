@@ -377,4 +377,4 @@ def queryset(*args, **kwargs):
     return query.get_queryset()
 
 
-__all__ = ['queryset']
+__all__ = ['queryset', 'Query']
