@@ -80,7 +80,9 @@ class Query:
 
     def translate_expand_fields(self):
         """转换展开字段"""
-        return list(map(self.expand_field_mapper, self.expand_fields))
+        for idx, item in enumerate(self.expand_fields):
+            # 这里一定要在 expand_fields 原对象上修改，因为 expand_fields 传了进来修改完成后，外面后续的程序还要依赖于修改后的格式
+            self.expand_fields[idx] = self.expand_field_mapper(item)
 
     def _guard(self, queryset):
         # 如果不是超级用户，则进行对应的数据筛选
@@ -311,8 +313,8 @@ class Query:
 
         # 2. 添加expand_field
         if self.expand_fields:
-            expand_fields = self.translate_expand_fields()
-            expand_dict = sort_expand_fields(expand_fields)
+            self.translate_expand_fields()
+            expand_dict = sort_expand_fields(self.expand_fields)
             queryset = queryset_utils.queryset_prefetch(queryset, expand_dict, context, display_fields=self.fields)
 
         # 3. 添加计算字段的annotate
