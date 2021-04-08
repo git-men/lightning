@@ -40,29 +40,32 @@ index_content = index_template.render({
 })
 login_response = HttpResponse(index_content)
 
-manifest = open(finders.find(lightning_static_url + '/manifest.json')).read()
-manifest = unquote_placeholder(manifest)
-manifest_template = engines['django'].from_string(manifest)
+manifest = finders.find(lightning_static_url + '/manifest.json')
+if manifest:
+    manifest = open(manifest).read()
+    manifest = unquote_placeholder(manifest)
+    manifest = engines['django'].from_string(manifest)
 
 
-service_worker = open(finders.find(lightning_static_url + '/service-worker.js')).read()
-[precache_manifest] = re.findall(r'precache-manifest\.\w+\.js', service_worker)
-service_worker = unquote_placeholder(service_worker)
-service_worker = service_worker.replace(public_path_placeholder+'/precache-manifest', '/basebone/precache-manifest')
-service_worker_template = engines['django'].from_string(service_worker)
-service_worker = service_worker_template.render({
-    'public_path': public_path,
-})
-service_worker_response = HttpResponse(service_worker, content_type='application/javascript')
+service_worker = finders.find(lightning_static_url + '/service-worker.js')
+if service_worker:
+    service_worker = open(service_worker).read()
+    [precache_manifest] = re.findall(r'precache-manifest\.\w+\.js', service_worker)
+    service_worker = unquote_placeholder(service_worker)
+    service_worker = service_worker.replace(public_path_placeholder+'/precache-manifest', '/basebone/precache-manifest')
+    service_worker_template = engines['django'].from_string(service_worker)
+    service_worker = service_worker_template.render({
+        'public_path': public_path,
+    })
+    service_worker = HttpResponse(service_worker, content_type='application/javascript')
 
-
-precache_manifest = open(finders.find(lightning_static_url + '/' + precache_manifest)).read()
-precache_manifest = precache_manifest.replace(public_path_placeholder + '/index.html', '/basebone/index.html')
-precache_manifest_template = engines['django'].from_string(precache_manifest)
-precache_manifest = precache_manifest_template.render({
-    'public_path': public_path,
-})
-precache_manifest_response = HttpResponse(precache_manifest, content_type='application/javascript')
+    precache_manifest = open(finders.find(lightning_static_url + '/' + precache_manifest)).read()
+    precache_manifest = precache_manifest.replace(public_path_placeholder + '/index.html', '/basebone/index.html')
+    precache_manifest_template = engines['django'].from_string(precache_manifest)
+    precache_manifest = precache_manifest_template.render({
+        'public_path': public_path,
+    })
+    precache_manifest_response = HttpResponse(precache_manifest, content_type='application/javascript')
 
 
 def get_userinfo(user):
@@ -119,7 +122,7 @@ class LightningView:
 
     @classmethod
     def manifest(cls, request):
-        content = manifest_template.render({
+        content = manifest.render({
             'public_path': public_path,
         })
         content = json.loads(content)
@@ -142,7 +145,7 @@ class LightningView:
 
     @staticmethod
     def service_worker(request):
-        return service_worker_response
+        return service_worker
 
     @staticmethod
     def precache_manifest(request):
