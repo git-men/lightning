@@ -86,6 +86,8 @@ def update_setting_config_permission(sender, **kwargs):
 def get_actions(config):
     result = []
     for action in config.get('inlineActions', []) + config.get('actions', []) + config.get('tableActions', []):
+        if not isinstance(action, dict):
+            action = {'action': action}
         if 'id' not in action:
             action['id'] = str(uuid.uuid4().hex)
         result.append(action)
