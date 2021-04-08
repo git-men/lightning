@@ -66,7 +66,7 @@ class BusinessException(Exception):
     default_error_message = '系统错误'
     default_error_app = ''
 
-    def __init__(self, error_code=None, error_message=None, error_data='', error_app=''):
+    def __init__(self, error_code=None, error_message=None, error_data='', error_app='', logs=None):
 
         self.error_code = (
             error_code if error_code is not None else self.default_error_code
@@ -84,6 +84,7 @@ class BusinessException(Exception):
 
         self.error_data = error_data
         self.error_app = error_app if error_app else force_text(self.default_error_app)
+        self.logs = logs
 
     def __str__(self):
-        return f'{self.error_code}:{self.error_message},{self.error_data}'
+        return f'error_code: {self.error_code}, error_message: {self.error_message}, error_data: {self.error_data}'

@@ -3,8 +3,9 @@ from api_basebone.services import queryset as queryset_service
 from api_basebone.core.exceptions import BusinessException
 from django.apps import apps
 from datetime import date
+from api_basebone.sandbox.logger import LogCollector
 
-__all__ = ['get_queryset', 'raise_error', 'get_model', 'today', 'generate_sequence']
+__all__ = ['get_queryset', 'raise_error', 'get_model', 'today', 'generate_sequence', 'get_logger']
 
 get_model = apps.get_model
 today = date.today
@@ -25,6 +26,12 @@ def get_queryset(request, model, expand_fields=None):
 
 def raise_error(message, code='9999', data=None, app=None):
     raise BusinessException(error_code=code, error_message=message, error_data=data, error_app=app)
+
+
+def get_logger(name):
+    """每次调用，都是一个新的
+    """
+    return LogCollector(name)
 
 
 context = {

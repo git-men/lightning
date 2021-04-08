@@ -16,22 +16,27 @@ from ..utils.sentry import sentry_client
 logger = logging.getLogger('django')
 
 
-def business_exception_handler(exc, context):
+def business_exception_handler(exc, context, formated_tb=None):
 
     set_rollback()
+    logs = [(logging.ERROR, '\n'.join(formated_tb))] if formated_tb else []
     return error_response(
-        exc.error_code, exc.error_message, exc.error_data, exc.error_app)
+        exc.error_code, exc.error_message, exc.error_data, exc.error_app, logs
+    )
 
 
 def exception_handler(exc, context):
     """异常接收处理器"""
-    if settings.DEBUG:
-        import traceback
-        t, v, tb = sys.exc_info()
-        traceback.print_tb(tb)
+    import traceback
+    t, v, tb = sys.exc_info()
+    
+    traceback.print_tb(tb)
+    formated_tb = traceback.format_tb(tb)
+    formated_tb.insert(0, f'Exception Type: {t.__name__}')
+    formated_tb.insert(0, f'【Server-Error】:{v}')
+    
     if isinstance(exc, BusinessException):
-        logger.info(exc.error_message)
-        return business_exception_handler(exc, context)
+        return business_exception_handler(exc, context, formated_tb)
 
     if isinstance(exc, ValidationError):
         return error_response(
@@ -45,26 +50,21 @@ def exception_handler(exc, context):
             error_code=404,
             error_message='找不到对应的数据详情'
         )
-        return business_exception_handler(api_exception, context)
+        return business_exception_handler(api_exception, context, formated_tb)
 
     if isinstance(exc, PermissionDenied):
         api_exception = BusinessException(
             error_code=403,
             error_message='当前用户的权限不够'
         )
-        return business_exception_handler(api_exception, context)
+        return business_exception_handler(api_exception, context, formated_tb)
 
     if isinstance(exc, APIException):
         api_exception = BusinessException(
             error_code=exc.status_code,
             error_message=exc.default_detail
         )
-        return business_exception_handler(api_exception, context)
-
-    if not settings.DEBUG:
-        import traceback
-        t, v, tb = sys.exc_info()
-        traceback.print_tb(tb)
+        return business_exception_handler(api_exception, context, formated_tb)
 
     logger.exception(exc)
 
@@ -81,4 +81,4 @@ def exception_handler(exc, context):
 
         # 如果是非开发环境，则返回对应的错误，而不是直接报 500
         return business_exception_handler(
-            BusinessException(error_data=str(exc)), context)
+            BusinessException(error_data=str(exc)), context, formated_tb)

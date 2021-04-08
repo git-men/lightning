@@ -18,8 +18,8 @@ from api_basebone.settings import settings
 from api_basebone.signals import post_bsm_create, post_bsm_delete, before_bsm_create, before_bsm_delete
 from api_basebone.restful.funcs import find_func
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
-from api_basebone.drf.response import success_response
-
+from api_basebone.drf.response import success_response, get_or_create_logger
+from api_basebone.sandbox.logger import LogCollector
 from api_basebone.restful.client import user_pip as client_user_pip
 
 log = logging.getLogger(__name__)
@@ -198,8 +198,10 @@ def manage_func(genericAPIView, user, app, model, func_name, params):
         'request': genericAPIView.request,
         'current_model': f'{app}__{model}',
         'current_model_cls': apps.get_model(app, model),
+        'logger': get_or_create_logger(func_name, 'function')
     })
     
+
     if options.get('atomic', True):
         with transaction.atomic():
             result = func(user, **params)

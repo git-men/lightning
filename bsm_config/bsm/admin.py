@@ -47,7 +47,22 @@ class AdminConfigAdmin(BSMAdmin):
         'model',
         {'name': "config", 'widget': "CodeEditor", "params": {"mode": "json"}}
     ]
-    inline_actions = ['edit']
+    inline_actions = [
+        {
+            "action": "partEdit",
+		    "title": "修改配置",
+		    "params": {
+			    "fields": [],
+			    "editFields": [{
+                    "name": "config",
+                    "widget": "CodeEditor",
+                    "params": {
+                        "mode": "json",
+                        "fullScreen": True
+                    }
+                }]
+		    },
+    }]
 
     class Meta:
         model = Admin
