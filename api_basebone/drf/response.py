@@ -1,4 +1,5 @@
-
+from django.core.signals import request_finished
+from django.dispatch import receiver
 from rest_framework.response import Response
 
 from api_basebone.core.exceptions import ERROR_PHRASES
@@ -6,6 +7,11 @@ from api_basebone.sandbox.logger import LogCollector
 from werkzeug import Local
 
 request_logs = Local()
+
+@receiver(request_finished, dispatch_uid='clean_request_locals')
+def clean_local(sender, **kwargs):
+    if hasattr(request_logs, 'logger'):
+        del request_logs.logger
 
 def get_or_create_logger(name, log_type='function'):
     """如果无Logger则会创建
@@ -31,8 +37,6 @@ def success_response(data=None):
             'error_message': '',
             'logs': logger.collect() if logger else []
         }
-    if logger:
-        del request_logs.logger
     return Response(response_data)
 
 
@@ -50,6 +54,4 @@ def error_response(error_code, error_message=None, error_data=None, error_app=No
         'error_app': error_app,
         'logs': origin_logs + (logs or [])
     }
-    if logger:
-        del request_logs.logger
     return Response(response_data)
