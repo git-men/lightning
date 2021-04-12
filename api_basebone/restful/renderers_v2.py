@@ -173,6 +173,8 @@ def row_data_no_merge(model, fields, instance_data, export_fields):
 
     data = {}
     for key in export_fields:
+        if isinstance(key, (list, tuple)):
+            key = key[0]
         data[key] = get_data_from_dict(instance_data, key)
         if len(data[key]) > max_nest_list:
             max_nest_list = len(data[key])
