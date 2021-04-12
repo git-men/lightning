@@ -33,6 +33,9 @@ def get_attribute(instance, field_path, formatter=None):
         if field_obj.__class__ in [ManyToManyField, ManyToManyRel, ManyToOneRel]:
             return rs.all()
         if getattr(field_obj, 'choices', None):
+            choices = dict(field_obj.choices)
+            if rs is None and rs not in choices:
+                return ''
             return dict(field_obj.choices)[rs]
         return rs
 
