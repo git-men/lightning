@@ -53,7 +53,7 @@ def create_admin_config(app_labels, exist_model):
     permissions = []
     for model in models:
         key = '{}__{}'.format(model._meta.app_label, model._meta.model_name).lower()
-        config = {'display':[], 'formFields':[], 'inlineActions':['edit', 'delete', 'detail'], 'filter':[]}
+        config = {'display':[], 'formFields':[], 'inlineActions':['edit', 'detail', 'delete'], 'filter':[]}
         detail = {'fields': False, 'sections':[],'style': 'group'}
         detailTableFields = []
         detailFields = []
