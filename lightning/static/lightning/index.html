@@ -1,7 +1,47 @@
-<!DOCTYPE html><html lang="en"><head><link rel="stylesheet" href="{{public_path}}/umi.ed332937.css"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="keywords" content="antd,umi,umijs,ant design,脚手架,布局, Ant Design,项目,Pro,admin,控制台,主页,开箱即用,中后台,解决方案,组件库"><meta name="description" content="
-    An out-of-box UI solution for enterprise applications as a React boilerplate."><meta name="description" content="
-      开箱即用的中台前端/设计解决方案。"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0"><!--    <title>Ant Design Pro</title> --><link rel="icon" href="{{public_path}}/favicon.png" type="image/x-icon"><script>window.routerBase = "/";
-  window.publicPath = "{{public_path}}/";</script><script>Object.assign(window, {{injection|safe}})</script></head><body><noscript>Out-of-the-box mid-stage front/design solution!</noscript><div id="root"><style>html,
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="keywords"
+      content="antd,umi,umijs,ant design,脚手架,布局, Ant Design,项目,Pro,admin,控制台,主页,开箱即用,中后台,解决方案,组件库"
+    />
+    <meta
+      name="description"
+      content="
+    An out-of-box UI solution for enterprise applications as a React boilerplate."
+    />
+    <meta
+      name="description"
+      content="
+      开箱即用的中台前端/设计解决方案。"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=0.85, maximum-scale=1.0, user-scalable=0"
+    />
+    <!--lightning-render<title>{{title}}</title>lightning-render-->
+    <link rel="shortcut icon" type="image/png" href="{{favicon_path}}" />
+    <link rel="stylesheet" href="{{public_path}}/umi.fd6e4f68.css" />
+    <script>
+      window.routerBase = "/";
+    </script>
+    <script>
+      window.publicPath = window.resourceBaseUrl || "{{public_path}}/";
+    </script>
+    <script>
+      //! umi version: 3.4.8
+    </script>
+    <script>
+      Object.assign(window, {{injection|safe}})
+    </script>
+  </head>
+  <body>
+    <noscript>Out-of-the-box mid-stage front/design solution!</noscript>
+    <div id="root">
+      <style>
+        html,
         body,
         #root {
           height: 100%;
@@ -9,7 +49,7 @@
           padding: 0;
         }
         #root {
-          background-image: url('{{public_path}}/home_bg.png');
+          background-image: url("{{public_path}}/home_bg.png");
           background-repeat: no-repeat;
           background-size: 100% auto;
         }
@@ -29,16 +69,18 @@
           font-variant: tabular-nums;
           line-height: 1.5;
           list-style: none;
-          -webkit-font-feature-settings: 'tnum';
-          font-feature-settings: 'tnum';
+          -webkit-font-feature-settings: "tnum";
+          font-feature-settings: "tnum";
           position: absolute;
           display: none;
           color: #1890ff;
           text-align: center;
           vertical-align: middle;
           opacity: 0;
-          -webkit-transition: -webkit-transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
-          transition: -webkit-transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+          -webkit-transition: -webkit-transform 0.3s
+            cubic-bezier(0.78, 0.14, 0.15, 0.86);
+          transition: -webkit-transform 0.3s
+            cubic-bezier(0.78, 0.14, 0.15, 0.86);
           transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
           transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86),
             -webkit-transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
@@ -152,4 +194,45 @@
             -webkit-transform: rotate(405deg);
             transform: rotate(405deg);
           }
-        }</style><div style="display: flex;justify-content: center;align-items: center;flex-direction: column;min-height: 420px;height: 100%;"><img src="{{public_path}}/favicon.png" alt="logo" width="256"> 闪电企业应用<div class="page-loading-warp"><div class="ant-spin ant-spin-lg ant-spin-spinning"><span class="ant-spin-dot ant-spin-dot-spin"><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i></span></div></div><div style="display: flex;justify-content: center;align-items: center;"><img src="{{public_path}}/gitmen.png" width="32" style="margin-right: 8px;"> 广东杰明科技出品</div></div></div><script src="{{public_path}}/umi.923174dc.js"></script></body></html>
+        }
+      </style>
+      <div
+        style="
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+          min-height: 420px;
+          height: 100%;
+        "
+      >
+        <!--lightning-render
+          <img src="{{cover_path}}" alt="logo" width="256" />
+          {{title}}
+        lightning-render-->
+        <div class="page-loading-warp">
+          <div class="ant-spin ant-spin-lg ant-spin-spinning">
+            <span class="ant-spin-dot ant-spin-dot-spin"
+              ><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i
+              ><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i
+            ></span>
+          </div>
+        </div>
+        <div
+          style="display: flex; justify-content: center; align-items: center"
+        >
+          <!--lightning-render
+          <img
+            src="{{public_path}}/logo.png"
+            width="32"
+            style="margin-right: 8px;"
+          />
+          lightning-render-->
+          Lightning!
+        </div>
+      </div>
+    </div>
+
+    <script src="{{public_path}}/umi.1d41ea05.js"></script>
+  </body>
+</html>
