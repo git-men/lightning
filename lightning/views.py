@@ -11,15 +11,13 @@ from django.contrib.staticfiles import finders
 from django.conf import settings
 from rest_framework.utils import encoders
 
-from bsm_config.settings import site_setting
 from api_basebone.export.fields import get_app_field_schema
 from api_basebone.export.menu import get_menu_data
 from api_basebone.export.setting import get_settins
 from api_basebone.restful.serializers import create_serializer_class
 
 lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
-static_url = settings.STATIC_URL
-public_path = getattr(settings, 'LIGHTNING_CDN_HOST', '').rstrip('/') + static_url + lightning_static_url
+public_path = getattr(settings, 'LIGHTNING_CDN_HOST', '').rstrip('/') + settings.STATIC_URL + lightning_static_url
 
 public_path_placeholder = '{{public_path}}'
 
@@ -29,16 +27,10 @@ def unquote_placeholder(text):
 
 
 index_template = open(finders.find(lightning_static_url + '/index.html')).read()
-index_template = unquote_placeholder(index_template)
+index_template = unquote_placeholder(index_template)  # PWA需要unquote
 index_template = index_template.replace(public_path_placeholder + '/manifest.json', '/manifest.json')
+index_template = index_template.replace('<!--lightning-render', '').replace('lightning-render-->', '')
 index_template = engines['django'].from_string(index_template)
-
-index_content = index_template.render({
-    'public_path': public_path,
-    'injection': json.dumps({
-    }, cls=encoders.JSONEncoder),  # encoders.JSONEncoder 解决django lazy object不能json.dumps的问题
-})
-login_response = HttpResponse(index_content)
 
 manifest = finders.find(lightning_static_url + '/manifest.json')
 if manifest:
@@ -91,37 +83,76 @@ class LightningView:
         self.lightning_context = lightning_context
 
     @property
+    def site_setting(self):
+        return self.lightning_context.site_setting
+
+    @property
     def export_service(self):
         return self.lightning_context.export
+
+    def get_favicon(self):
+        logo = self.site_setting['LOGO']
+        if logo and '#' in logo:
+            url, provider = logo.rsplit('#', 1)
+            return self.image_url(url, 144, provider, formatter='png')
+
+        return public_path + '/logo.png'
+
+    def get_cover(self):
+        logo = self.site_setting['LOGO']
+        if logo and '#' in logo:
+            url, provider = logo.rsplit('#', 1)
+            return self.image_url(url, 256, provider, method='cover')
+
+        return public_path + '/logo.png'
+
+    def render_index(self, injection=None):
+        content = index_template.render({
+            'public_path': public_path,
+            'favicon_path': self.get_favicon(),
+            'cover_path': self.get_cover(),
+            'title': self.site_setting['TITLE'] or '',
+            'injection': json.dumps(injection or {}, cls=encoders.JSONEncoder),  # encoders.JSONEncoder 解决django lazy object不能json.dumps的问题
+        })
+        return HttpResponse(content)
 
     @login_required(redirect_field_name='redirect', login_url='/user/login')
     def index_view(self, request):
         user = request.user
-        content = index_template.render({
-            'public_path': public_path,
-            'injection': json.dumps({
-                '$$schemas': get_app_field_schema(),
-                '$$admins': self.export_service.get_app_admin_config(request),
-                '$$menus': get_menu_data(user),
-                '$$settings': get_settins(),
-                '$$userinfo': get_userinfo(user),
-                '$$permissions': user.get_all_permissions(),
-            }, cls=encoders.JSONEncoder),  # encoders.JSONEncoder 解决django lazy object不能json.dumps的问题
+        return self.render_index(injection={
+            '$$schemas': get_app_field_schema(),
+            '$$admins': self.export_service.get_app_admin_config(request),
+            '$$menus': get_menu_data(user),
+            '$$settings': get_settins(),
+            '$$userinfo': get_userinfo(user),
+            '$$permissions': user.get_all_permissions(),
         })
-        return HttpResponse(content)
+
+    def login_page(self, request):
+        return self.render_index()
 
     @staticmethod
-    def login_page(request):
-        return login_response
-
-    @staticmethod
-    def image_url(raw, size, provider):
+    def image_url(raw, size, provider, method='lfit', formatter=None, rounded=0):
         if provider == 'oss':
-            return raw + '?x-oss-process=image/resize,m_pad,h_{0},w_{0},limit_0'.format(size)
+            size_formatted = 'h_{0},w_{0}'.format(size)
+            if method == 'pwa_icon':
+                method = 'pad'
+            elif method == 'cover':
+                method = 'lfit'
+                size_formatted = 'w_{}'.format(size)
+            print(method, size)
+            url = raw + '?x-oss-process=image/resize,m_{},{},limit_0'.format(method, size_formatted)
+            if formatter:
+                # 转格式
+                url += '/format,{}'.format(formatter)
+            if rounded:
+                # 圆角
+                url += '/rounded-corners,r_{}'.format(rounded)
+            return url
         return raw
 
-    @classmethod
-    def manifest(cls, request):
+    def manifest(self, request):
+        site_setting = self.site_setting
         content = manifest.render({
             'public_path': public_path,
         })
@@ -138,7 +169,7 @@ class LightningView:
             url, provider = logo.rsplit('#', 1)
             content['icons'] = [{
                 'sizes': '{0}x{0}'.format(s),
-                'src': cls.image_url(url, s, provider),
+                'src': self.image_url(url, s, provider, method='pwa_icon', rounded=4, formatter='png'),
             } for s in [128, 192, 512]]
         content = json.dumps(content)
         return HttpResponse(content, content_type='application/json')

@@ -7,6 +7,7 @@ from django.conf import settings
 from api_basebone.export.admin import ExportService
 from bsm_config.models import Menu, Admin
 from bsm_config.utils import create_menus_permission
+from bsm_config.settings import site_setting
 from .const import DEFAULT_MENU
 
 User = get_user_model()
@@ -130,6 +131,7 @@ class Lightning:
     def __init__(self):
         from .urls import LightningRoute
         self.route = LightningRoute(self)
+        self.site_setting = site_setting
 
     @property
     def urls(self):
