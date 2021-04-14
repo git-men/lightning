@@ -28,16 +28,8 @@ def unquote_placeholder(text):
 
 index_template = open(finders.find(lightning_static_url + '/index.html')).read()
 index_template = unquote_placeholder(index_template)  # PWA需要unquote
-index_template = index_template.replace(public_path_placeholder + '/manifest.json', '/manifest.json')
 index_template = index_template.replace('<!--lightning-render', '').replace('lightning-render-->', '')
 index_template = engines['django'].from_string(index_template)
-
-manifest = finders.find(lightning_static_url + '/manifest.json')
-if manifest:
-    manifest = open(manifest).read()
-    manifest = unquote_placeholder(manifest)
-    manifest = engines['django'].from_string(manifest)
-
 
 service_worker = finders.find(lightning_static_url + '/service-worker.js')
 if service_worker:
@@ -140,7 +132,6 @@ class LightningView:
             elif method == 'cover':
                 method = 'lfit'
                 size_formatted = 'w_{}'.format(size)
-            print(method, size)
             url = raw + '?x-oss-process=image/resize,m_{},{},limit_0'.format(method, size_formatted)
             if formatter:
                 # 转格式
@@ -153,10 +144,16 @@ class LightningView:
 
     def manifest(self, request):
         site_setting = self.site_setting
-        content = manifest.render({
-            'public_path': public_path,
-        })
-        content = json.loads(content)
+        content = {
+            'name': '闪电',
+            'short_name': '闪电',
+            'display': 'standalone',
+            'start_url': '../?utm_source=homescreen',
+            'theme_color': '#002140',
+            'background_color': '#001529',
+            # logo的路径要注意，加了哈希
+            'icons': [{'src': public_path+'/logo.png', 'sizes': '256x256'}]
+        }
         title = site_setting['TITLE']
         if title:
             content['name'] = title
