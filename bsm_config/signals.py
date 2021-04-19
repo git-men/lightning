@@ -137,13 +137,15 @@ def update_action_permission(app, model, new_config, old_config):
         for action in actions:
             log.debug(f'create permission for action: {action}')
             permission = Permission(
-                name=action['title'],
-                codename=f'{action["action"]}_{model}_{action["id"]}',
+                # 适配tableAction的格式
+                name=action.get('title', None) or action['name'],
+                codename=f'{action.get("action") or action["type"]}_{model}_{action["id"]}',
                 content_type=content_type
             )
             permission.save()
             if action['groups']:
-                permission.group_set.set(action['groups'])
+                # 适配tableAction的格式
+                permission.group_set.set([a['id'] if isinstance(a, dict) else a for a in action['groups']])
     
     if update:
         ids = [action['id'] for action in update]
@@ -152,13 +154,15 @@ def update_action_permission(app, model, new_config, old_config):
             log.debug(f'update permission for action: {action}')
             try:
                 permission = Permission.objects.get(
-                    codename=f'{action["action"]}_{model}_{action["id"]}',
+                # 适配tableAction的格式
+                    codename=f'{action.get("action") or action["type"]}_{model}_{action["id"]}',
                     content_type=content_type
                 )
                 if permission.name != action.get('title', action.get('name', '')):
                     permission.name = action.get('title', action.get('name', ''))
                     permission.save()
-                permission.group_set.set(action['groups'])
+                # 适配tableAction的格式
+                permission.group_set.set([a['id'] if isinstance(a, dict) else a for a in action['groups']])
             except Permission.DoesNotExist:
                 log.error('update and set permission error', exc_info=True)
                 permission = Permission(
