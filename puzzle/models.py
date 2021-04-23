@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 from mptt.models import MPTTModel, TreeForeignKey
+from puzzle import component_resolver
+from jsonfield import JSONField
 
 
 def uuid4_hex():
@@ -38,3 +40,32 @@ class Page(Block):
     
     class GMeta:
         title_field = 'name'
+
+
+class Table(models.Model):
+    block = models.OneToOneField(Block, verbose_name='渲染结点', null=True, on_delete=models.CASCADE)
+    model = models.CharField('模型', max_length=255)
+    display = JSONField('列表字段', default=[])
+    filter = JSONField('过滤字段', default=[])
+    inlineActions = JSONField('操作项', default=[])
+    actions = JSONField('批量操作', default=[])
+    tableActions = JSONField('全局操作', default=[])
+    sortable = JSONField('排序字段', default=[])
+    filterLayout = JSONField('过滤布局', default='default')
+
+
+@component_resolver('Table')
+def table_resolver(block: Block):
+    table = Table.objects.get(block__id=block.id)
+    return {
+        'model': table.model,
+        'table_id': table.id,
+        'display': table.display,
+        'filter': table.filter,
+        'inlineActions': table.inlineActions,
+        'actions': table.actions,
+        'tableActions': table.tableActions,
+        'sortable': table.sortable,
+        'filterLayout': table.filterLayout,
+    }
+
