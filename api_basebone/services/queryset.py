@@ -173,7 +173,7 @@ class Query:
     def get_queryset_by_order_by(self, queryset):
         """结果集支持排序"""
         # fields = self.request.data.get(const.ORDER_BY_FIELDS)
-        fields = self.order,
+        fields = self.order
         if isinstance(fields, list) and fields:
             return queryset.order_by(*fields)
         return queryset
