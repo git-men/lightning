@@ -65,7 +65,7 @@ def append_delete_log(sender, instance, request, scope, **kwargs):
         title_field = getattr(gmeta, 'title_field', None) if gmeta else None
 
         AdminLog.objects.create(
-            user=request.user.pk,
+            user_id=request.user.pk,
             action=action,
             app_label=sender._meta.app_label,
             model_slug=sender._meta.model_name,
