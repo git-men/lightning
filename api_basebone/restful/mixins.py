@@ -233,11 +233,16 @@ class GroupStatisticsMixin:
             **{
                 key: methods[value.get('method', None)](
                     value['field'].replace('.', '__'),
-                    distinct=value.get('distinct', False),
+                    **{'distinct': value['distinct']} if 'distinct' in value else {}
                 )
                 for key, value in fields.items()
                 # 排除exclude_fields
-                if value['field'] not in get_model_exclude_fields(self.model, None)
+                if 'expression' not in value and value.get('field', None) not in get_model_exclude_fields(self.model, None)
+            },
+            **{
+                key: resolve_expression(value['expression'])
+                for key, value in fields.items()
+                if 'expression' in value
             }
         ).order_by(*group_kwargs.keys())
         # 支持排序
