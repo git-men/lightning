@@ -19,6 +19,7 @@ class FieldType:
     FILE = 'file'
     REF = 'ref'
     MREF = 'mref'
+    DURATION = 'duration'
 
 
 common_attribute = [

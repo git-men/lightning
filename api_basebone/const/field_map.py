@@ -16,6 +16,7 @@ ComputedFieldTypeSerializerMap = {
     FieldType.DATE: fields.DateField,
     FieldType.TIME: fields.TimeField,
     FieldType.DATETIME: fields.DateTimeField,
+    FieldType.DURATION: fields.DurationField,
 }
 
 # 导出的字段和序列化字段的映射

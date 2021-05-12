@@ -155,6 +155,8 @@ DB_FUNC = {
     'FloatField': FloatField,
     'IntegerField': IntegerField,
     'CharField': CharField,
+    'DurationField': DurationField,
+    'ExpressionWrapper': ExpressionWrapper,
 }
 
 

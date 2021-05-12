@@ -23,7 +23,7 @@
     />
     <!--lightning-render<title>{{title}}</title>lightning-render-->
     <link rel="shortcut icon" type="image/png" href="{{favicon_path}}" />
-    <link rel="stylesheet" href="{{public_path}}/umi.fd6e4f68.css" />
+    <link rel="stylesheet" href="{{public_path}}/umi.a3b82603.css" />
     <script>
       window.routerBase = "/";
     </script>
@@ -54,28 +54,26 @@
           background-size: 100% auto;
         }
         .page-loading-warp {
-          padding: 98px;
           display: flex;
-          justify-content: center;
           align-items: center;
+          justify-content: center;
+          padding: 98px;
         }
         .ant-spin {
+          position: absolute;
+          display: none;
           -webkit-box-sizing: border-box;
           box-sizing: border-box;
           margin: 0;
           padding: 0;
           color: rgba(0, 0, 0, 0.65);
+          color: #1890ff;
           font-size: 14px;
           font-variant: tabular-nums;
           line-height: 1.5;
-          list-style: none;
-          -webkit-font-feature-settings: "tnum";
-          font-feature-settings: "tnum";
-          position: absolute;
-          display: none;
-          color: #1890ff;
           text-align: center;
           vertical-align: middle;
+          list-style: none;
           opacity: 0;
           -webkit-transition: -webkit-transform 0.3s
             cubic-bezier(0.78, 0.14, 0.15, 0.86);
@@ -84,6 +82,8 @@
           transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
           transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86),
             -webkit-transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+          -webkit-font-feature-settings: "tnum";
+          font-feature-settings: "tnum";
         }
 
         .ant-spin-spinning {
@@ -95,9 +95,9 @@
         .ant-spin-dot {
           position: relative;
           display: inline-block;
-          font-size: 20px;
           width: 20px;
           height: 20px;
+          font-size: 20px;
         }
 
         .ant-spin-dot-item {
@@ -153,9 +153,9 @@
         }
 
         .ant-spin-lg .ant-spin-dot {
-          font-size: 32px;
           width: 32px;
           height: 32px;
+          font-size: 32px;
         }
 
         .ant-spin-lg .ant-spin-dot i {
@@ -233,6 +233,6 @@
       </div>
     </div>
 
-    <script src="{{public_path}}/umi.1d41ea05.js"></script>
+    <script src="{{public_path}}/umi.ba366008.js"></script>
   </body>
 </html>

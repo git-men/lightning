@@ -47,11 +47,11 @@ class ConfigViewSet(viewsets.GenericViewSet):
         admin, created = Admin.objects.get_or_create(model=model_name)
         old_config = admin.config
         admin.config = dict(request.data)
-        admin.save()
         if created:
             create_action_permission(*admin.model.split('__'), admin.config)
         else:
             update_action_permission(*admin.model.split('__'), admin.config, old_config)
+        admin.save()
         return success_response()
 
     @action(detail=False, url_path='all', permission_classes = (IsAdminUser,))
