@@ -847,3 +847,10 @@ class CommonManageViewSet(
         return rest_services.manage_func(
             self, request.user, app, model, func_name, params
         )
+
+    @action(methods=['GET', 'POST'], detail=False, url_name='functions')
+    def functions(self, request, app, model, **kwargs):
+        """获取云函数定义。
+        """
+        scene = request.query_params.get('scene')
+        return rest_services.functions(self, app, model, scene)
