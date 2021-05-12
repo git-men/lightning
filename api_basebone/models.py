@@ -56,7 +56,6 @@ def append_create_log(sender, instance, create, request, old_instance, scope, **
 
 @receiver(post_bsm_delete, dispatch_uid='__append_delete_log')
 def append_delete_log(sender, instance, request, scope, **kwargs):
-    print('增加删除的Log')
     if sender == AdminLog or not basebone_settings.MANAGE_USE_ACTION_LOG or scope != 'admin':
         return
     try:
