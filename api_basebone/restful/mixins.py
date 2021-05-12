@@ -237,12 +237,12 @@ class GroupStatisticsMixin:
                 )
                 for key, value in fields.items()
                 # 排除exclude_fields
-                if 'expression' not in value and value.get('field', None) not in get_model_exclude_fields(self.model, None)
+                if not value.get('expression', None) and value.get('field', None) not in get_model_exclude_fields(self.model, None)
             },
             **{
                 key: resolve_expression(value['expression'])
                 for key, value in fields.items()
-                if 'expression' in value
+                if value.get('expression', None)
             }
         ).order_by(*group_kwargs.keys())
         # 支持排序
