@@ -17,7 +17,7 @@ def register_func(app, model, func_name, func, options):
         funcs[app, model] = {}
     funcs[app, model][func_name] = func, options
 
-def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[], atomic=True, params=[]):
+def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[], atomic=True, scene=None, params=[]):
     # 做注册工作，把下层的方法注册到funcs里面去。
     def _decorator(function):
         app = model._meta.app_label
@@ -30,6 +30,7 @@ def bsm_func(name, model, login_required=True, staff_required=False, superuser_r
                 'superuser_required': superuser_required,
                 'permissions': permissions,
                 'atomic': atomic,
+                'scene': scene,
                 'params': params
             })
         return function
@@ -118,7 +119,7 @@ def find_dynamic_func(app, model, func_name):
 
 def get_funcs(app, model, scene):
     # 获取模型定义的云函数
-    def_funcs = funcs.get((app, model), [])
+    def_funcs = funcs.get((app, model), {})
     def_funcs = [
         {
             "name": name,
@@ -129,7 +130,7 @@ def get_funcs(app, model, scene):
             "staff_required": option['staff_required'],
             "superuser_required": option['superuser_required'],
             'params': option['params']
-        } for name, option in def_funcs if option['scene'] == scene
+        } for name, (f, option) in def_funcs.items() if option['scene'] == scene
     ]
     if apps.is_installed('api_db'):
         from api_db.models import Function
