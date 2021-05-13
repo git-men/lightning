@@ -17,7 +17,7 @@ def register_func(app, model, func_name, func, options):
         funcs[app, model] = {}
     funcs[app, model][func_name] = func, options
 
-def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[], atomic=True):
+def bsm_func(name, model, login_required=True, staff_required=False, superuser_required=False, permissions=[], atomic=True, scene=None, params=[]):
     # 做注册工作，把下层的方法注册到funcs里面去。
     def _decorator(function):
         app = model._meta.app_label
@@ -29,7 +29,9 @@ def bsm_func(name, model, login_required=True, staff_required=False, superuser_r
                 'staff_required': staff_required,
                 'superuser_required': superuser_required,
                 'permissions': permissions,
-                'atomic': atomic
+                'atomic': atomic,
+                'scene': scene,
+                'params': params
             })
         return function
     return _decorator
@@ -54,8 +56,8 @@ def find_dynamic_func(app, model, func_name):
     check_sum = md5(func_obj.code.encode('utf-8')).hexdigest()
     script_name = f'{func_name}_{check_sum}'
     func = getattr(lightning_rt_function_scripts, script_name, None)
+    params = func_obj.functionparameter_set.all()
     if not func:
-        params = func_obj.functionparameter_set.all()
         required_params = [p.name for p in params if p.required]
         optional_params = [p.name for p in params if not p.required]
         sign = ''
@@ -101,9 +103,62 @@ def find_dynamic_func(app, model, func_name):
         'login_required': func_obj.login_required,
         'staff_required': func_obj.staff_required,
         'superuser_required': func_obj.superuser_required,
-        'atomic': True  # 默认全开启事务
+        'atomic': True,  # 默认全开启事务
+        'scene': func_obj.scene,
+        'params': [
+            {
+                "name": param.name,
+                "displayName": param.display_name,
+                "type": param.type,
+                "ref": param.ref,
+                "required": param.required,
+                "description": param.description
+            } for param in params
+        ]
     }
 
+def get_funcs(app, model, scene):
+    # 获取模型定义的云函数
+    def_funcs = funcs.get((app, model), {})
+    def_funcs = [
+        {
+            "name": name,
+            "model": "__".join([app, model]),
+            "description": '',
+            "scene": option['scene'],
+            "login_required": option['login_required'],
+            "staff_required": option['staff_required'],
+            "superuser_required": option['superuser_required'],
+            'params': option['params']
+        } for name, (f, option) in def_funcs.items() if option['scene'] == scene
+    ]
+    if apps.is_installed('api_db'):
+        from api_db.models import Function
+        db_funcs = Function.objects.filter(model=f'{app}__{model}', scene=scene, enable=True).prefetch_related('functionparameter_set')
+        for db_func in db_funcs:
+            def_funcs.append({
+                "name": db_func.name,
+                "model": db_func.model,
+                "description": db_func.description,
+                "scene": db_func.scene,
+                "login_required": db_func.login_required,
+                "staff_required": db_func.staff_required,
+                "superuser_required": db_func.superuser_required,
+                'params': [
+                    {
+                        "name": param.name,
+                        "displayName": param.display_name,
+                        "type": param.type,
+                        "ref": param.ref,
+                        "required": param.required,
+                        "description": param.description
+                    }
+                    for param in db_func.functionparameter_set.all()
+                ]
+            })
+    return def_funcs
+
+    
 
 def find_func(app, model, func_name):
     if (app, model) not in funcs or func_name not in funcs[app, model]:

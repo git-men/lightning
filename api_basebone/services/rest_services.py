@@ -16,7 +16,7 @@ from api_basebone.permissions import BasePermission
 from api_basebone.core import exceptions
 from api_basebone.settings import settings
 from api_basebone.signals import post_bsm_create, post_bsm_delete, before_bsm_create, before_bsm_delete
-from api_basebone.restful.funcs import find_func
+from api_basebone.restful.funcs import find_func, get_funcs
 from api_basebone.restful.relations import forward_relation_hand, reverse_relation_hand
 from api_basebone.drf.response import success_response, get_or_create_logger
 from api_basebone.sandbox.logger import LogCollector
@@ -154,6 +154,12 @@ def client_func(genericAPIView, user, app, model, func_name, params):
         serializer = genericAPIView.get_serializer(result)
         return success_response(serializer.data)
     return success_response()
+
+def functions(genericAPIView, app, model, scene):
+    """获取云函数的定义，分别从代码和数据库中获取。
+    """
+    funcs = get_funcs(app, model, scene)
+    return success_response(funcs)
 
 
 def manage_func(genericAPIView, user, app, model, func_name, params):
