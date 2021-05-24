@@ -29,7 +29,7 @@ class LightningRoute:
             path('service-worker.js', self.views.service_worker),
             path('basebone/index.html', self.views.login_page),
             re_path(r'^basebone/precache-manifest\.\w+\.js$', self.views.precache_manifest),
-            re_path(r'^(?!basebone)(?!service-worker\.js)(?!manifest.json).*$', self.views.index_view)
+            re_path(r'^(?!basebone)(?!service-worker\.js)(?!manifest.json)(?!api).*$', self.views.index_view)
         ]
 
 
