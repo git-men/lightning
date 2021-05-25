@@ -159,10 +159,12 @@ def create_meta_class(
     attrs = {'model': model}
 
     exclude_field_list = get_model_exclude_fields(model, exclude_fields)
-    if action in ['list', 'set']:
+    if action in ['list', 'set', 'retrieve']:
         flat_fields = [
             f.name
             for f in model._meta.get_fields()
+            # 只读的请求如果没有expand的话，只渲染外键id，不渲染其它的关联关系
+            # 以前多对多会默认渲染id数组，现在也不会了。
             if f.concrete
             and not (
                 f.is_relation
