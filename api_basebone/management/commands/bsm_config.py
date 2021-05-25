@@ -2,11 +2,8 @@ import os
 import requests
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
-
-from api_basebone.export.fields import get_app_field_schema
-from api_basebone.export.admin import get_app_admin_config
 
 
 class Command(BaseCommand):

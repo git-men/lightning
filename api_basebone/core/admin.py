@@ -1,12 +1,14 @@
 from importlib import import_module
 
-from django.contrib.admin import ModelAdmin as DjangoModelAdmin
 from django.conf import settings
-from django.utils import six
+
+from api_basebone.restful.batch_actions import get_model_batch_actions
+from api_basebone.utils.format import underline_to_camel
 from api_basebone.utils import get_lower_case_name
 # 属性的常量声明
 
 # 根据哪个字段进行筛选登录的用户，因为一个模型可能有多个字段指向用户模型
+
 BSM_AUTH_FILTER_FIELD = 'user_field'
 
 # 是否允许根据当前登录用户进行筛选
@@ -126,7 +128,29 @@ class BSMAdmin:
     前端可以根据配置动态的构造管理后台界面
     """
 
-    pass
+    def __init__(self, request=None):
+        self.request = request
+
+    def to_dict(self):
+        config = {}
+        model = self.Meta.model
+
+        for item in dir(self):
+            if item in VALID_MANAGE_ATTRS:
+                config[underline_to_camel(item)] = getattr(self, item, None)
+
+        if BSM_BATCH_ACTION not in config:
+            model_actions = get_model_batch_actions(model)
+            if model_actions:
+                config[BSM_BATCH_ACTION] = [
+                    [key, getattr(value, 'short_description', key)]
+                    for key, value in model_actions.items()
+                ]
+
+        return config
+
+    class Meta:
+        pass
 
 
 for key, value in ATTRS_DICT.items():
