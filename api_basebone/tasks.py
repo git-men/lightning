@@ -5,6 +5,7 @@ from api_basebone.utils.dingding import dingding_robot
 from bsm_config.settings import site_setting
 from django.core.mail import get_connection, send_mail, EmailMessage
 from django.core.mail.message import EmailMessage
+from api_basebone.utils.wechat import send_robot_text
 
 
 @shared_task
@@ -27,3 +28,8 @@ def send_email(subject, body, mail_to):
         if type(mail_to) not in [tuple, list]:
             mail_to = [mail_to]
         print(send_mail(subject, body, f"{site_setting['sender_name']} <{site_setting['sender_address']}>",  mail_to, connection=connection))
+
+@shared_task
+def wechat_robot_push(app_id, message, mentioned_mobiles=[]):
+    return send_robot_text(app_id, message, mentioned_mobiles)
+

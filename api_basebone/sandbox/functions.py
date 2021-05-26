@@ -5,7 +5,12 @@ from django.apps import apps
 from datetime import date
 from api_basebone.sandbox.logger import LogCollector
 
-__all__ = ['get_queryset', 'raise_error', 'get_model', 'today', 'generate_sequence', 'get_logger']
+
+__all__ = [
+    'get_queryset', 'raise_error', 'get_model', 'today',
+    'generate_sequence', 'get_logger', 'local_call_async',
+    'call', 'call_async', 'push_wechat_notify'
+]
 
 get_model = apps.get_model
 today = date.today
@@ -33,6 +38,25 @@ def get_logger(name):
     """
     return LogCollector(name)
 
+
+def local_call_async(func_obj, params={}):
+    from lightning_task.tasks import _execute_async
+    return _execute_async.delay(func_obj, params)
+
+def call(db_func, params={}, develop_mode=False):
+    from lightning_code.tasks import call_function
+    return call_function(db_func, params, develop_mode)
+
+def call_async(db_func, params={}, develop_mode=False):
+    # TODO 检测是否有开启异步
+    from lightning_code.tasks import call_function
+    return call_function.delay(db_func, params, develop_mode)
+
+def push_wechat_notify(robot, message, mentioned_mobiles=[], delay=True):
+    from api_basebone.tasks import wechat_robot_push
+    if delay:
+        return wechat_robot_push.delay(robot, message, mentioned_mobiles)
+    return wechat_robot_push(robot, message, mentioned_mobiles)
 
 context = {
     'get_queryset': get_queryset,
