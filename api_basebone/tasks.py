@@ -1,11 +1,17 @@
 from celery import shared_task
+from django.core.mail import get_connection, send_mail
+from django.conf import settings
 
 from api_basebone.core.exceptions import BusinessException
 from api_basebone.utils.dingding import dingding_robot
 from bsm_config.settings import site_setting
-from django.core.mail import get_connection, send_mail, EmailMessage
-from django.core.mail.message import EmailMessage
 from api_basebone.utils.wechat import send_robot_text
+
+
+def task(func):
+    if not hasattr(settings, 'CELERY_BROKER_URL'):
+        return func
+    return shared_task(func).delay
 
 
 @shared_task
@@ -13,7 +19,8 @@ def dingding_robot_push(data, access_token_type='default'):
     """钉钉机器人发送消息"""
     dingding_robot.push_message(data, access_token_type=access_token_type)
 
-@shared_task
+
+@task
 def send_email(subject, body, mail_to):
     if not site_setting['mail_protocol']:
         raise BusinessException(error_message='未配置邮件配置')
