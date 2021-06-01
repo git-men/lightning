@@ -4,6 +4,7 @@ from django.contrib.staticfiles.views import serve
 from django.conf import settings
 from .views import LightningView
 from .services import Lightning
+from oauth2_provider.models import *
 
 lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 
@@ -19,6 +20,7 @@ class LightningRoute:
     @property
     def urls(self):
         return [
+            path('basebone/oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
             path('basebone/block/', include('puzzle.urls')),
             path('basebone/storage/', include('storage.urls')),
             path('', include('api_basebone.urls')),

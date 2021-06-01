@@ -24,3 +24,4 @@ https://github.com/jeffkit/django-celery-beat/archive/refs/heads/master.zip
 psycopg2-binary==2.8.5
 django-mptt
 pillow
+django-oauth-toolkit==1.5.0
