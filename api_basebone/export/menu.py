@@ -19,7 +19,7 @@ def get_menu_from_database(user):
 
 
 def filter_valid_menu(menus):
-    return [{**m, 'children': filter_valid_menu(m['children'])} for m in menus if m['page'] or m['children']]
+    return [{**m, 'children': filter_valid_menu(m['children'])} for m in menus if m.get('page', m['children'])]
 
 
 def get_menu_data(user):
