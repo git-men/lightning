@@ -11,14 +11,10 @@ OAUTH2_PROVIDER = {
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'api_basebone.drf.handler.exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
         'api_basebone.drf.authentication.CsrfExemptSessionAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    )
 }
 
 
