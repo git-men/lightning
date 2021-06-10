@@ -7,6 +7,24 @@ from .services import Lightning
 
 lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 
+FRONT_END_ROUTES = [
+    '',
+    'user',
+    'user/login',
+    'user/register',
+    'user/qrcode_login',
+    'user/install',
+    'login/qrcode_login',
+    'lightning',
+    'account/settings',
+    'account/settings',
+    'dashboard/charts',
+    'puzzle/.*',
+    'content/.*',
+    'config/admin',
+    'iframe/.*',
+]
+
 
 class LightningRoute:
     def __init__(self, lightning_context=None):
@@ -29,8 +47,7 @@ class LightningRoute:
             path('service-worker.js', self.views.service_worker),
             path('basebone/index.html', self.views.login_page),
             re_path(r'^basebone/precache-manifest\.\w+\.js$', self.views.precache_manifest),
-            re_path(r'^(?!basebone)(?!service-worker\.js)(?!manifest.json)(?!api).*$', self.views.index_view)
-        ]
+        ] + [re_path('^{}$'.format(r), self.views.index_view) for r in FRONT_END_ROUTES]
 
 
 lightning = Lightning()
