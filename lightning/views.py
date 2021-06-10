@@ -12,7 +12,6 @@ from django.conf import settings
 from rest_framework.utils import encoders
 
 from api_basebone.export.fields import get_app_field_schema
-from api_basebone.export.menu import get_menu_data
 from api_basebone.export.setting import get_settins
 from api_basebone.restful.serializers import create_serializer_class
 
@@ -114,7 +113,7 @@ class LightningView:
         return self.render_index(injection={
             '$$schemas': get_app_field_schema(),
             '$$admins': self.export_service.get_app_admin_config(request),
-            '$$menus': get_menu_data(user),
+            '$$menus': self.export_service.get_menu_data(request),
             '$$settings': get_settins(),
             '$$userinfo': get_userinfo(user),
             '$$permissions': user.get_all_permissions(),
