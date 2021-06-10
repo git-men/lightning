@@ -35,6 +35,9 @@ class LightningRoute:
             self.lightning_context = Lightning()
         self.views = LightningView(self.lightning_context)
 
+    def handler404(self, request, exception):
+        return self.views.index_view(request)
+
     @property
     def urls(self):
         return [
@@ -54,3 +57,4 @@ class LightningRoute:
 
 lightning = Lightning()
 urlpatterns = lightning.urls
+handler404 = lightning.route.handler404
