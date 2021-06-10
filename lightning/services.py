@@ -132,10 +132,13 @@ class Lightning:
         from .urls import LightningRoute
         self.route = LightningRoute(self)
         self.site_setting = site_setting
+        # 这串先快速处理，暂时还是只能单例
+        from api_basebone.restful.manage import config_views
+        config_views.export_service = self.export
 
     @property
     def urls(self):
         return self.route.urls
 
 
-__all__ = ['Lightning']
+__all__ = ['Lightning', 'ExportService']
