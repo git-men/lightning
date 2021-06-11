@@ -119,7 +119,7 @@ class LightningView:
             '$$permissions': user.get_all_permissions(),
         })
 
-    def login_page(self, request):
+    def anonymous_index_view(self, request):
         return self.render_index()
 
     @staticmethod
