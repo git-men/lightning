@@ -43,7 +43,13 @@ def fullname(self):
 
 
 setattr(User, 'fullname', fullname)
-setattr(User, 'GMeta', UserGMeta)
+if not hasattr(User, 'GMeta'):
+    setattr(User, 'GMeta', UserGMeta)
+else:
+    for attr in dir(UserGMeta):
+        if not attr.startswith('_'):
+            if not hasattr(User.GMeta, attr):
+                setattr(User.GMeta, attr, getattr(UserGMeta, attr))
 
 
 @lightning_admin
