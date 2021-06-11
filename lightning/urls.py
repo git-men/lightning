@@ -10,11 +10,7 @@ lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
 FRONT_END_ROUTES = [
     '',
     'user',
-    'user/login',
-    'user/register',
-    'user/qrcode_login',
     'user/install',
-    'login/qrcode_login',
     'lightning',
     'account/settings',
     'account/settings',
@@ -23,6 +19,12 @@ FRONT_END_ROUTES = [
     'content/.*',
     'config/admin',
     'iframe/.*',
+]
+ANONYMOUS_ROUTES = [
+    'user/login',
+    'user/register',
+    'user/qrcode_login',
+    'login/qrcode_login',
 ]
 
 
@@ -44,13 +46,17 @@ class LightningRoute:
             path('basebone/storage/', include('storage.urls')),
             path('', include('api_basebone.urls')),
             re_path(r'^%s(?P<path>.*)$' % re.escape(settings.STATIC_URL.lstrip('/')), serve, kwargs={'insecure': True}),
-            path('user/login', self.views.login_page),
-            path('index.html', self.views.login_page),
+            path('user/login', self.views.anonymous_index_view),
+            path('index.html', self.views.anonymous_index_view),
             path('basebone/manifest.json', self.views.manifest),
             path('service-worker.js', self.views.service_worker),
-            path('basebone/index.html', self.views.login_page),
+            path('basebone/index.html', self.views.anonymous_index_view),
             re_path(r'^basebone/precache-manifest\.\w+\.js$', self.views.precache_manifest),
-        ] + [re_path('^{}$'.format(r), self.views.index_view) for r in FRONT_END_ROUTES]
+        ] + [
+            re_path('^{}$'.format(r), self.views.anonymous_index_view) for r in ANONYMOUS_ROUTES
+        ] + [
+            re_path('^{}$'.format(r), self.views.index_view) for r in FRONT_END_ROUTES
+        ]
 
 
 lightning = Lightning()
