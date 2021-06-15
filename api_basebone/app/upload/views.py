@@ -71,7 +71,7 @@ class UploadViewSet(viewsets.GenericViewSet):
             result = tencent.post_object_token()
             result['provider'] = 'cos'
         elif service == 'file_storage':
-            result = {'provider': 'file_storage', 'policy': '', 'dir': '', 'host': '/basebone/storage/upload'}
+            result = {'provider': 'file_storage', 'host': '/basebone/storage/upload'}
         elif service == 's3':
             result = upload.get_token()
             result['provider'] = 's3'
