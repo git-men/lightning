@@ -12,6 +12,17 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
 }
 
+S3_SHOW = '${upload_provider} === "s3"'
+S3_CONFIGURATION = [
+    {'name': 's3_endpoint', 'type': 'string', 'displayName': 'EndPoint', 'default': 'play.min.io'},
+    {'name': 's3_port', 'type': 'integer', 'displayName': 'Port', 'default': 9000},
+    {'name': 's3_use_ssl', 'type': 'bool', 'displayName': '使用SSL', 'default': True},
+    {'name': 's3_access_key', 'type': 'string', 'displayName': 'Access Key', 'default': 'Q3AM3UQ867SPQQA43P2F'},
+    {'name': 's3_secret_key', 'type': 'string', 'displayName': 'Secret Key', 'default': 'zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG'},
+    {'name': 's3_bucket', 'type': 'string', 'displayName': 'Bucket'},
+]
+for item in S3_CONFIGURATION:
+    item.update({'show': S3_SHOW, 'required': True})
 
 WEBSITE_CONFIG = [
     {
@@ -74,7 +85,7 @@ WEBSITE_CONFIG = [
         'key': 'upload',
         "fields": [
             {"name":'upload_provider', "type":"string", "displayName": '供应商',
-            'choices': [['file_storage', '文件系统'], ['oss', '阿里云'], ['cos', '腾讯云']],'widget': 'Radio'},
+            'choices': [['file_storage', '文件系统'], ['oss', '阿里云OSS'], ['cos', '腾讯云COS'], ['s3', '亚马逊S3']],'widget': 'Radio'},
 
             {"name": 'storage_path', "type": "string", "displayName": '存储路径', "show": '${upload_provider} === "file_storage"'},
 
@@ -92,6 +103,7 @@ WEBSITE_CONFIG = [
             {"name":'qcloud_cos_bucket', "type":"string", "displayName": '存储空间',"show":'${upload_provider} === "cos"'},
             {"name":'qcloud_cos_duration_seconds', "type":"integer", "displayName": '有效时间(秒)',"show":'${upload_provider} === "cos"'},
             {"name":'qcloud_cos_region', "type":"string", "displayName": '地域',"show":'${upload_provider} === "cos"'},
+            *S3_CONFIGURATION,
         ]
     },
 ]
