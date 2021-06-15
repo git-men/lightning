@@ -71,13 +71,17 @@ class AliYunOSS:
         sign_result = base64.encodebytes(h.digest()).strip()
 
         token_dict = {
-            'accessid': site_setting[self.OSS_KEY],
             'host': site_setting[self.OSS_HOST],
-            'cdn_host': site_setting[self.OSS_CDN_HOST],
             'policy': policy_encode,
+            'dir': upload_dir,
+            'OSSAccessKeyId': site_setting[self.OSS_KEY],
+            'Signature': sign_result,
+
+            # for legacy
+            'accessid': site_setting[self.OSS_KEY],
+            'cdn_host': site_setting[self.OSS_CDN_HOST],
             'signature': sign_result,
             'expire': expire_syncpoint,
-            'dir': upload_dir,
         }
         return token_dict
 

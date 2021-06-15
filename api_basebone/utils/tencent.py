@@ -1,4 +1,3 @@
-import arrow
 import base64
 import hashlib
 import hmac
@@ -86,14 +85,16 @@ def post_object_token():
     end_timestamp = start_timestamp + 60 * 30
     key_time = f'{start_timestamp};{end_timestamp}'
 
+    policy_items = {
+        'q-sign-algorithm': 'sha1',
+        'q-ak': site_setting['QCLOUD_SECRET_ID'],
+        'q-sign-time': key_time,
+    }
     policy = {
         "expiration": expiration,
         "conditions": [
             {"bucket": site_setting['QCLOUD_COS_BUCKET']},
-            {"q-sign-algorithm": "sha1"},
-            {"q-ak": site_setting['QCLOUD_SECRET_ID']},
-            {"q-sign-time": key_time},
-        ],
+        ] + [{k: v} for k, v in policy_items.items()],
     }
 
     # 使用 HMAC-SHA1 以 SecretKey 为密钥，以 KeyTime 为消息，计算消息摘要（哈希值），即为 SignKey。
@@ -114,9 +115,13 @@ def post_object_token():
 
     return {
         'policy': base64.b64encode(json.dumps(policy).encode('utf-8')).decode(),
+        'host': f'https://{bucket}.cos.{region}.myqcloud.com',
+        'dir': 'media/',
+        **policy_items,
+        'q-signature': signature,
+
+        # for legacy
         'q_ak': site_setting['QCLOUD_SECRET_ID'],
         'key_time': key_time,
         'signature': signature,
-        'host': f'https://{bucket}.cos.{region}.myqcloud.com',
-        'dir': 'media/',
     }
