@@ -48,6 +48,8 @@ BSM_ORDER_BY = 'order_by'
 # 表单的过滤
 BSM_FILTER = 'filter'
 
+BSM_SEARCH_FIELDS = 'search_fields'
+
 # 表单
 BSM_FORM_FIELDS = 'form_fields'
 
@@ -96,6 +98,7 @@ VALID_MANAGE_ATTRS = [
     BSM_MODAL_CONFIG,
     BSM_ORDER_BY,
     BSM_FILTER,
+    BSM_SEARCH_FIELDS,
     BSM_FORM_FIELDS,
     BSM_FORM_LAYOUT,
     BSM_LIST_STYLE,
