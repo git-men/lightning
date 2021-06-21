@@ -112,7 +112,7 @@ class ExportService:
             return []
 
     def filter_valid_menu(self, menus):
-        return [{**m, 'children': self.filter_valid_menu(m['children'])} for m in menus if m.get('page', m['children'])]
+        return [{**m, 'children': self.filter_valid_menu(m['children'])} for m in menus if m.get('page', None) or m['children']]
 
     @staticmethod
     def get_menu_from_database(user):
