@@ -241,6 +241,13 @@ def import_excel(config, content, queryset, request, detail=None):
                 choices = dict([(c[1], c[0]) for c in model_fields[field["field"]].choices])
                 if value in choices:
                     value = choices[value]
+            # 通过 to_field 指定外键的唯一标识字段
+            if 'to_field' in field and value:
+                field_definition = model_fields[field["field"]]
+                related_model = field_definition.related_model
+                # 得到字段本身定义的to_field
+                to_field = field_definition.remote_field.field_name
+                value = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()[to_field]
             row_data[field["field"]] = value
         line += 1
         if not [val for val in row_data.values() if val]:
