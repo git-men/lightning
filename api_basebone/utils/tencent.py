@@ -119,6 +119,7 @@ def post_object_token():
         'dir': 'media/',
         **policy_items,
         'q-signature': signature,
+        'q-key-time': key_time,
 
         # for legacy
         'q_ak': site_setting['QCLOUD_SECRET_ID'],

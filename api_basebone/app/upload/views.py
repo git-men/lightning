@@ -6,7 +6,6 @@ from api_basebone.drf.response import success_response
 from api_basebone.restful.serializers import create_serializer_class
 from api_basebone.utils import tencent
 from api_basebone.utils.aliyun import aliyun
-from api_basebone.utils import upload
 from bsm_config.settings import site_setting
 
 
@@ -73,6 +72,11 @@ class UploadViewSet(viewsets.GenericViewSet):
         elif service == 'file_storage':
             result = {'provider': 'file_storage', 'host': '/basebone/storage/upload'}
         elif service == 's3':
-            result = upload.get_token()
-            result['provider'] = 's3'
+            try:
+                from api_basebone.utils import upload
+            except:
+                pass
+            else:
+                result = upload.get_token()
+                result['provider'] = 's3'
         return success_response(result)
