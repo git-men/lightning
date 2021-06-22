@@ -178,7 +178,7 @@ class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model']
     def __call__(self, field_path, q=None):
         aggregation = self.aggregation
         if '__' not in field_path:
-            return aggregation(field_path, q)
+            return aggregation_align(aggregation)(field_path, q)
         model = self.model
         reverse_path = []
         path_parts = field_path.split('__')
