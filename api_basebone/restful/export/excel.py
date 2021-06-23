@@ -59,6 +59,11 @@ def get_attribute(instance, field_path, formatter=None):
     
     # 格式化
     if not formatter:
+        if isinstance(result, QuerySet):
+            title_field = 'pk'
+            if hasattr(result.model, 'GMeta') and hasattr(result.model.GMeta, 'title_field'):
+                title_field = result.model.GMeta.title_field
+            return '、'.join(result.values_list(title_field, flat=True))
         return result
     if isinstance(result, QuerySet) or isinstance(result, list):
         return [format(rs, formatter['type'], formatter['params']) for rs in result]
@@ -243,11 +248,20 @@ def import_excel(config, content, queryset, request, detail=None):
                     value = choices[value]
             # 通过 to_field 指定外键的唯一标识字段
             if 'to_field' in field and value:
-                field_definition = model_fields[field["field"]]
-                related_model = field_definition.related_model
-                # 得到字段本身定义的to_field
-                to_field = field_definition.remote_field.field_name
-                value = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()[to_field]
+                if field["field"] in model_fields:
+                    field_definition = model_fields[field["field"]]
+                    related_model = field_definition.related_model
+                    # 得到字段本身定义的to_field
+                    to_field = field_definition.remote_field.field_name
+                    value = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()[to_field]
+                else:
+                    try:
+                        field_definition = queryset.model._meta.get_field(field['field'])
+                        if isinstance(field_definition, models.ManyToManyField):
+                            value = field_definition.related_model.objects.filter(**{field['to_field']+'__in': value.split('、')}).values_list('pk', flat=True)
+                    except Exception:
+                        import traceback
+                        traceback.print_exc()
             row_data[field["field"]] = value
         line += 1
         if not [val for val in row_data.values() if val]:
