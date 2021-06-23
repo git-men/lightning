@@ -54,7 +54,7 @@ def get_attribute(instance, field_path, formatter=None):
                 else:
                     inter.append(rs)
             result = inter
-        else:
+        elif result is not None:
             result = _get(result, path)
     
     # 格式化
