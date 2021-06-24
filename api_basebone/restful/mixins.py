@@ -1,18 +1,6 @@
-from functools import partial
 import logging
-
-import pytz
 from django.db.models import Sum, Count, Value, F, Avg, Max, Min
-from django.db.models.fields.related import (
-    ManyToManyField,
-    ManyToManyRel,
-    ManyToOneRel,
-    ForeignKey,
-    OneToOneField,
-    OneToOneRel,
-)
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncHour
-
 from rest_framework.decorators import action
 
 from api_basebone.core import admin, exceptions
@@ -21,11 +9,9 @@ from api_basebone.restful import const
 from api_basebone.restful.serializers import get_model_exclude_fields
 from api_basebone.utils.meta import get_all_relation_fields
 from api_basebone.utils.meta import get_bsm_model_admin
-from api_basebone.models import AdminLog
-from api_basebone.settings import settings as basebone_settings
-from api_basebone.services.expresstion import resolve_expression
-from .forms import get_form_class
+from api_basebone.services.expresstion import resolve_expression, FieldExpression
 from api_basebone.utils.operators import build_filter_conditions2
+from .forms import get_form_class
 
 log = logging.getLogger(__name__)
 
@@ -240,7 +226,7 @@ class GroupStatisticsMixin:
                 if not value.get('expression', None) and value.get('field', None) not in get_model_exclude_fields(self.model, None)
             },
             **{
-                key: resolve_expression(value['expression'])
+                key: FieldExpression(self.model).resolve(value['expression'])
                 for key, value in fields.items()
                 if value.get('expression', None)
             }
