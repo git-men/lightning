@@ -253,7 +253,9 @@ def import_excel(config, content, queryset, request, detail=None):
                     related_model = field_definition.related_model
                     # 得到字段本身定义的to_field
                     to_field = field_definition.remote_field.field_name
-                    value = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()[to_field]
+                    value = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()
+                    if value is not None:
+                        value = value[to_field]
                 else:
                     try:
                         field_definition = queryset.model._meta.get_field(field['field'])
