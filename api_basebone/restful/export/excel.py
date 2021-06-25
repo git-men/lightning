@@ -203,7 +203,7 @@ def export_excel(config, queryset, detail=None):
     return response
 
 
-def import_excel(config, content, queryset, request, detail=None):
+def import_excel(config, content, queryset, request, detail_id=None, detail_field=None):
     """导入Exce
     参数：
     1. config: 导入配置
@@ -269,6 +269,8 @@ def import_excel(config, content, queryset, request, detail=None):
         if not [val for val in row_data.values() if val]:
             eof = True
         else:
+            if detail_field:
+                row_data[detail_field] = detail_id
             data.append(row_data)
 
     if config['type'] == 'create':
