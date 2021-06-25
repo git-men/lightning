@@ -77,9 +77,9 @@ class BaseExpression:
                         escape = True
                 elif char == '"':
                     quote = not quote
-                elif char in '([{':
+                elif char in '([{' and not quote:
                     surround += 1
-                elif char in ')]}':
+                elif char in ')]}' and not quote:
                     surround -= 1
             buffer += char
         if buffer:
