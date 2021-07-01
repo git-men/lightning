@@ -177,7 +177,7 @@ def resolve_expression(expression, variables=None):
 class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model'])):
     def __call__(self, field_path, q=None):
         aggregation = self.aggregation
-        if '__' not in field_path:
+        if not isinstance(field_path, str) or '__' not in field_path:
             return aggregation_align(aggregation)(field_path, q)
         model = self.model
         reverse_path = []
@@ -186,7 +186,7 @@ class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model']
             try:
                 next_field = model._meta.get_field(part).remote_field
             except:
-                return aggregation(field_path, q)
+                return aggregation_align(aggregation)(field_path, q)
             model = next_field.model
             reverse_path.insert(0, next_field.name)
 
