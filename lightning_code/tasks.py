@@ -1,9 +1,7 @@
 from celery import shared_task
-from member.models import User
 import types
 from lightning_code.models import Function
 from api_basebone.sandbox.functions import __all__
-from celery import Celery
 
 lightning_rt_custom_functions = types.ModuleType('lightning_rt_custom_functions')
 
@@ -37,7 +35,6 @@ def call_function(db_func, params={}, develop_mode=False):
         exec(head + body)
         func_obj = locals().get(func.name, None)
     else:
-        func.released_check_sum 
         func_name = f'{func.name}_{func.released_check_sum }'
         func_obj = getattr(lightning_rt_custom_functions, func_name, None)
         if not func_obj:
