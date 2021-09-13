@@ -1,3 +1,6 @@
+from django.conf import settings
+
+
 class Field:
     type = None
 
@@ -24,20 +27,22 @@ class DecimalField(Field):
     type = 'decimal'
 
 
-class PanelMeta(type):
-    def __init__(cls, name, bases, attrs):
-        meta = attrs.pop('Meta', None)
-        super().__init__(name, bases, attrs)
-        cls._meta = meta
-
-
-class Panel(metaclass=PanelMeta):
+class Panel:
     @classmethod
-    def to_dict(cls):
-        meta = cls._meta
-        result = {attr: getattr(meta, attr) for attr in [
-            'permission_code', 'title', 'key', 'help_text',
-        ] if hasattr(meta, attr)}
-        result['fields'] = [{'name': k, **v.to_dict()} for k, v in cls.__dict__.items() if isinstance(v, Field)]
+    def to_dict(cls, meta):
+        meta['fields'] = [{'name': k, **v.to_dict()} for k, v in cls.__dict__.items() if isinstance(v, Field)]
+        return meta
 
-        return result
+
+class PanelMeta:
+    kwargs = {}
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __call__(self, panel: Panel):
+        settings.WEBSITE_CONFIG.append(panel.to_dict(self.kwargs))
+
+
+def register_panel(**kwargs):
+    return PanelMeta(**kwargs)
