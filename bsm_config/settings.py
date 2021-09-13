@@ -80,13 +80,14 @@ data_convert = DataConvert()
 # settings = SettingClient()
 
 
-
-site_defaults = {}
 WEBSITE_CONFIG = getattr(django_settings, 'WEBSITE_CONFIG', DEFAULT_WEBSITE_CONFIG)
-for section in WEBSITE_CONFIG:
-    for f in section['fields']:
-        if 'default' in f:
-            site_defaults[f['name']] = f['default']
+
+
+def get_site_default(key):
+    for section in WEBSITE_CONFIG:
+        for f in section['fields']:
+            if f['name'] == key:
+                return f.get('default', None)
 
 
 class SiteSetting:
@@ -99,10 +100,7 @@ class SiteSetting:
         except Exception as e:
             if key_upper in os.environ:
                 return os.environ.get(key_upper)
-        if key in site_defaults:
-            return site_defaults[key]
-        return None
-        log.warning(f'配置中找不到 {key} 对应的配置')
+        return get_site_default(key)
 
     def __getitem__(self, item):
         if isinstance(item, tuple):
