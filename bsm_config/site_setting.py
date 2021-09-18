@@ -45,13 +45,8 @@ class DecimalField(Field):
     type = 'decimal'
 
 
-class ArrayField(Field):
-    type = 'array'
-
-    def get_field(self, field_dict):
-        result = super().get_field(field_dict)
-        # TODO
-        return result
+class IntegerField(Field):
+    type = 'integer'
 
 
 class FieldDict(dict):
