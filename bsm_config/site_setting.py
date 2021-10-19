@@ -3,7 +3,7 @@ from django.conf import settings
 
 def default_get_field(field):
     f = {
-        "displayName": field.get('displayName',''),
+        "displayName": field.get('displayName', field['name']),
         "help": field.get('help',''),
         "name": field['name'],
         "type": field.get('type','string'),
