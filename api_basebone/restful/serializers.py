@@ -1,4 +1,5 @@
-from collections import Mapping, OrderedDict
+from collections import OrderedDict
+from collections.abc import Mapping
 
 from django.db import models
 from django.db.models.fields.related import ForeignKey, OneToOneField
