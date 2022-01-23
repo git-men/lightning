@@ -1,0 +1,1 @@
+(window["webpackJsonp"]=window["webpackJsonp"]||[]).push([[26],{ZnhR:function(a,n,e){"use strict";e.r(n);var r=e("q1tI"),t=e.n(r),c=e("kvAW"),o=e("jkD3"),u=e("jA2l"),i=e("qJlv");n["default"]=function(a){var n=a.children;return t.a.createElement(c["a"],{backend:i["a"]},n({DragSource:o["a"],DropTarget:u["a"]}))}}}]);

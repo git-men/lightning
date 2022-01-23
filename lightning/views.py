@@ -111,6 +111,7 @@ class LightningView:
     def index_view(self, request):
         user = request.user
         return self.render_index(injection={
+            '$$dev': settings.DEBUG,
             '$$schemas': get_app_field_schema(),
             '$$admins': self.export_service.get_app_admin_config(request),
             '$$menus': self.export_service.get_menu_data(request),
