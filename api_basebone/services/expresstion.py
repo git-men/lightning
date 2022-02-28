@@ -102,7 +102,7 @@ class BaseExpression:
         if matched:
             func, arg_str = matched.groups()
             return self.execute_function(func, self.split_expression(arg_str))
-        log.error(f'error when resolving expression: {expression}')
+        log.error(f'error when resolving expression: {expression}', exc_info=True)
         raise NotImplementedError()
 
 
