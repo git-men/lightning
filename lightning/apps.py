@@ -31,5 +31,5 @@ class LightningConfig(AppConfig):
                 if os.path.exists(signal_path + '.py'):
                     __import__('.'.join([app, 'signals']))
             except:
-                log.error(f'自动发现脚本发生异常: {functions_path}', exc_info=True)
+                log.warning(f'自动发现脚本发生异常: {functions_path}', exc_info=True)
                 pass
