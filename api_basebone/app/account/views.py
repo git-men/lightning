@@ -11,6 +11,7 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
     """通用管理端账号接口"""
 
     permission_classes = (permissions.IsAuthenticated,)
+    login_form = forms.LoginForm
 
     def get_serializer_class(self):
         model = get_user_model()
@@ -49,7 +50,7 @@ class ManageAccountViewSet(viewsets.GenericViewSet):
             object 用户数据结构
         ```
         """
-        serializer = forms.LoginForm(
+        serializer = self.login_form(
             data=request.data, context=self.get_serializer_context()
         )
         serializer.is_valid(raise_exception=True)

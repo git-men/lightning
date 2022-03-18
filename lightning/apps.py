@@ -26,9 +26,9 @@ class LightningConfig(AppConfig):
                 path = app_module.__path__[0]
                 functions_path = os.path.join(path, 'functions')
                 signal_path = os.path.join(path, 'signals')
-                if os.path.exists(functions_path + '.py'):
+                if os.path.exists(functions_path + '.py') or os.path.exists(functions_path + '.pyc'):
                     __import__('.'.join([app, 'functions']))
-                if os.path.exists(signal_path + '.py'):
+                if os.path.exists(signal_path + '.py') or os.path.exists(signal_path + '.pyc'):
                     __import__('.'.join([app, 'signals']))
             except:
                 log.warning(f'自动发现脚本发生异常: {functions_path}', exc_info=True)

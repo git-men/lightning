@@ -24,10 +24,10 @@ def cmp_wrap(func):
 FUNCS = {
     'round': round,
     '__getattr__': getattr,
-    'now': timezone.now,
-    'today': lambda: timezone.now().date(),
-    'first_day_of_month': lambda: timezone.now().date().replace(day=1),
-    'days_after': lambda days: timezone.now().date() + timedelta(days=days),
+    'now': timezone.localtime(),
+    'today': lambda: timezone.localdate(),
+    'first_day_of_month': lambda: timezone.localdate().replace(day=1),
+    'days_after': lambda days: timezone.localdate() + timedelta(days=days),
     'max': max,
     'min': min,
     'add': reduce_wrap(operator.add),
@@ -77,9 +77,9 @@ class BaseExpression:
                         escape = True
                 elif char == '"':
                     quote = not quote
-                elif char in '([{':
+                elif char in '([{' and not quote:
                     surround += 1
-                elif char in ')]}':
+                elif char in ')]}' and not quote:
                     surround -= 1
             buffer += char
         if buffer:
@@ -177,8 +177,8 @@ def resolve_expression(expression, variables=None):
 class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model'])):
     def __call__(self, field_path, q=None):
         aggregation = self.aggregation
-        if '__' not in field_path:
-            return aggregation(field_path, q)
+        if not isinstance(field_path, str) or '__' not in field_path:
+            return aggregation_align(aggregation)(field_path, q)
         model = self.model
         reverse_path = []
         path_parts = field_path.split('__')
@@ -186,7 +186,7 @@ class SubqueryAggregate(namedtuple('SubqueryAggregate', ['aggregation', 'model']
             try:
                 next_field = model._meta.get_field(part).remote_field
             except:
-                return aggregation(field_path, q)
+                return aggregation_align(aggregation)(field_path, q)
             model = next_field.model
             reverse_path.insert(0, next_field.name)
 

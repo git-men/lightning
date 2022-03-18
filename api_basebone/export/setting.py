@@ -1,5 +1,6 @@
 from django.apps import apps
 from bsm_config.settings import site_setting, WEBSITE_CONFIG
+from bsm_config.site_setting import default_get_field, default_get_schemas
 
 
 def get_settins():
@@ -24,19 +25,7 @@ def get_setting_config():
             model = section['key']
             group_name = f'{model}_group'
             for field in section['fields']:
-                f = {
-                    "displayName": field.get('displayName',''),
-                    "help": field.get('help',''),
-                    "name": field['name'],
-                    "type": field.get('type','string'),
-                    "required": field.get('required',False),
-                }
-                if 'choices' in field:
-                    f['choices'] = field['choices']
-                if 'default' in field:
-                    f['default'] = field['default']
-                if 'validators' in field:
-                    f['validators'] = field['validators']
+                f = field.get_field() if hasattr(field, 'get_field') else default_get_field(field)
                 fields.append(f)
                 formField = {'name': field.get('name',''),}
                 if 'widget' in field:
@@ -64,7 +53,7 @@ def get_setting_config():
 
             setting = {
                 "title": section.get('title',None), "model": model,
-                "schemas": {model:{"fields":fields}},
+                "schemas": getattr(section, 'get_schemas', default_get_schemas)({model:{"fields":fields}}),
                 'admins': {model: {"formFields": formFields}},
                 "values": values,
                 "help_text": section.get('help_text',''),

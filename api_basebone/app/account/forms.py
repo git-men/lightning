@@ -8,8 +8,8 @@ User = get_user_model()
 
 
 class LoginForm(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
-    password = serializers.CharField(max_length=32)
+    username = serializers.CharField()
+    password = serializers.CharField()
 
     def validate(self, data):
         request = self.context['request']

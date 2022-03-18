@@ -147,6 +147,24 @@ class CustomModelSerializer(serializers.ModelSerializer):
     serializer_field_mapping[models.BigIntegerField] = CharIntegerField
     serializer_field_mapping[models.BigAutoField] = CharIntegerField
 
+    def build_relational_field(self, field_name, relation_info):
+        """DRF默认带through的ManyToManyField都为read_only，因此需要去掉这个默认值"""
+        model_field, related_model, to_many, to_field, has_through_model, reverse = relation_info
+        field_class, field_kwargs = super().build_relational_field(field_name, relation_info)
+
+        if has_through_model:
+            field_kwargs.pop('read_only', None)
+            field_kwargs['required'] = False
+            field_kwargs['queryset'] = related_model._default_manager
+
+            limit_choices_to = model_field and model_field.get_limit_choices_to()
+            if limit_choices_to:
+                if not isinstance(limit_choices_to, models.Q):
+                    limit_choices_to = models.Q(**limit_choices_to)
+                field_kwargs['queryset'] = field_kwargs['queryset'].filter(limit_choices_to)
+
+        return field_class, field_kwargs
+
 
 def create_meta_class(
     model, exclude_fields=None, extra_fields=None, action=None, display_fields=None, allow_one_to_one=False, **kwargs

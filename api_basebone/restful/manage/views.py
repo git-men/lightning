@@ -734,25 +734,18 @@ class CommonManageViewSet(
         content = request.data['file'].read()
         detail_id = request.data.get('detail_id', None)
         detail_model = request.data.get('detail_model', None)
-        detail_field = request.data.get('detail_field', None)    
-        
-        detail_obj = None
-        if detail_id:
-            dm = apps.get_model(*detail_model.split('__'))
-            detail_obj = queryset_service.queryset(request, dm).get(pk=detail_id)
-            if not detail_obj:
-                raise exceptions.BusinessException(error_message='找不到对象')
+        detail_field = request.data.get('detail_field', None)
 
-        if detail_obj:
-            detail_filter = {detail_field: detail_obj}
+        if detail_field:
+            detail_filter = {detail_field: detail_id}
             queryset = queryset_service.queryset(request, self.model).filter(**detail_filter)
         else:
             queryset = queryset_service.queryset(request, self.model)
         
         if config['file_type'] == 'excel':
-            return import_excel(config, content, queryset, request, detail_obj)
+            return import_excel(config, content, queryset, request, detail_id, detail_field)
         else:
-            return import_excel(config, content, queryset, request, detail_obj)
+            return import_excel(config, content, queryset, request, detail_id, detail_field)
     
 
     @action(methods=['get', 'post'], detail=False, url_path='export/file')
