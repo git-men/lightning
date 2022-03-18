@@ -16,69 +16,77 @@ from ..utils.sentry import sentry_client
 logger = logging.getLogger('django')
 
 
-def business_exception_handler(exc, context, formated_tb=None):
+class ExceptionHandler:
+    @staticmethod
+    def log_exception(exc):
+        logger.exception(exc)
 
-    set_rollback()
-    logs = [(logging.ERROR, '\n'.join(formated_tb))] if formated_tb else []
-    return error_response(
-        exc.error_code, exc.error_message, exc.error_data, exc.error_app, logs
-    )
+    @staticmethod
+    def business_exception_handler(exc, context, formated_tb=None):
 
-
-def exception_handler(exc, context):
-    """异常接收处理器"""
-    import traceback
-    t, v, tb = sys.exc_info()
-    
-    traceback.print_tb(tb)
-    formated_tb = traceback.format_tb(tb)
-    formated_tb.insert(0, f'Exception Type: {t.__name__}')
-    formated_tb.insert(0, f'【Server-Error】:{v}')
-    
-    if isinstance(exc, BusinessException):
-        return business_exception_handler(exc, context, formated_tb)
-
-    if isinstance(exc, ValidationError):
+        set_rollback()
+        logs = [(logging.ERROR, '\n'.join(formated_tb))] if formated_tb else []
         return error_response(
-            PARAMETER_FORMAT_ERROR,
-            error_data=exc.detail,
-            error_app=getattr(exc, 'error_app', None)
+            exc.error_code, exc.error_message, exc.error_data, exc.error_app, logs
         )
 
-    if isinstance(exc, Http404):
-        api_exception = BusinessException(
-            error_code=404,
-            error_message='找不到对应的数据详情'
-        )
-        return business_exception_handler(api_exception, context, formated_tb)
+    def __call__(self, exc, context):
+        """异常接收处理器"""
+        import traceback
+        t, v, tb = sys.exc_info()
 
-    if isinstance(exc, PermissionDenied):
-        api_exception = BusinessException(
-            error_code=403,
-            error_message='当前用户的权限不够'
-        )
-        return business_exception_handler(api_exception, context, formated_tb)
+        traceback.print_tb(tb)
+        formated_tb = traceback.format_tb(tb)
+        formated_tb.insert(0, f'Exception Type: {t.__name__}')
+        formated_tb.insert(0, f'【Server-Error】:{v}')
 
-    if isinstance(exc, APIException):
-        api_exception = BusinessException(
-            error_code=exc.status_code,
-            error_message=exc.default_detail
-        )
-        return business_exception_handler(api_exception, context, formated_tb)
+        if isinstance(exc, BusinessException):
+            return self.business_exception_handler(exc, context, formated_tb)
 
-    logger.exception(exc)
+        if isinstance(exc, ValidationError):
+            return error_response(
+                PARAMETER_FORMAT_ERROR,
+                error_data=exc.detail,
+                error_app=getattr(exc, 'error_app', None)
+            )
 
-    # 可自由配置是否直接抛出严重的错误
-    CLOSE_DIRECT_SERIOUS_ERROR_SHOW = getattr(
-        settings, 'CLOSE_DIRECT_SERIOUS_ERROR_SHOW', True)
+        if isinstance(exc, Http404):
+            api_exception = BusinessException(
+                error_code=404,
+                error_message='找不到对应的数据详情'
+            )
+            return self.business_exception_handler(api_exception, context, formated_tb)
 
-    if CLOSE_DIRECT_SERIOUS_ERROR_SHOW:
-        try:
-            # 如果有设置 sentry，日志打到对应的 sentry 中
-            sentry_client.captureException()
-        except Exception:
-            pass
+        if isinstance(exc, PermissionDenied):
+            api_exception = BusinessException(
+                error_code=403,
+                error_message='当前用户的权限不够'
+            )
+            return self.business_exception_handler(api_exception, context, formated_tb)
 
-        # 如果是非开发环境，则返回对应的错误，而不是直接报 500
-        return business_exception_handler(
-            BusinessException(error_data=str(exc)), context, formated_tb)
+        if isinstance(exc, APIException):
+            api_exception = BusinessException(
+                error_code=exc.status_code,
+                error_message=exc.default_detail
+            )
+            return self.business_exception_handler(api_exception, context, formated_tb)
+
+        self.log_exception(exc)
+
+        # 可自由配置是否直接抛出严重的错误
+        CLOSE_DIRECT_SERIOUS_ERROR_SHOW = getattr(
+            settings, 'CLOSE_DIRECT_SERIOUS_ERROR_SHOW', True)
+
+        if CLOSE_DIRECT_SERIOUS_ERROR_SHOW:
+            try:
+                # 如果有设置 sentry，日志打到对应的 sentry 中
+                sentry_client.captureException()
+            except Exception:
+                pass
+
+            # 如果是非开发环境，则返回对应的错误，而不是直接报 500
+            return self.business_exception_handler(
+                BusinessException(error_data=str(exc)), context, formated_tb)
+
+
+exception_handler = ExceptionHandler()
