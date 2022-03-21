@@ -1,5 +1,6 @@
 from django.core.signals import request_finished
 from django.dispatch import receiver
+from django.conf import settings
 from rest_framework.response import Response
 
 from api_basebone.core.exceptions import ERROR_PHRASES
@@ -23,7 +24,7 @@ def get_or_create_logger(name, log_type='function'):
 
 def success_response(data=None):
     """成功返回的数据结构"""
-    logger = getattr(request_logs, 'logger', None)
+    logger = settings.DEBUG and getattr(request_logs, 'logger', None)
     if data is not None:
         response_data = {
             'error_code': '0',
@@ -52,6 +53,6 @@ def error_response(error_code, error_message=None, error_data=None, error_app=No
         'error_message': error_message,
         'error_data': error_data,
         'error_app': error_app,
-        'logs': origin_logs + (logs or [])
+        'logs': (origin_logs + (logs or [])) if settings.DEBUG else []
     }
     return Response(response_data)
