@@ -26,7 +26,7 @@ def unquote_placeholder(text):
     return text.replace(urllib.parse.quote_plus(public_path_placeholder), public_path_placeholder)
 
 
-index_template = open(finders.find(lightning_static_url + '/index.html')).read()
+index_template = open(finders.find(lightning_static_url + '/index.html'), encoding='utf8').read()
 index_template = unquote_placeholder(index_template)  # PWA需要unquote
 index_template = index_template.replace('<!--lightning-render', '').replace('lightning-render-->', '')
 index_template = engines['django'].from_string(index_template)
