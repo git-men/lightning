@@ -525,7 +525,7 @@ class GenericViewMixin:
         """
         if getattr(django_settings, 'QUERYSET_VERSION', 'v1') == 'v2':
             log.debug('USING QUERYSET VERSION 2')
-            return queryset_service.queryset(self.request, self.model, self.action, 
+            return self.query_class(self.request, self.model, self.action,
                 filters=self.request.data.get(const.FILTER_CONDITIONS, []),
                 fields=self.get_display_fields(),
                 expand_fields=self.expand_fields,
@@ -533,7 +533,7 @@ class GenericViewMixin:
                 tree_data=self.tree_data,
                 skip_distinct=self.action == 'statistics',
                 view=self.request.data.get('view', None)
-            )
+            ).get_queryset()
         return self.get_queryset_legacy()
 
     def get_queryset_legacy(self):
@@ -671,6 +671,8 @@ class CommonManageViewSet(
 
     end_slug = MANAGE_END_SLUG
 
+    query_class = queryset_service.Query
+
     def create(self, request, *args, **kwargs):
         """
         这里校验表单和序列化类分开创建
@@ -736,12 +738,11 @@ class CommonManageViewSet(
         detail_model = request.data.get('detail_model', None)
         detail_field = request.data.get('detail_field', None)
 
+        queryset = self.query_class(request, self.model).get_queryset()
         if detail_field:
             detail_filter = {detail_field: detail_id}
-            queryset = queryset_service.queryset(request, self.model).filter(**detail_filter)
-        else:
-            queryset = queryset_service.queryset(request, self.model)
-        
+            queryset = queryset.filter(**detail_filter)
+
         if config['file_type'] == 'excel':
             return import_excel(config, content, queryset, request, detail_id, detail_field)
         else:
@@ -790,8 +791,8 @@ class CommonManageViewSet(
             detail_obj = None
             if detail_id and detail_model:
                 dmodel = apps.get_model(*detail_model.split('__'))
-                detail_obj = queryset_service.queryset(
-                    request, dmodel).filter(pk=detail_id).last()
+                detail_obj = self.query_class(
+                    request, dmodel).get_queryset().filter(pk=detail_id).last()
             return export_excel(self._export_type_config, self.get_queryset(), detail_obj)
         
         else:  # 原始旧版导出
