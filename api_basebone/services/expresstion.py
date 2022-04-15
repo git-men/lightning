@@ -10,6 +10,8 @@ from django.utils import timezone
 from django.db.models import *
 from django.db.models.functions import Concat, Cast, Coalesce
 
+from api_basebone.services.functions import GroupConcat
+
 log = logging.getLogger(__name__)
 
 
@@ -145,6 +147,7 @@ DB_FUNC = {
     'Avg': aggregation_align(Avg),
     'Max': aggregation_align(Max),
     'Min': aggregation_align(Min),
+    'GroupConcat': GroupConcat,
     'StdDev': StdDev,
     'Variance': Variance,
     'Cast': Cast,
