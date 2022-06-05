@@ -170,12 +170,17 @@ class BSMAdminModule:
     modules = {}
 
 
-def register(admin_class):
-    _meta = admin_class.Meta.model._meta
-    key = f'{_meta.app_label}__{_meta.model_name}'
-    # if key not in BSMAdminModule.modules:
-    BSMAdminModule.modules[key] = admin_class
-    return admin_class
+def register(*args, force=True, **kwargs):
+    def _register(admin_class):
+        _meta = admin_class.Meta.model._meta
+        key = f'{_meta.app_label}__{_meta.model_name}'
+        if not force and key in BSMAdminModule.modules:
+            return
+        BSMAdminModule.modules[key] = admin_class
+        return admin_class
+    if args:
+        return _register(args[0])
+    return _register
 
 
 configs = {}
