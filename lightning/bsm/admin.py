@@ -9,7 +9,7 @@ from . import UserGMeta
 User = get_user_model()
 
 
-@lightning_admin
+@lightning_admin(force=False)
 class UserAdmin(Admin):
     display = ['username', 'is_active', 'is_superuser', 'groups']
     form_fields = [
