@@ -147,7 +147,7 @@ class StatisticsMixin:
             return success_response({})
 
         result = queryset.aggregate(**aggregates)
-        origin_queryset = self.basebone_origin_queryset or queryset
+        origin_queryset = getattr(self, 'basebone_origin_queryset', queryset)
         origin_queryset.query.annotations.clear()
         relation_result = origin_queryset.aggregate(
             **relation_aggregates)
