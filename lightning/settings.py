@@ -6,15 +6,20 @@ AUTHENTICATION_BACKENDS = (
 DEFAULT_AUTHENTICATION_CLASSES = ['rest_framework.authentication.SessionAuthentication']
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'api_basebone.drf.handler.exception_handler',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'api_basebone.drf.authentication.CsrfExemptSessionAuthentication'
-    ] + DEFAULT_AUTHENTICATION_CLASSES,
+    'DEFAULT_AUTHENTICATION_CLASSES': DEFAULT_AUTHENTICATION_CLASSES,
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
 }
 
 
+# 改成默认启用csrf_protection了
 def enable_csrf_protection():
     REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = DEFAULT_AUTHENTICATION_CLASSES
+
+
+def disable_csrf_protection():
+    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
+        'api_basebone.drf.authentication.CsrfExemptSessionAuthentication'
+    ] + DEFAULT_AUTHENTICATION_CLASSES
 
 
 S3_SHOW = '${upload_provider} === "s3"'
