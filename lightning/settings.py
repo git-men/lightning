@@ -22,6 +22,12 @@ def disable_csrf_protection():
     ] + DEFAULT_AUTHENTICATION_CLASSES
 
 
+def enable_api_signature():
+    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'].append(
+        'api_basebone.drf.authentication.SignatureSessionAuthentication',
+    )
+
+
 S3_SHOW = '${upload_provider} === "s3"'
 S3_CONFIGURATION = [
     {'name': 's3_endpoint', 'type': 'string', 'displayName': 'EndPoint', 'default': 'play.min.io'},
