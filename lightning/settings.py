@@ -23,9 +23,9 @@ def disable_csrf_protection():
 
 
 def enable_api_signature():
-    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'].append(
-        'api_basebone.drf.authentication.SignatureSessionAuthentication',
-    )
+    classes = REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']
+    if not classes or classes[0] != 'api_basebone.drf.authentication.SignatureSessionAuthentication':
+        classes.insert(0, 'api_basebone.drf.authentication.SignatureSessionAuthentication')
 
 
 S3_SHOW = '${upload_provider} === "s3"'

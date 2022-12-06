@@ -13,8 +13,12 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
 class SignatureSessionAuthentication(SessionAuthentication):
     def authenticate(self, request):
         if request.data:
-            body_str = json.dumps(request.data, ensure_ascii=False, separators=(',', ':'))
-            sign = hashlib.sha256(body_str.encode()).hexdigest()
-            if sign != request.META['HTTP_X_SIGNATURE']:
-                return PermissionDenied()
+            try:
+                body_str = json.dumps(request.data, ensure_ascii=False, separators=(',', ':'))
+            except:
+                pass  # multipart/form-data请求不能序列化，先跳过
+            else:
+                sign = hashlib.sha256(body_str.encode()).hexdigest()
+                if sign != request.META['HTTP_X_SIGNATURE']:
+                    raise PermissionDenied()
         return super().authenticate(request)
