@@ -11,6 +11,7 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
 from django.db import models, transaction
+from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 
@@ -56,7 +57,7 @@ def get_attribute(instance, field_path, formatter=None):
             result = inter
         elif result is not None:
             result = _get(result, path)
-    
+
     # 格式化
     if not formatter:
         if isinstance(result, QuerySet):
@@ -91,13 +92,13 @@ def export_excel(config, queryset, detail=None):
         }],
         "list_mapping": [{
             "column": "A",
-            "field": "a", 
+            "field": "a",
             "formatter": {
-                "type": "prefix", 
+                "type": "prefix",
                 "params": {
                     "prefix": "姓  名：",
                 }
-            }, 
+            },
         }]
     }
 
@@ -127,7 +128,7 @@ def export_excel(config, queryset, detail=None):
         sheet = workbook.active
 
     detail_mapping = config.get('detail_mapping', [])
-    
+
     list_mapping = config.get('list_mapping', [])
 
     model_fields = dict([(f.name, f) for f in queryset.model._meta.fields])
@@ -145,7 +146,7 @@ def export_excel(config, queryset, detail=None):
             sheet.delete_rows(row, end - row + 1)
         else:
             row = len(detail_mapping) + 1
-            
+
             # 输出标題
             col = 1
             for field in list_mapping:
@@ -172,10 +173,12 @@ def export_excel(config, queryset, detail=None):
                 col = 1
                 for field in list_mapping:
                     value = get_attribute(instance, field['field'], field.get('formatter', None))
+                    if isinstance(value, datetime.datetime) and value.tzinfo:
+                        value = timezone.make_naive(value)
                     sheet.cell(row, col, value)
                     col += 1
                 row += 1
-    
+
     if detail_mapping:
         # 渲染关联详情
         if use_template:  # 模型指定位置
@@ -211,7 +214,7 @@ def import_excel(config, content, queryset, request, detail_id=None, detail_fiel
     3. detail: 上层数据
 
     config的结构：
-    {	
+    {
         "type": "create",  // create | update
         "template": "",  // 可用模板，可不用模板。
         "update_by": ["user.first_name", "user.last_name"],  // 更新的话需要指定条件
@@ -283,10 +286,10 @@ def import_excel(config, content, queryset, request, detail_id=None, detail_fiel
         condition = {f'{pk_name}__in': pk_values}
         print('condition: ', condition)
         instances = queryset.filter(**condition)
-        
+
         # FIXME 如果data里面有instances里面没有的数据时，要报无权修改
         serializer = get_form_class(queryset.model, 'update', request=request, batch=True)(instances, data=data, partial=True, many=True)
-    
+
     if not serializer.is_valid(raise_exception=False):
         error_details = []
         errors = serializer.errors

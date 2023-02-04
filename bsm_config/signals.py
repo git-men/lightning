@@ -66,7 +66,9 @@ def menu_changed(sender, instance, model, pk_set, action, **kwargs):
             permission.group_set.remove(*groups)
 
 @receiver(post_migrate)
-def update_setting_config_permission(sender, **kwargs):
+def update_setting_config_permission(sender, using, **kwargs):
+    if using != 'default':
+        return
     content_type = ContentType.objects.get_for_model(Setting)
     permissions = [*Permission.objects.filter(content_type=content_type).values_list('codename', flat=True)]
     permission_assign_content_type = ContentType.objects.get_for_model(Permission)

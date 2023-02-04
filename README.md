@@ -53,7 +53,7 @@ lightning是由一系列的Django apps组件，前端是SPA，己打包到lightn
 安装lightning 依赖
 
 ```sh
-pip install lightning
+pip install django-lightning
 ```
 
 ### 配置

@@ -301,13 +301,17 @@ class Query:
             return queryset.filter(**params)
         return queryset
 
+    def get_annotation_context(self):
+        request = self.request
+        return {'user': request.user} if request else {}
+
     def get_queryset(self):
         model = self.model
         request = self.request
         # 1. 从最原始的queryset开始
         queryset = model.objects.all()
 
-        context = {'user': request.user} if request else {}
+        context = self.get_annotation_context()
 
         admin_class = get_bsm_model_admin(model)
 

@@ -8,14 +8,30 @@ OAUTH2_PROVIDER = {
     'SCOPES': {'read': 'Read scope', 'write': 'Write scope', 'groups': 'Access to your groups'}
 }
 
+DEFAULT_AUTHENTICATION_CLASSES = ['rest_framework.authentication.SessionAuthentication']
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'api_basebone.drf.handler.exception_handler',
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'api_basebone.drf.authentication.CsrfExemptSessionAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': DEFAULT_AUTHENTICATION_CLASSES,
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
 }
+
+
+# 改成默认启用csrf_protection了
+def enable_csrf_protection():
+    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = DEFAULT_AUTHENTICATION_CLASSES
+
+
+def disable_csrf_protection():
+    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
+        'api_basebone.drf.authentication.CsrfExemptSessionAuthentication'
+    ] + DEFAULT_AUTHENTICATION_CLASSES
+
+
+def enable_api_signature():
+    classes = REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']
+    if not classes or classes[0] != 'api_basebone.drf.authentication.SignatureSessionAuthentication':
+        classes.insert(0, 'api_basebone.drf.authentication.SignatureSessionAuthentication')
+
 
 S3_SHOW = '${upload_provider} === "s3"'
 S3_CONFIGURATION = [
