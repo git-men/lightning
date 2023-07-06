@@ -71,7 +71,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         settings = get_settins()
         return success_response(settings)
 
-    @action(detail=False, url_path='setting_config')
+    @action(detail=False, url_path='setting_config', permission_classes=(IsAdminUser,))
     def get_setting_config(self, request, *args, **kargs):
         settings = get_setting_config()
         return success_response(settings)
