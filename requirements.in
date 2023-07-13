@@ -21,6 +21,6 @@ qcloud-python-sts==3.0.3
 # fork
 https://github.com/jeffkit/wechatpy/archive/v.18.13-work.zip
 https://github.com/jeffkit/django-celery-beat/archive/refs/heads/master.zip
-psycopg2-binary==2.8.5
+psycopg2-binary==2.8.6
 django-mptt
 pillow
