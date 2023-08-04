@@ -701,6 +701,17 @@ class CommonManageViewSet(
     def update_sort(self, request, *args, **kwargs):
         return rest_services.update_sort(self, request, request.data)
 
+    def perform_batch(self, batch_action, data, payload=None):
+        form_data = {'action': batch_action, 'data': data}
+        if payload is not None:
+            form_data['payload'] = payload
+        serializer = batch_actions.BatchActionForm(
+            data=form_data, context=self.get_serializer_context()
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.handle()
+        return success_response()
+
     @action(methods=['POST'], detail=False, url_path='batch')
     def batch(self, request, app, model, **kwargs):
         """
@@ -714,12 +725,11 @@ class CommonManageViewSet(
         }
         ```
         """
-        serializer = batch_actions.BatchActionForm(
-            data=request.data, context=self.get_serializer_context()
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.handle()
-        return success_response()
+        return self.perform_batch(request.data['action'], request.data['data'], request.data.get('payload', None))
+
+    @action(methods=['POST'], detail=False, url_path='batch-delete')
+    def batch_delete(self, request, app, model, **kwargs):
+        return self.perform_batch('delete', request.data['id'])
 
     @action(methods=['POST'], detail=False, url_path='import/file')
     def import_file(self, request, *args, **kwargs):

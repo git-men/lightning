@@ -9,6 +9,7 @@ APPS = [
     'storage',
     'puzzle',
     'lightning',
+    'rest_framework',
 ]
 
 FUNC_SCENE_UNLIMIT = 'unlimit'

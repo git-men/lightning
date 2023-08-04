@@ -169,11 +169,12 @@ def find_func(app, model, func_name):
         func, options = funcs[app, model][func_name]
 
     def proxy(*args, **kwargs):
-        signature = inspect.signature(func)
-        required = {k for k, p in list(signature.parameters.items())[len(args):] if p.default == Parameter.empty and p.kind in [Parameter.KEYWORD_ONLY, Parameter.POSITIONAL_OR_KEYWORD]}
-        lack = required - kwargs.keys()
-        if lack:
-            raise exceptions.BusinessException(exceptions.PARAMETER_FORMAT_ERROR, '、'.join(lack)+' 必填')
+        if inspect.isfunction(func):
+            signature = inspect.signature(func)
+            required = {k for k, p in list(signature.parameters.items())[len(args):] if p.default == Parameter.empty and p.kind in [Parameter.KEYWORD_ONLY, Parameter.POSITIONAL_OR_KEYWORD]}
+            lack = required - kwargs.keys()
+            if lack:
+                raise exceptions.BusinessException(exceptions.PARAMETER_FORMAT_ERROR, '、'.join(lack)+' 必填')
         return func(*args, **kwargs)
 
     return proxy, options

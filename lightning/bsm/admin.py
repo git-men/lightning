@@ -2,14 +2,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 
 from api_basebone.core.widgets import widgets
+from lightning import flags
 from lightning.admin import Admin
 from lightning.decorators import lightning_admin
 from . import UserGMeta
-
 User = get_user_model()
 
 
-@lightning_admin(force=False)
 class UserAdmin(Admin):
     display = ['username', 'is_active', 'is_superuser', 'groups']
     form_fields = [
@@ -32,27 +31,11 @@ class UserAdmin(Admin):
         model = User
 
 
-if hasattr(Group, '_meta'):
-    setattr(Group._meta, 'verbose_name', '角色')
-    setattr(Group._meta, 'verbose_name_plural', '角色')
-
-
 @property
 def fullname(self):
     return f'{self.last_name}{self.first_name}' if self.first_name.strip() != '' else self.username
 
 
-setattr(User, 'fullname', fullname)
-if not hasattr(User, 'GMeta'):
-    setattr(User, 'GMeta', UserGMeta)
-else:
-    for attr in dir(UserGMeta):
-        if not attr.startswith('_'):
-            if not hasattr(User.GMeta, attr):
-                setattr(User.GMeta, attr, getattr(UserGMeta, attr))
-
-
-@lightning_admin
 class GroupAdmin(Admin):
     display = ['name']
     modal_form = False
@@ -71,7 +54,6 @@ class GroupAdmin(Admin):
         model = Group
 
 
-@lightning_admin
 class PermissionAdmin(Admin):
     filter = ['name', 'content_type', 'codename']
     display = ['name', 'display_name', 'content_type', 'content_type.app_label', 'codename']
@@ -79,3 +61,23 @@ class PermissionAdmin(Admin):
 
     class Meta:
         model = Permission
+
+
+if flags.BUILTIN_ADMIN:
+    lightning_admin(force=False)(UserAdmin)
+    if hasattr(Group, '_meta'):
+        setattr(Group._meta, 'verbose_name', '角色')
+        setattr(Group._meta, 'verbose_name_plural', '角色')
+
+    setattr(User, 'fullname', fullname)
+    if not hasattr(User, 'GMeta'):
+        setattr(User, 'GMeta', UserGMeta)
+    else:
+        for attr in dir(UserGMeta):
+            if not attr.startswith('_'):
+                if not hasattr(User.GMeta, attr):
+                    setattr(User.GMeta, attr, getattr(UserGMeta, attr))
+
+    lightning_admin(GroupAdmin)
+    lightning_admin(PermissionAdmin)
+

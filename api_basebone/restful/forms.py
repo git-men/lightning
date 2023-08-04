@@ -127,12 +127,14 @@ def get_validate(validators):
     return validate
 
 
-def create_meta_class(model, exclude_fields=None):
+def create_meta_class(model, exclude_fields=None, fields=None):
     """构建序列化类的 Meta 类"""
     attrs = {'model': model, 'list_serializer_class': BulkCreateListSerializer}
 
     if exclude_fields is not None and isinstance(exclude_fields, (list, tuple)):
         attrs['exclude'] = exclude_fields
+    elif fields is not None and isinstance(fields, (list, tuple)):
+        attrs['fields'] = fields
     else:
         attrs['fields'] = '__all__'
 
@@ -161,7 +163,7 @@ def simple_support_m2m_field_specify_through_model(func):
 
 
 @simple_support_m2m_field_specify_through_model
-def create_form_class(model, action='create', batch=False, exclude_fields=None, **kwargs):
+def create_form_class(model, action='create', batch=False, exclude_fields=None, fields=None, **kwargs):
     """构建序列化类"""
 
     def __init__(self, *args, **kwargs):
@@ -190,7 +192,7 @@ def create_form_class(model, action='create', batch=False, exclude_fields=None, 
         return instance
 
     attrs = {
-        'Meta': create_meta_class(model, exclude_fields=None), 
+        'Meta': create_meta_class(model, exclude_fields=None, fields=fields),
         '__init__': __init__,
         'update': update
     }
