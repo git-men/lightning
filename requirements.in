@@ -11,7 +11,7 @@ factory-boy==2.11.1
 jsonfield==3.1.0
 mysqlclient>=1.4.3,<2
 oss2>=2.6.0,<=2.12.1
-openpyxl>=2.5.12
+openpyxl>=2.5.12,<3.1
 raven==6.9.0
 Werkzeug==0.15.0
 pydash==4.7.4
@@ -22,7 +22,7 @@ qcloud-python-sts==3.0.3
 # https://github.com/jeffkit/wechatpy/archive/v.18.13-work.zip
 wechatpy
 https://github.com/jeffkit/django-celery-beat/archive/refs/heads/master.zip
-psycopg2-binary==2.8.5
+psycopg2-binary
 django-mptt
 pillow
 django-oauth-toolkit==1.5.0

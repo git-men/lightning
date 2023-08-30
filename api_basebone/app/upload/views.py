@@ -72,6 +72,7 @@ class UploadViewSet(viewsets.GenericViewSet):
         elif service == 'file_storage':
             result = {'provider': 'file_storage', 'host': '/basebone/storage/upload'}
         elif service == 's3':
+            result['provider'] = 's3'
             try:
                 from api_basebone.utils import upload
             except:

@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from django.conf import settings
 from rest_framework.response import Response
 
+import flags
 from api_basebone.core.exceptions import ERROR_PHRASES
 from api_basebone.sandbox.logger import LogCollector
 from werkzeug import Local
@@ -27,17 +28,19 @@ def success_response(data=None):
     logger = settings.DEBUG and getattr(request_logs, 'logger', None)
     if data is not None:
         response_data = {
-            'error_code': '0',
+            'error_code': 0,
             'error_message': '',
             'result': data,
             'logs': logger.collect() if logger else []
         }
     else:
         response_data = {
-            'error_code': '0',
+            'error_code': 0,
             'error_message': '',
             'logs': logger.collect() if logger else []
         }
+    if flags.NUMERIC_RESPONSE_STATUS is False:
+        response_data['error_code'] = str(response_data['error_code'])
     return Response(response_data)
 
 

@@ -128,3 +128,23 @@ WEBSITE_CONFIG = [
         ]
     },
 ]
+
+
+class Menu(dict):
+    def __init__(self, name, **kwargs):
+        super().__init__(name=name, **kwargs)
+
+
+class ListMenu(Menu):
+    def __init__(self, name, app, model, **kwargs):
+        super().__init__(name, model=f'{app}__{model.lower()}', **kwargs, page='list')
+
+
+class PuzzleMenu(Menu):
+    def __init__(self, name, puzzle, **kwargs):
+        super().__init__(name, puzzle=puzzle, **kwargs, page='puzzle')
+
+
+class MenuGroup(Menu):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, type='group')

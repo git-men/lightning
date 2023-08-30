@@ -9,7 +9,8 @@ APPS = [
     'storage',
     'puzzle',
     'lightning',
-    'oauth2_provider'
+    'rest_framework',
+    'oauth2_provider',
 ]
 
 FUNC_SCENE_UNLIMIT = 'unlimit'

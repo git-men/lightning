@@ -15,6 +15,7 @@ class BSMWidgets(Enum):
     Switch = 'Switch'
     Select = 'Select'
     InlineForm = 'InlineForm'
+    InnerTable = 'InnerTable'
     TimePicker = 'TimePicker'
     ImageUploader = 'ImageUploader'
     FileUploader = 'FileUploader'
