@@ -4,8 +4,11 @@ from collections import OrderedDict
 
 from django.http import HttpResponse
 from pydash import objects
-import openpyxl
-from openpyxl.styles.alignment import Alignment
+try:
+    import openpyxl
+    from openpyxl.styles.alignment import Alignment
+except:
+    pass
 from tempfile import NamedTemporaryFile
 
 from api_basebone.core import gmeta

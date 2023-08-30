@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.conf import settings
 from rest_framework.response import Response
 
-import flags
+import lightning_flags as flags
 from api_basebone.core.exceptions import ERROR_PHRASES
 from api_basebone.sandbox.logger import LogCollector
 from werkzeug import Local
@@ -41,6 +41,8 @@ def success_response(data=None):
         }
     if flags.NUMERIC_RESPONSE_STATUS is False:
         response_data['error_code'] = str(response_data['error_code'])
+    else:
+        response_data['error_code'] = int(response_data['error_code'])
     return Response(response_data)
 
 

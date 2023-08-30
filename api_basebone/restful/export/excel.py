@@ -1,7 +1,10 @@
 import datetime
-import openpyxl
-from openpyxl import load_workbook
-from openpyxl.worksheet.datavalidation import DataValidation
+try:
+    import openpyxl
+    from openpyxl import load_workbook
+    from openpyxl.worksheet.datavalidation import DataValidation
+except:
+    pass
 import collections
 import requests
 from time import time

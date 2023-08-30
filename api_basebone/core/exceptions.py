@@ -1,5 +1,7 @@
 from django.utils.encoding import force_text
 
+import lightning_flags as flags
+
 PARAMETER_FORMAT_ERROR = '10000'
 SERVER_IS_BUSY = '10001'
 REQUEST_FORBIDDEN = '10002'
@@ -71,6 +73,8 @@ class BusinessException(Exception):
         self.error_code = (
             error_code if error_code is not None else self.default_error_code
         )
+        if flags.NUMERIC_RESPONSE_STATUS:
+            self.error_code = int(self.error_code)
 
         if error_message is not None:
             self.error_message = error_message
