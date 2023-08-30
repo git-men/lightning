@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 
 from api_basebone.core.widgets import widgets
-from lightning import flags
+import lightning_flags as flags
 from lightning.admin import Admin
 from lightning.decorators import lightning_admin
 from . import UserGMeta
