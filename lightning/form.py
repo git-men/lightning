@@ -19,3 +19,7 @@ class InlineForm(TextInput):
         if fields is not None:
             params['fields'] = fields
         super().__init__(name, params=params)
+
+
+class Radio(TextInput):
+    pass
