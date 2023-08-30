@@ -3,8 +3,11 @@ import csv
 from collections import OrderedDict
 
 from django.http import HttpResponse
-from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
+try:
+    from openpyxl import Workbook
+    from openpyxl.writer.excel import save_virtual_workbook
+except:
+    pass
 from pydash import objects
 
 from api_basebone.core import gmeta

@@ -4,7 +4,10 @@ import datetime
 import hmac
 import json
 import logging
-import oss2
+try:
+    import oss2
+except:
+    pass
 
 from hashlib import sha1
 from django.conf import settings

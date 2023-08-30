@@ -6,33 +6,6 @@ NAME = 'django-lightning'
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 VERSION = '1.2.0'
 
-def get_install_require_packages():
-    """获取依赖的安装包"""
-    with open('requirements.in', 'r') as file:
-        return [line
-            for line in file.readlines() if not line.startswith('http')]
-
-# 可能会导致 Windows 安装有问题
-# with open('README.zh-CN.md', 'r') as file:
-#     long_description = file.read()
-
-
-def get_packages(app):
-    """获取包"""
-    return [app] + [
-        "{}.{}".format(app, item) for item in find_packages(app)
-    ]
-
-all_packages = []
-[all_packages.extend(item) for item in map(get_packages, [
-    'api_basebone',
-    'bsm_config',
-    'lightning',
-    'shield',
-    'storage',
-    'puzzle'
-])]
-
 import ssl
 
 try:
@@ -54,13 +27,51 @@ setup(
     long_description='A Django based no-code Admin and rapid development framework',
     # long_description_content_type='text/markdown',
     license='MIT',
-    packages=all_packages,
+    packages=find_packages(exclude=['lightning_code', 'lightning_code.*']),
     include_package_data=True,
     data_files={},
-    install_requires=get_install_require_packages(),
-    dependency_links = [
-     "git+https://github.com/jeffkit/wechatpy/archive/v.18.13-work.zip",
+    install_requires=[
+        'arrow>=0.12.1,<=0.15.8',
+        'django>=2.2,<3',
+        'django-cors-headers>=2.4.0,<=3.2.1',
+        'django-extensions==2.1.3',
+        'django-environ==0.4.5',
+        'djangorestframework==3.9.4',
+        'django-rest-swagger==2.2.0',
+        'jsonfield==3.1.0',
+        'raven==6.9.0',
+        'Werkzeug==0.15.0',
+        'pydash==4.7.4',
+        'django-guardian==2.3.0',
+        'django-redis',
+        'django-mptt',
     ],
+    extras_require={
+        'celery': [
+            'celery==5.1.0',
+            'django-celery-beat @ https://github.com/jeffkit/django-celery-beat/archive/refs/heads/master.zip',
+        ],
+        'mysql': [
+            'mysqlclient>=1.4.3,<2',
+        ],
+        'postgresql': [
+            'psycopg2-binary',
+        ],
+        'development': [
+            'factory-boy==2.11.1',
+            'oss2>=2.6.0,<=2.12.1',
+            'qcloud-python-sts==3.0.3',
+            'wechatpy @ https://github.com/jeffkit/wechatpy/archive/v.18.13-work.zip',
+        ],
+        'excel': [
+            'openpyxl>=2.5.12,<3.1',
+            'pillow',  # openpyxl用到pillow
+        ],
+        'oauth': [
+            'django-oauth-toolkit==1.5.0',
+        ],
+    },
+    py_modules=['lightning_flags'],
     zip_safe=False,
     classifiers=[
         'Intended Audience :: Developers',

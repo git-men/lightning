@@ -3,7 +3,10 @@ import hashlib
 import hmac
 import json
 import datetime
-from sts.sts import Sts
+try:
+    from sts.sts import Sts
+except:
+    pass
 from bsm_config.settings import site_setting
 from api_basebone.utils.timezone import local_timestamp
 

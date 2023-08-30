@@ -1,3 +1,4 @@
+import requests
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
@@ -7,6 +8,31 @@ from api_basebone.restful.serializers import create_serializer_class
 from api_basebone.utils import tencent
 from api_basebone.utils.aliyun import aliyun
 from bsm_config.settings import site_setting
+
+
+def get_upload_token(service=None):
+    if service is None:
+        service = site_setting['upload_provider']
+
+    result = {'provider': None}
+    if service in ['aliyun', 'oss']:
+        result = aliyun.get_token()
+        result['provider'] = 'oss'
+    elif service in ['tencent', 'cos']:
+        result = tencent.post_object_token()
+        result['provider'] = 'cos'
+    elif service == 'file_storage':
+        result = {'provider': 'file_storage', 'host': '/basebone/storage/upload'}
+    elif service == 's3':
+        result['provider'] = 's3'
+        try:
+            from api_basebone.utils import upload
+        except:
+            pass
+        else:
+            result = upload.get_token()
+            result['provider'] = 's3'
+    return result
 
 
 class UploadViewSet(viewsets.GenericViewSet):
@@ -62,22 +88,21 @@ class UploadViewSet(viewsets.GenericViewSet):
         }
         """
         service = request.query_params.get('service', site_setting['upload_provider'])
-        result = {'provider': None}
-        if service in ['aliyun', 'oss']:
-            result = aliyun.get_token()
-            result['provider'] = 'oss'
-        elif service in ['tencent', 'cos']:
-            result = tencent.post_object_token()
-            result['provider'] = 'cos'
-        elif service == 'file_storage':
-            result = {'provider': 'file_storage', 'host': '/basebone/storage/upload'}
-        elif service == 's3':
-            result['provider'] = 's3'
-            try:
-                from api_basebone.utils import upload
-            except:
-                pass
-            else:
-                result = upload.get_token()
-                result['provider'] = 's3'
+        result = get_upload_token(service)
         return success_response(result)
+
+
+def upload_file(file, filename=None):
+    # 无filename就随机生成一个
+    if filename is None:
+        import uuid
+        filename = str(uuid.uuid4()).replace('-', '')
+    token = get_upload_token()
+    host = token.pop('host')
+    directory = token.pop('dir')
+    del token['provider']
+    token['key'] = directory + filename
+    res = requests.post(host, data=token, files={'file': file})
+    if res.ok:
+        return host + '/' + directory + filename
+    raise
