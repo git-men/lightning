@@ -55,7 +55,7 @@ setup(
             'mysqlclient>=1.4.3,<2',
         ],
         'postgresql': [
-            'psycopg2-binary',
+            'psycopg2<2.9',
         ],
         'development': [
             'factory-boy==2.11.1',
