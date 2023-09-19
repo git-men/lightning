@@ -32,6 +32,13 @@ class ExceptionHandler:
 
     def __call__(self, exc, context):
         """异常接收处理器"""
+        try:
+            from traceback_with_variables import print_exc
+        except:
+            pass
+        else:
+            print_exc(exc)
+
         import traceback
         t, v, tb = sys.exc_info()
 
