@@ -338,9 +338,8 @@ def reverse_one_to_one(field, value, instance):
         if value is None:
             model.objects.filter(**{field.remote_field.name: to_field_value}).delete()
         else:
-            pass
-            # 不應該改掉原先的關聯關係，所以註釋掉，改爲pass了。什麼都不做。
-            # model.objects.filter(**{pk_field.name: pk_field.to_python(value)}).update(**{field.remote_field.name: to_field_value})
+            # 不應該改掉原先的關聯關係
+            model.objects.filter(**{pk_field.name: pk_field.to_python(value), field.remote_field.name: None}).update(**{field.remote_field.name: to_field_value})
 
 
 def reverse_relation(model, data, instance):
