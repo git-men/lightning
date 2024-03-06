@@ -23,3 +23,8 @@ class InlineForm(TextInput):
 
 class Radio(TextInput):
     pass
+
+
+class Gallery(TextInput):
+    pass
+
