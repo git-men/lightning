@@ -14,6 +14,7 @@ class UserAdmin(BSMAdmin):
         'object_id',
         'params',
     ]
+    table_actions = []
 
     class Meta:
         model = AdminLog
