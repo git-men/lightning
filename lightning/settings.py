@@ -139,6 +139,11 @@ class PuzzleMenu(Menu):
         super().__init__(name, puzzle=puzzle, **kwargs, page='puzzle')
 
 
+class IFrameMenu(Menu):
+    def __init__(self, name, path, **kwargs):
+        super().__init__(name, path=path, **kwargs, page='iframe')
+
+
 class MenuGroup(Menu):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, type='group')

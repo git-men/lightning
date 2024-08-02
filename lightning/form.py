@@ -28,3 +28,7 @@ class Radio(TextInput):
 class Gallery(TextInput):
     pass
 
+
+class Cascader(TextInput):
+    pass
+
