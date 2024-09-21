@@ -247,7 +247,7 @@ def csv_render(model, queryset, serializer_class, export_config=None):
     response.write(codecs.BOM_UTF8)
     writer = csv.writer(response)
 
-    if export_config['merge_bref']:
+    if export_config.get('merge_bref', False):
         fields = get_merge_fields(model, serializer_class, export_config)
         verbose_names = fields.values()
 
@@ -289,8 +289,8 @@ def excel_render(model, queryset, serializer_class, export_config=None):
 
     datas = []
     
-    get_fields = get_merge_fields if export_config['merge_bref'] else get_no_merge_fields
-    row_data = row_data_merge if export_config['merge_bref'] else row_data_no_merge
+    get_fields = get_merge_fields if export_config.get('merge_bref', False) else get_no_merge_fields
+    row_data = row_data_merge if export_config.get('merge_bref', False) else row_data_no_merge
 
     fields = get_fields(model, serializer_class, export_config)
     # 处理结果集
