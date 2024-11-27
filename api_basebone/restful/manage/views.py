@@ -778,11 +778,11 @@ class CommonManageViewSet(
             )
 
         export_version = self._export_type_config.get('version')
-        if export_version == 'v2': 
+        queryset = self.filter_queryset(self.get_queryset())
+        if export_version == 'v2':
             file_type = self._export_type_config['file_type']
             file_type = file_type if file_type in ('csv', 'excel') else 'csv'
 
-            queryset = self.filter_queryset(self.get_queryset())
             serializer_class = get_export_serializer_class(
                 self.model, self.get_serializer_class(), version=export_version
             )

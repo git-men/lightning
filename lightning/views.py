@@ -13,6 +13,7 @@ from rest_framework.utils import encoders
 
 from api_basebone.export.fields import get_app_field_schema
 from api_basebone.export.setting import get_settins
+from api_basebone.restful.manage.config_views import front_end_flags
 from api_basebone.restful.serializers import create_serializer_class
 
 lightning_static_url = getattr(settings, 'LIGHTNING_STATIC_URL', 'lightning')
@@ -118,10 +119,13 @@ class LightningView:
             '$$settings': get_settins(),
             '$$userinfo': get_userinfo(user),
             '$$permissions': user.get_all_permissions(),
+            '$$flags': front_end_flags,
         })
 
     def anonymous_index_view(self, request):
-        return self.render_index()
+        return self.render_index(injection={
+            '$$flags': front_end_flags,
+        })
 
     @staticmethod
     def image_url(raw, size, provider, method='lfit', formatter=None, rounded=0):

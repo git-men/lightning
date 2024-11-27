@@ -25,7 +25,7 @@ def get_prefetch_fields_from_export_fields(model, fields=None):
     prefetch_set = set()
 
     for item in fields:
-        field_str = item[0] if isinstance(item, list) else item
+        field_str = item[0] if isinstance(item, list) or isinstance(item, tuple) else item
         prefetch_field = hand_signle_export_field_to_prefetch(model, field_str)
 
         if prefetch_field:

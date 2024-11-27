@@ -9,8 +9,12 @@ from api_basebone.export.setting import get_settins, get_setting_config
 from api_basebone.utils.meta import load_custom_admin_module
 from bsm_config.models import Admin
 from bsm_config.signals import update_action_permission, create_action_permission
+import lightning_flags as flags
 
 export_service = ExportService()
+front_end_flags = {
+    'MIXED_LAYOUT': flags.MIXED_LAYOUT,
+}
 
 
 class ConfigViewSet(viewsets.GenericViewSet):
@@ -64,6 +68,7 @@ class ConfigViewSet(viewsets.GenericViewSet):
         data['schemas'].update(json_object_schemas)
         data['schemas'].update(json_array_item_schemas)
         data['admins'].update(json_admin_configs)
+        data['flags'] = front_end_flags
         return success_response(data)
 
     @action(detail=False, url_path='settings')
