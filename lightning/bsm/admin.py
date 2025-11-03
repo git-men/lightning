@@ -1,10 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 
-from api_basebone.core.widgets import widgets
 import lightning_flags as flags
 from lightning.admin import Admin
 from lightning.decorators import lightning_admin
+from lightning.form import PasswordInput
 from . import UserGMeta
 User = get_user_model()
 
@@ -15,7 +15,7 @@ class UserAdmin(Admin):
         'username',
         'last_name',
         'first_name',
-        {'name': 'password', 'widget': widgets.PasswordInput},
+        PasswordInput('password'),
         'is_active',
         'is_staff',
         'is_superuser',
