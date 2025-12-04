@@ -40,7 +40,7 @@ def get_attribute(instance, field_path, formatter=None):
             choices = dict(field_obj.choices)
             if rs is None and rs not in choices:
                 return ''
-            return dict(field_obj.choices)[rs]
+            return dict(field_obj.choices).get(rs, rs)
         return rs
 
     # 逐层获取属性
