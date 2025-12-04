@@ -248,6 +248,8 @@ def import_excel(config, content, queryset, request, detail_id=None, detail_fiel
             value = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
             if isinstance(value, datetime.datetime) and isinstance(model_fields[field["field"]], models.DateField):
                 value = value.date()
+            if value is None and model_fields[field["field"]].null is False:
+                value = ''
             if field["field"] in model_fields and model_fields[field["field"]].choices:
                 choices = dict([(c[1], c[0]) for c in model_fields[field["field"]].choices])
                 if value in choices:
