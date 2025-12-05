@@ -48,6 +48,10 @@ class Cascader(FormField):
     pass
 
 
+class TreeSelect(FormField):
+    pass
+
+
 class MultiFileUploader(FormField):
     pass
 
