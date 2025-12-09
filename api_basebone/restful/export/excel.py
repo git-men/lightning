@@ -239,72 +239,102 @@ def import_excel(config, content, queryset, request, detail_id=None, detail_fiel
     line = start_line
 
     model_fields = dict([(f.name, f) for f in queryset.model._meta.fields])
+    indexed_list_mapping = {field['field']: field for field in list_mapping}
 
     data = []
     eof = False
-    while not eof:
-        row_data = {}
-        for field in list_mapping:
-            value = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
-            if isinstance(value, datetime.datetime) and isinstance(model_fields[field["field"]], models.DateField):
-                value = value.date()
-            if value is None and model_fields[field["field"]].null is False:
-                value = ''
-            if field["field"] in model_fields and model_fields[field["field"]].choices:
-                choices = dict([(c[1], c[0]) for c in model_fields[field["field"]].choices])
-                if value in choices:
-                    value = choices[value]
-            # 通过 to_field 指定外键的唯一标识字段
-            if 'to_field' in field and value:
-                if field["field"] in model_fields:
-                    field_definition = model_fields[field["field"]]
-                    related_model = field_definition.related_model
-                    # 得到字段本身定义的to_field
-                    to_field = field_definition.remote_field.field_name
-                    value = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()
-                    if value is not None:
-                        value = value[to_field]
-                else:
-                    try:
-                        field_definition = queryset.model._meta.get_field(field['field'])
-                        if isinstance(field_definition, models.ManyToManyField):
-                            value = field_definition.related_model.objects.filter(**{field['to_field']+'__in': value.split('、')}).values_list('pk', flat=True)
-                    except Exception:
-                        import traceback
-                        traceback.print_exc()
-            row_data[field["field"]] = value
-        line += 1
-        if not [val for val in row_data.values() if val]:
-            eof = True
-        else:
-            if detail_field:
-                row_data[detail_field] = detail_id
-            data.append(row_data)
-
-    if config['type'] == 'create':
-        serializer = get_form_class(queryset.model, 'create', request=request)(data=data, many=True)
-    elif config['type'] == 'update':
-        # 更新，是有条件的更新
-        # update_by = config.get('update_by', [])
-        pk_name = queryset.model._meta.pk.name
-        pk_values = [row[pk_name] for row in data]
-        condition = {f'{pk_name}__in': pk_values}
-        print('condition: ', condition)
-        instances = queryset.filter(**condition)
-
-        # FIXME 如果data里面有instances里面没有的数据时，要报无权修改
-        serializer = get_form_class(queryset.model, 'update', request=request, batch=True)(instances, data=data, partial=True, many=True)
-
-    if not serializer.is_valid(raise_exception=False):
-        error_details = []
-        errors = serializer.errors
-        for idx in range(len(errors)):
-            if errors[idx]:
-                error_details.append({
-                    "line": start_line + idx,
-                    "error": errors[idx]
-                })
-        raise ValidationError(error_details)
     with transaction.atomic():
+        while not eof:
+            row_data = {}
+            for field in list_mapping:
+                value = sheet[f'{field["column"]}{line}'].value  # TODO 考虑多层级场景
+                if isinstance(value, datetime.datetime) and isinstance(model_fields[field["field"]], models.DateField):
+                    value = value.date()
+                if value is None and model_fields[field["field"]].null is False:
+                    value = ''
+                if field["field"] in model_fields and model_fields[field["field"]].choices:
+                    choices = dict([(c[1], c[0]) for c in model_fields[field["field"]].choices])
+                    if value in choices:
+                        value = choices[value]
+                # 通过 to_field 指定外键的唯一标识字段
+                if 'to_field' in field and value:
+                    if field["field"] in model_fields:
+                        field_definition = model_fields[field["field"]]
+                        related_model = field_definition.related_model
+                        # 得到字段本身定义的to_field
+                        to_field = field_definition.remote_field.field_name
+                        existed = related_model.objects.filter(**{field['to_field']: value}).exclude(**{to_field: None}).values(to_field).first()
+                        if existed is not None:
+                            value = existed[to_field]
+                        else:
+                            if field.get('can_add', False):
+                                add_ref = field.get('add_ref', {})
+
+                                def find_ref(mapping):
+                                    ref_value = sheet[f'{mapping["column"]}{line}'].value
+                                    if 'to_field' in mapping and ref_value:
+                                        ref_field_definition = model_fields[mapping["field"]]
+                                        ref_related_model = ref_field_definition.related_model
+                                        ref_to_field = ref_field_definition.remote_field.field_name
+                                        ref_existed = ref_related_model.objects.filter(**{mapping['to_field']: ref_value}).exclude(**{ref_to_field: None}).values(ref_to_field).first()
+                                        if ref_existed is not None:
+                                            return ref_existed[ref_to_field]
+                                        if mapping.get('can_add', False):
+                                            ref_created = ref_related_model.objects.create(**{mapping['to_field']: ref_value})
+                                            return getattr(ref_created, ref_to_field)
+                                        else:
+                                            return None
+                                    return ref_value
+
+                                refs = {}
+                                for k, v in add_ref.items():
+                                    if v in indexed_list_mapping:
+                                        refs[k] = find_ref(indexed_list_mapping[v])
+
+                                created = related_model.objects.create(**refs, **{field['to_field']: value})
+                                value = getattr(created, to_field)
+                            else:
+                                value = None
+                    else:
+                        try:
+                            field_definition = queryset.model._meta.get_field(field['field'])
+                            if isinstance(field_definition, models.ManyToManyField):
+                                value = field_definition.related_model.objects.filter(**{field['to_field']+'__in': value.split('、')}).values_list('pk', flat=True)
+                        except Exception:
+                            import traceback
+                            traceback.print_exc()
+                row_data[field["field"]] = value
+            line += 1
+            if not [val for val in row_data.values() if val]:
+                eof = True
+            else:
+                if detail_field:
+                    row_data[detail_field] = detail_id
+                data.append(row_data)
+
+        if config['type'] == 'create':
+            serializer = get_form_class(queryset.model, 'create', request=request)(data=data, many=True)
+        elif config['type'] == 'update':
+            # 更新，是有条件的更新
+            # update_by = config.get('update_by', [])
+            pk_name = queryset.model._meta.pk.name
+            pk_values = [row[pk_name] for row in data]
+            condition = {f'{pk_name}__in': pk_values}
+            print('condition: ', condition)
+            instances = queryset.filter(**condition)
+
+            # FIXME 如果data里面有instances里面没有的数据时，要报无权修改
+            serializer = get_form_class(queryset.model, 'update', request=request, batch=True)(instances, data=data, partial=True, many=True)
+
+        if not serializer.is_valid(raise_exception=False):
+            error_details = []
+            errors = serializer.errors
+            for idx in range(len(errors)):
+                if errors[idx]:
+                    error_details.append({
+                        "line": start_line + idx,
+                        "error": errors[idx]
+                    })
+            raise ValidationError(error_details)
         serializer.save()
     return success_response()
